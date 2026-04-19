@@ -42,6 +42,12 @@ interface AudioContextType {
   isLoading: boolean;
   initError: string | null;
   
+  swStatus: 'active' | 'waiting' | 'installing' | 'none';
+  resetServiceWorker: () => Promise<void>;
+  clearCacheStorage: () => Promise<void>;
+  clearDatabase: () => Promise<void>;
+  fullAppReset: () => Promise<void>;
+  
   toast: string | null;
   showToast: (message: string) => void;
   resetUISettings: () => void;
@@ -62,6 +68,78 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [swStatus, setSwStatus] = useState<'active' | 'waiting' | 'installing' | 'none'>('none');
+
+  // Monitor Service Worker Status
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+
+    const updateStatus = async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        setSwStatus('none');
+        return;
+      }
+
+      if (registration.installing) setSwStatus('installing');
+      else if (registration.waiting) setSwStatus('waiting');
+      else if (registration.active) setSwStatus('active');
+    };
+
+    updateStatus();
+    // Re-check periodically or on events
+    const interval = setInterval(updateStatus, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const resetServiceWorker = async () => {
+    if (!('serviceWorker' in navigator)) return;
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    for (const reg of registrations) {
+      await reg.unregister();
+    }
+    showToast("Service workers deactivated");
+  };
+
+  const clearCacheStorage = async () => {
+    if (!('caches' in window)) return;
+    const cacheNames = await caches.keys();
+    for (const name of cacheNames) {
+      await caches.delete(name);
+    }
+    showToast("Cache storage cleared");
+  };
+
+  const clearDatabase = async () => {
+    if (!confirm("This will delete all your tracks and playlists. This action cannot be undone. Continue?")) return;
+    try {
+      await db.clearAllData();
+      showToast("All data cleared. Refreshing tracks...");
+      // Update local state
+      setTracks([]);
+      setSubliminalTracks([]);
+      setPlaylists([]);
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to clear some data");
+    }
+  };
+
+  const fullAppReset = async () => {
+    if (!confirm("This will perform a factory reset: unregister service worker, clear cache, and delete all your music/settings. The app will then reload. Continue?")) return;
+    try {
+      await resetServiceWorker();
+      await clearCacheStorage();
+      await db.clearAllData();
+      localStorage.clear();
+      sessionStorage.clear();
+      showToast("System reset complete. Reloading...");
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e) {
+      console.error(e);
+      showToast("Reset encountered issues. Refresh app manually.");
+    }
+  };
 
   const DEFAULT_SETTINGS: AppSettings = {
     subliminal: {
@@ -473,6 +551,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       clearSeekRequest,
       isLoading,
       initError,
+      swStatus,
+      resetServiceWorker,
+      clearCacheStorage,
+      clearDatabase,
+      fullAppReset,
       toast,
       showToast,
       resetUISettings,

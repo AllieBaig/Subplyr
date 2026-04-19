@@ -125,3 +125,15 @@ export async function deletePlaylist(id: string) {
     console.error("Failed to delete playlist:", err);
   }
 }
+
+export async function clearAllData() {
+  try {
+    const db = await initDB();
+    const stores = [TRACKS_STORE, SUB_TRACKS_STORE, SETTINGS_STORE, PLAYLISTS_STORE];
+    for (const store of stores) {
+      await db.clear(store);
+    }
+  } catch (err) {
+    console.error("Failed to clear all data:", err);
+  }
+}
