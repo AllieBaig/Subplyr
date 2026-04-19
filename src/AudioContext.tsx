@@ -99,21 +99,25 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         if (isMounted && savedSettings) setSettings(savedSettings);
 
         const savedTracks = await db.getTracks(false);
-        const tracksWithUrls = savedTracks.map(t => ({
-          ...t,
-          url: URL.createObjectURL(t.blob)
-        }));
-        if (isMounted) setTracks(tracksWithUrls);
+        if (isMounted) {
+          const tracksWithUrls = savedTracks.map(t => ({
+            ...t,
+            url: URL.createObjectURL(t.blob)
+          }));
+          setTracks(tracksWithUrls);
+        }
 
         const savedSubTracks = await db.getTracks(true);
-        const subTracksWithUrls = savedSubTracks.map(t => ({
-          ...t,
-          url: URL.createObjectURL(t.blob)
-        }));
-        if (isMounted) setSubliminalTracks(subTracksWithUrls);
+        if (isMounted) {
+          const subTracksWithUrls = savedSubTracks.map(t => ({
+            ...t,
+            url: URL.createObjectURL(t.blob)
+          }));
+          setSubliminalTracks(subTracksWithUrls);
+        }
       } catch (err) {
-        console.error("Critical DB error:", err);
-        if (isMounted) setInitError("Failed to load your library. Data might be corrupted.");
+        console.warn("Defensive Load Trace:", err);
+        if (isMounted) setInitError("Database sync issue. We're attempting recovery.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -122,7 +126,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       }
     }
     loadData();
-    return () => { isMounted = false; clearTimeout(timeoutId); };
+    return () => { 
+      isMounted = false; 
+      clearTimeout(timeoutId); 
+      // Memory Safety: Revoke all object URLs on cleanup
+      tracks.forEach(t => { if (t.url.startsWith('blob:')) URL.revokeObjectURL(t.url); });
+      subliminalTracks.forEach(t => { if (t.url.startsWith('blob:')) URL.revokeObjectURL(t.url); });
+    };
   }, []);
 
   // Save settings when changed

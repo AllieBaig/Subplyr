@@ -11,42 +11,66 @@ export interface DBTrack extends Track {
 }
 
 export async function initDB() {
-  return openDB(DB_NAME, 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(TRACKS_STORE)) {
-        db.createObjectStore(TRACKS_STORE, { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains(SUB_TRACKS_STORE)) {
-        db.createObjectStore(SUB_TRACKS_STORE, { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
-        db.createObjectStore(SETTINGS_STORE);
-      }
-    },
-  });
+  try {
+    return await openDB(DB_NAME, 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(TRACKS_STORE)) {
+          db.createObjectStore(TRACKS_STORE, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(SUB_TRACKS_STORE)) {
+          db.createObjectStore(SUB_TRACKS_STORE, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+          db.createObjectStore(SETTINGS_STORE);
+        }
+      },
+    });
+  } catch (err) {
+    console.error("Critical IndexedDB initialization error:", err);
+    throw new Error("Unable to start local database");
+  }
 }
 
 export async function saveTrack(track: DBTrack, isSubliminal: boolean = false) {
-  const db = await initDB();
-  const store = isSubliminal ? SUB_TRACKS_STORE : TRACKS_STORE;
-  await db.put(store, track);
+  try {
+    if (!track.id || !track.blob) throw new Error("Invalid track data");
+    const db = await initDB();
+    const store = isSubliminal ? SUB_TRACKS_STORE : TRACKS_STORE;
+    await db.put(store, track);
+  } catch (err) {
+    console.error("Failed to save track:", err);
+  }
 }
 
 export async function getTracks(isSubliminal: boolean = false): Promise<DBTrack[]> {
-  const db = await initDB();
-  const store = isSubliminal ? SUB_TRACKS_STORE : TRACKS_STORE;
-  return db.getAll(store);
+  try {
+    const db = await initDB();
+    const store = isSubliminal ? SUB_TRACKS_STORE : TRACKS_STORE;
+    const tracks = await db.getAll(store);
+    return Array.isArray(tracks) ? tracks : [];
+  } catch (err) {
+    console.error("Failed to retrieve tracks:", err);
+    return [];
+  }
 }
 
 export async function deleteTrack(id: string, isSubliminal: boolean = false) {
-  const db = await initDB();
-  const store = isSubliminal ? SUB_TRACKS_STORE : TRACKS_STORE;
-  await db.delete(store, id);
+  try {
+    const db = await initDB();
+    const store = isSubliminal ? SUB_TRACKS_STORE : TRACKS_STORE;
+    await db.delete(store, id);
+  } catch (err) {
+    console.error("Failed to delete track:", err);
+  }
 }
 
 export async function saveSettings(settings: AppSettings) {
-  const db = await initDB();
-  await db.put(SETTINGS_STORE, settings, 'current');
+  try {
+    const db = await initDB();
+    await db.put(SETTINGS_STORE, settings, 'current');
+  } catch (err) {
+    console.error("Failed to save settings:", err);
+  }
 }
 
 export async function getSettings(): Promise<AppSettings | null> {
@@ -54,16 +78,18 @@ export async function getSettings(): Promise<AppSettings | null> {
     const db = await initDB();
     const settings = await db.get(SETTINGS_STORE, 'current');
     
-    if (settings) {
-      // Basic validation: ensure critical top-level keys exist
-      if (settings.subliminal && typeof settings.fadeInOut === 'boolean') {
+    if (settings && typeof settings === 'object') {
+      // Robust validation: check structure
+      const hasSub = settings.subliminal && typeof settings.subliminal === 'object';
+      const hasBin = settings.binaural && typeof settings.binaural === 'object';
+      
+      if (hasSub && hasBin && typeof settings.fadeInOut === 'boolean') {
         return settings;
       }
-      console.warn("Settings found but seem incomplete. Ignoring corrupted data.");
     }
     return null;
   } catch (err) {
-    console.error("Failed to read settings from IndexedDB:", err);
-    return null; // Fallback to defaults
+    console.warn("Recovering from settings read failure:", err);
+    return null; 
   }
 }

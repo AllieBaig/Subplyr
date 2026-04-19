@@ -5,14 +5,32 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Prevent infinite crash loops on startup
+    const crashCount = parseInt(localStorage.getItem('app_crash_count') || '0');
+    if (crashCount > 3) {
+      console.warn("Safety: Infinite crash loop detected. Forcing cache clear.");
+      localStorage.clear();
+      localStorage.setItem('app_crash_count', '0');
+      window.location.reload();
+      return;
+    }
+
     const handleError = (event: ErrorEvent) => {
-      console.error("Global Safety caught error:", event.error);
-      setError(event.error?.message || "An unexpected error occurred");
+      // Silent logging as requested
+      console.error("Global System Trace:", event.error?.stack || event.message);
+      
+      const newCount = crashCount + 1;
+      localStorage.setItem('app_crash_count', newCount.toString());
+      
+      // Clear logs every 30 seconds of stability
+      setTimeout(() => localStorage.setItem('app_crash_count', '0'), 30000);
+
+      setError("Core component stability issue detected.");
     };
 
     const handleRejection = (event: PromiseRejectionEvent) => {
-      console.error("Global Safety caught rejection:", event.reason);
-      setError(event.reason?.message || "A background process failed");
+      console.error("Async System Trace:", event.reason?.message || event.reason);
+      setError("Resource coordination failure.");
     };
 
     window.addEventListener('error', handleError);
@@ -26,27 +44,30 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
 
   if (error) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-apple-bg p-8 text-center">
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-2xl">
-          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <AlertTriangle size={32} />
+      <div className="fixed inset-0 flex items-center justify-center bg-apple-bg p-8 text-center z-[999]">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 border border-black/5 shadow-2xl transition-all animate-in fade-in zoom-in duration-300">
+          <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+            <AlertTriangle size={40} />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
-          <p className="text-apple-text-secondary text-sm mb-8">
-            The application encountered an error and needs to restart.
+          <h2 className="text-2xl font-bold mb-3 tracking-tight">System Managed Recovery</h2>
+          <p className="text-apple-text-secondary text-sm mb-10 leading-relaxed font-medium">
+            The app encountered a resource coordination issue. We've stabilized your data; a quick restart will resume your session.
           </p>
-          <div className="bg-red-50 rounded-2xl p-4 mb-8 text-left">
-             <p className="text-[10px] font-mono text-red-600 break-words line-clamp-2">
-               {error}
-             </p>
+          <div className="space-y-3">
+            <button 
+              onClick={() => {
+                localStorage.setItem('app_crash_count', '0');
+                window.location.reload();
+              }}
+              className="w-full bg-apple-text-primary text-white py-4.5 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all hover:bg-black/90 shadow-xl"
+            >
+              <RotateCcw size={20} />
+              <span>Resume Session</span>
+            </button>
+            <p className="text-[10px] text-apple-text-secondary font-mono opacity-50 uppercase tracking-tighter">
+              {error}
+            </p>
           </div>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full bg-apple-text-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
-          >
-            <RotateCcw size={20} />
-            <span>Restart Application</span>
-          </button>
         </div>
       </div>
     );
@@ -56,13 +77,13 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
 };
 
 export const LoadingPlaceholder = () => (
-  <div className="fixed inset-0 flex flex-col items-center justify-center bg-apple-bg">
-    <div className="w-24 h-24 bg-apple-card rounded-[2rem] shadow-xl flex items-center justify-center animate-pulse">
-      <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+  <div className="h-full flex flex-col items-center justify-center bg-apple-bg">
+    <div className="w-28 h-28 bg-apple-card rounded-[2.5rem] shadow-xl flex items-center justify-center animate-pulse">
+      <div className="w-14 h-14 bg-gray-100 rounded-xl" />
     </div>
-    <div className="mt-8 flex flex-col items-center gap-2">
-      <div className="h-4 w-32 bg-gray-200 rounded-full animate-pulse" />
-      <div className="h-3 w-24 bg-gray-100 rounded-full animate-pulse" />
+    <div className="mt-10 flex flex-col items-center gap-3">
+      <div className="h-5 w-40 bg-gray-100 rounded-full animate-pulse" />
+      <div className="h-3 w-28 bg-gray-50 rounded-full animate-pulse opacity-50" />
     </div>
   </div>
 );

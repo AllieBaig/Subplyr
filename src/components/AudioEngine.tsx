@@ -40,12 +40,34 @@ export default function AudioEngine() {
   useEffect(() => {
     natureAudioRef.current = new Audio();
     natureAudioRef.current.loop = true;
+
+    // iOS Safari Audio Unlock Helper
+    const unlockAudio = () => {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+      // Remove after first interaction
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+
     return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      
       if (audioCtxRef.current) {
         audioCtxRef.current.close().catch(console.error);
       }
       if (natureAudioRef.current) {
         natureAudioRef.current.pause();
+      }
+      if (mainAudioRef.current?.src.startsWith('blob:')) {
+        URL.revokeObjectURL(mainAudioRef.current.src);
+      }
+      if (subAudioRef.current?.src.startsWith('blob:')) {
+        URL.revokeObjectURL(subAudioRef.current.src);
       }
     };
   }, []);

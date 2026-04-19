@@ -1,14 +1,19 @@
-const CACHE_NAME = 'subliminal-player-v3';
+const VERSION = 'subliminal-v4';
+const CACHE_NAME = `subliminal-player-${VERSION}`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/favicon.ico',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      // Force individual asset adds to avoid one failing entire cache
+      return Promise.allSettled(
+        ASSETS_TO_CACHE.map(asset => cache.add(asset))
+      );
     })
   );
   self.skipWaiting();
@@ -18,8 +23,12 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+        cacheNames
+          .filter((name) => name.startsWith('subliminal-player-') && name !== CACHE_NAME)
+          .map((name) => {
+            console.log('Clearing legacy cache:', name);
+            return caches.delete(name);
+          })
       );
     })
   );
@@ -49,11 +58,11 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       }).catch(() => {
-        // Fallback for navigation requests (HTML)
+        // Fallback for navigation requests (HTML shell)
         if (event.request.mode === 'navigate') {
           return caches.match('/');
         }
-        return null; // Let it fail for other assets
+        return null;
       });
     })
   );
