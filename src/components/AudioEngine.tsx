@@ -8,6 +8,7 @@ export default function AudioEngine() {
     currentTrackIndex, 
     isPlaying, 
     settings,
+    playlists,
     setCurrentTime,
     setDuration,
     setIsPlaying,
@@ -20,6 +21,7 @@ export default function AudioEngine() {
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
   const subAudioRef = useRef<HTMLAudioElement | null>(null);
   const delayTimeoutRef = useRef<number | null>(null);
+  const subPlaylistIndexRef = useRef<number>(0);
 
   // Binaural Web Audio Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -235,9 +237,24 @@ export default function AudioEngine() {
   const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
   // Unified sourcing: Check both lists for the subliminal track
   const subTrack = useMemo(() => {
+    // If playlist mode is on, we derive track from the selected playlist and our internal index
+    if (settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId) {
+      const playlist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
+      if (playlist && playlist.trackIds.length > 0) {
+        // Ensure index is within bounds
+        const trackId = playlist.trackIds[subPlaylistIndexRef.current % playlist.trackIds.length];
+        return tracks.find(t => t.id === trackId);
+      }
+    }
+    
     return subliminalTracks.find(t => t.id === settings.subliminal.selectedTrackId) || 
            tracks.find(t => t.id === settings.subliminal.selectedTrackId);
-  }, [subliminalTracks, tracks, settings.subliminal.selectedTrackId]);
+  }, [subliminalTracks, tracks, settings.subliminal.selectedTrackId, settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId, playlists]);
+
+  // Reset Subliminal Index on mode/playlist change
+  useEffect(() => {
+    subPlaylistIndexRef.current = 0;
+  }, [settings.subliminal.sourcePlaylistId, settings.subliminal.isPlaylistMode]);
 
   // Initialize main audio
   useEffect(() => {
@@ -278,8 +295,29 @@ export default function AudioEngine() {
     (audio as any).playsInline = true;
     (audio as any).webkitPlaysInline = true;
     subAudioRef.current = audio;
-    return () => audio.pause();
-  }, []);
+    
+    const onEnded = () => {
+      if (settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId) {
+        const playlist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
+        if (playlist && playlist.trackIds.length > 0) {
+          subPlaylistIndexRef.current = (subPlaylistIndexRef.current + 1) % playlist.trackIds.length;
+          const nextTrackId = playlist.trackIds[subPlaylistIndexRef.current];
+          const nextTrack = tracks.find(t => t.id === nextTrackId);
+          if (nextTrack && isPlaying) {
+            audio.src = nextTrack.url;
+            audio.play().catch(console.error);
+          }
+        }
+      }
+    };
+
+    audio.addEventListener('ended', onEnded);
+
+    return () => {
+      audio.removeEventListener('ended', onEnded);
+      audio.pause();
+    };
+  }, [settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId, playlists, tracks, isPlaying]);
 
   // Handle Main Track Source Change
   useEffect(() => {

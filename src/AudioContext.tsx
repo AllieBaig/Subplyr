@@ -196,6 +196,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       volume: 0.1,
       isLooping: true,
       delayMs: 0,
+      isPlaylistMode: false,
+      sourcePlaylistId: null,
     },
     binaural: {
       isEnabled: false,

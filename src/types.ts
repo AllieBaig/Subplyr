@@ -23,6 +23,8 @@ export interface SubliminalSettings {
   volume: number; // 0 to 0.3
   isLooping: boolean;
   delayMs: number;
+  isPlaylistMode: boolean;
+  sourcePlaylistId: string | null;
 }
 
 export interface BinauralSettings {
