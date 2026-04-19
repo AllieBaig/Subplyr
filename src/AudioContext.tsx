@@ -43,6 +43,7 @@ interface AudioContextType {
   initError: string | null;
   
   swStatus: 'active' | 'waiting' | 'installing' | 'none';
+  swSupported: boolean;
   resetServiceWorker: () => Promise<void>;
   clearCacheStorage: () => Promise<void>;
   clearDatabase: () => Promise<void>;
@@ -69,28 +70,61 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [initError, setInitError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [swStatus, setSwStatus] = useState<'active' | 'waiting' | 'installing' | 'none'>('none');
+  const swSupported = 'serviceWorker' in navigator;
 
   // Monitor Service Worker Status
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
+    if (!swSupported) return;
 
     const updateStatus = async () => {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) {
-        setSwStatus('none');
-        return;
-      }
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        
+        if (!registration) {
+          setSwStatus('none');
+          console.log('[SW] No registration found');
+          return;
+        }
 
-      if (registration.installing) setSwStatus('installing');
-      else if (registration.waiting) setSwStatus('waiting');
-      else if (registration.active) setSwStatus('active');
+        if (registration.installing) {
+          setSwStatus('installing');
+        } else if (registration.waiting) {
+          setSwStatus('waiting');
+        } else if (registration.active) {
+          setSwStatus('active');
+        }
+
+        // Listen for changes
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  setSwStatus('waiting');
+                } else {
+                  setSwStatus('active');
+                }
+              }
+            };
+          }
+        };
+      } catch (err) {
+        console.error('[SW] Status check failed:', err);
+      }
     };
 
     updateStatus();
-    // Re-check periodically or on events
-    const interval = setInterval(updateStatus, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    
+    // Also listen to controller change
+    navigator.serviceWorker.addEventListener('controllerchange', updateStatus);
+
+    const interval = setInterval(updateStatus, 5000);
+    return () => {
+      clearInterval(interval);
+      navigator.serviceWorker.removeEventListener('controllerchange', updateStatus);
+    };
+  }, [swSupported]);
 
   const resetServiceWorker = async () => {
     if (!('serviceWorker' in navigator)) return;
@@ -552,6 +586,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       isLoading,
       initError,
       swStatus,
+      swSupported,
       resetServiceWorker,
       clearCacheStorage,
       clearDatabase,

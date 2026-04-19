@@ -18,6 +18,7 @@ export default function SettingsView() {
     resetUISettings,
     clearAppCache,
     swStatus,
+    swSupported,
     resetServiceWorker,
     clearCacheStorage,
     clearDatabase,
@@ -27,6 +28,8 @@ export default function SettingsView() {
 
   const [expandedSection, setExpandedSection] = useState<string | null>('subliminal');
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+
+  if (!settings) return null;
 
   const toggleSection = (id: string) => {
     setExpandedSection(expandedSection === id ? null : id);
@@ -378,89 +381,91 @@ export default function SettingsView() {
       </div>
 
       {/* 7. Advanced Service Worker Tools */}
-      <div className="mt-8 pt-8 border-t border-black/5">
-        <button 
-          onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-          className="w-full flex items-center justify-between px-2 mb-4"
-        >
-          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary">Advanced Developer Tools</h4>
-          <ChevronRight size={14} className={`text-apple-text-secondary transition-transform ${isAdvancedOpen ? 'rotate-90' : ''}`} />
-        </button>
+      {swSupported && (
+        <div className="mt-8 pt-8 border-t border-black/5">
+          <button 
+            onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+            className="w-full flex items-center justify-between px-2 mb-4"
+          >
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary">Advanced Developer Tools</h4>
+            <ChevronRight size={14} className={`text-apple-text-secondary transition-transform ${isAdvancedOpen ? 'rotate-90' : ''}`} />
+          </button>
 
-        <AnimatePresence>
-          {isAdvancedOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="bg-apple-card rounded-3xl border border-black/5 overflow-hidden flex flex-col mb-4">
-                <div className="p-4 border-b border-black/5 flex items-center justify-between bg-gray-50/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full animate-pulse bg-green-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest text-apple-text-primary">Service Worker</span>
+          <AnimatePresence>
+            {isAdvancedOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-apple-card rounded-3xl border border-black/5 overflow-hidden flex flex-col mb-4">
+                  <div className="p-4 border-b border-black/5 flex items-center justify-between bg-gray-50/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full animate-pulse bg-green-500" />
+                      <span className="text-xs font-bold uppercase tracking-widest text-apple-text-primary">Service Worker</span>
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase p-1 px-2 rounded-md ${
+                      swStatus === 'active' ? 'bg-green-100 text-green-700' : 
+                      swStatus === 'none' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {swStatus}
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-bold uppercase p-1 px-2 rounded-md ${
-                    swStatus === 'active' ? 'bg-green-100 text-green-700' : 
-                    swStatus === 'none' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {swStatus}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-2 border-b border-black/5">
+                  <div className="grid grid-cols-2 border-b border-black/5">
+                    <button 
+                      onClick={resetServiceWorker}
+                      className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors border-r border-black/5"
+                    >
+                      <RotateCw size={18} className="text-apple-text-secondary" />
+                      <span className="text-[10px] font-bold uppercase text-center">Unregister SW</span>
+                    </button>
+                    <button 
+                      onClick={clearCacheStorage}
+                      className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <Download size={18} className="text-apple-text-secondary rotate-180" />
+                      <span className="text-[10px] font-bold uppercase text-center">Wipe Cache</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 border-b border-black/5">
+                    <button 
+                      onClick={clearDatabase}
+                      className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors border-r border-black/5 text-amber-600"
+                    >
+                      <Trash2 size={18} />
+                      <span className="text-[10px] font-bold uppercase text-center">Clear DB</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        showToast("Hard reloading...");
+                        setTimeout(() => window.location.reload(), 500);
+                      }}
+                      className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <RotateCcw size={18} className="text-apple-text-secondary" />
+                      <span className="text-[10px] font-bold uppercase text-center">Hard Reload</span>
+                    </button>
+                  </div>
+
                   <button 
-                    onClick={resetServiceWorker}
-                    className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors border-r border-black/5"
+                    onClick={fullAppReset}
+                    className="w-full p-4 flex items-center justify-center gap-3 bg-red-500 text-white hover:bg-red-600 transition-colors font-bold text-xs uppercase tracking-widest"
                   >
-                    <RotateCw size={18} className="text-apple-text-secondary" />
-                    <span className="text-[10px] font-bold uppercase text-center">Unregister SW</span>
-                  </button>
-                  <button 
-                    onClick={clearCacheStorage}
-                    className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors"
-                  >
-                    <Download size={18} className="text-apple-text-secondary rotate-180" />
-                    <span className="text-[10px] font-bold uppercase text-center">Wipe Cache</span>
+                    <ShieldCheck size={18} />
+                    <span>Full Factory Reset</span>
                   </button>
                 </div>
-
-                <div className="grid grid-cols-2 border-b border-black/5">
-                  <button 
-                    onClick={clearDatabase}
-                    className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors border-r border-black/5 text-amber-600"
-                  >
-                    <Trash2 size={18} />
-                    <span className="text-[10px] font-bold uppercase text-center">Clear DB</span>
-                  </button>
-                  <button 
-                    onClick={() => {
-                      showToast("Hard reloading...");
-                      setTimeout(() => window.location.reload(), 500);
-                    }}
-                    className="p-4 flex flex-col items-center gap-2 hover:bg-gray-50 transition-colors"
-                  >
-                    <RotateCcw size={18} className="text-apple-text-secondary" />
-                    <span className="text-[10px] font-bold uppercase text-center">Hard Reload</span>
-                  </button>
-                </div>
-
-                <button 
-                  onClick={fullAppReset}
-                  className="w-full p-4 flex items-center justify-center gap-3 bg-red-500 text-white hover:bg-red-600 transition-colors font-bold text-xs uppercase tracking-widest"
-                >
-                  <ShieldCheck size={18} />
-                  <span>Full Factory Reset</span>
-                </button>
-              </div>
-              <p className="px-4 text-[9px] text-apple-text-secondary text-center leading-relaxed mb-8">
-                Use these tools only if the app is stuck or displaying a blank screen. Full Factory Reset will delete all offline content.
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+                <p className="px-4 text-[9px] text-apple-text-secondary text-center leading-relaxed mb-8">
+                  Use these tools only if the app is stuck or displaying a blank screen. Full Factory Reset will delete all offline content.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
