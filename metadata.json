@@ -1,0 +1,6 @@
+{
+  "name": "Subliminal Player",
+  "description": "A minimal, calm music player with a dedicated secondary layer for subliminal audio tracks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

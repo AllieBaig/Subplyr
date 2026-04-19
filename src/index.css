@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-apple-bg: #F5F5F7;
+  --color-apple-card: #FFFFFF;
+  --color-apple-text-primary: #1D1D1F;
+  --color-apple-text-secondary: #86868B;
+  --color-apple-blue: #0071E3;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-apple-bg text-apple-text-primary antialiased selection:bg-apple-blue/20;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
