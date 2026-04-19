@@ -1,9 +1,9 @@
 import React from 'react';
 import { useAudio } from '../AudioContext';
-import { Upload, Plus, Trash2 } from 'lucide-react';
+import { Upload, Plus, Trash2, Share } from 'lucide-react';
 
 export default function LibraryView() {
-  const { tracks, addTrack, removeTrack, setCurrentTrackIndex, setIsPlaying, currentTrackIndex } = useAudio();
+  const { tracks, addTrack, removeTrack, setCurrentTrackIndex, setIsPlaying, currentTrackIndex, showToast } = useAudio();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -21,10 +21,19 @@ export default function LibraryView() {
           <h1 className="text-3xl font-bold tracking-tight">Library</h1>
           <p className="text-apple-text-secondary">Your offline collection</p>
         </div>
-        <label className="bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
-          <Plus size={20} />
-          <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
-        </label>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => showToast("Tip: Share any audio file from 'Files' app to this app directly!")}
+            className="bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors text-apple-blue"
+            title="How to Import via Share Sheet"
+          >
+            <Share size={20} />
+          </button>
+          <label className="bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
+            <Plus size={20} />
+            <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
+          </label>
+        </div>
       </header>
 
       {tracks.length === 0 ? (

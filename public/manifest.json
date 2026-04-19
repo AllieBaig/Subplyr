@@ -18,5 +18,18 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "audio_files",
+          "accept": ["audio/*", ".m4a", ".mp3", ".wav", ".aac", "audio/mp4", "audio/x-m4a"]
+        }
+      ]
+    }
+  }
 }

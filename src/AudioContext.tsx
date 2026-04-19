@@ -149,6 +149,31 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           }));
           setSubliminalTracks(subTracksWithUrls);
         }
+
+        // Check for shared files from Share Target
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedCount = urlParams.get('shared-count');
+        if (sharedCount) {
+          const count = parseInt(sharedCount);
+          const cache = await caches.open('shared-files');
+          
+          for (let i = 0; i < count; i++) {
+            const cacheKey = `/shared-files/temp-${i}`;
+            const response = await cache.match(cacheKey);
+            if (response) {
+              const blob = await response.blob();
+              const filename = decodeURIComponent(response.headers.get('x-filename') || `shared-track-${i}.mp3`);
+              
+              // Create a proper File object for addTrack
+              const file = new File([blob], filename, { type: blob.type });
+              await addTrack(file);
+              await cache.delete(cacheKey);
+            }
+          }
+          // Clean up URL
+          window.history.replaceState({}, document.title, "/");
+          showToast(`Successfully imported ${count} shared track${count > 1 ? 's' : ''}`);
+        }
       } catch (err) {
         console.warn("Defensive Load Trace:", err);
         if (isMounted) setInitError("Database sync issue. We're attempting recovery.");
