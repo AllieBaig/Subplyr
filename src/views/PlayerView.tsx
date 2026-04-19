@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 export default function PlayerView() {
   const { 
     tracks, 
+    subliminalTracks,
     currentTrackIndex, 
     isPlaying, 
     setIsPlaying, 
@@ -231,7 +232,25 @@ export default function PlayerView() {
                     color="text-apple-blue"
                     maxVol={0.3}
                     subtitle="Hidden affirmations layer"
-                  />
+                  >
+                    <div className="mt-4 flex flex-col gap-2">
+                       <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary">Source Track</p>
+                       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                          {[...subliminalTracks, ...tracks].map(t => (
+                            <button
+                              key={t.id}
+                              onClick={() => updateSubliminalSettings({ selectedTrackId: t.id })}
+                              className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.selectedTrackId === t.id ? 'bg-apple-blue text-white border-apple-blue shadow-sm' : 'bg-gray-100 text-apple-text-secondary border-transparent'}`}
+                            >
+                              {t.name}
+                            </button>
+                          ))}
+                          {[...subliminalTracks, ...tracks].length === 0 && (
+                            <p className="text-[10px] text-gray-400 italic">No tracks available</p>
+                          )}
+                       </div>
+                    </div>
+                  </LayerOption>
                   <LayerOption 
                     icon={Activity} 
                     label="Binaural" 
@@ -278,31 +297,33 @@ const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
     onClick={onClick}
     className="flex flex-col items-center gap-3 p-4 bg-apple-card border border-black/[0.03] rounded-[2rem] hover:bg-gray-50 active:scale-95 transition-all"
   >
-    <div className={`w-12 h-12 ${color} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-${color.split('-')[1]}/20`}>
+    <div className={`flex-shrink-0 w-12 h-12 ${color} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-${color.split('-')[1]}/20`}>
       <Icon size={20} />
     </div>
-    <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">{label}</span>
+    <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary truncate w-full text-center">{label}</span>
   </button>
 );
 
-const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle }: any) => (
-  <div className="bg-apple-card p-5 rounded-[2.5rem] border border-black/[0.03]">
+const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle, children }: any) => (
+  <div className="bg-apple-card p-5 rounded-[2.5rem] border border-black/[0.03] flex flex-col">
     <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 ${isEnabled ? 'bg-white shadow-sm' : 'bg-gray-100'} rounded-2xl flex items-center justify-center ${isEnabled ? color : 'text-gray-300'} transition-all`}>
+      <div className="flex items-center gap-4 min-w-0">
+        <div className={`flex-shrink-0 w-10 h-10 ${isEnabled ? 'bg-white shadow-sm' : 'bg-gray-100'} rounded-2xl flex items-center justify-center ${isEnabled ? color : 'text-gray-300'} transition-all`}>
           <Icon size={20} />
         </div>
-        <div>
-          <h5 className="text-sm font-bold tracking-tight">{label}</h5>
-          {subtitle && <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider">{subtitle}</p>}
+        <div className="min-w-0 flex-1">
+          <h5 className="text-sm font-bold tracking-tight truncate">{label}</h5>
+          {subtitle && <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider truncate">{subtitle}</p>}
         </div>
       </div>
-      <button 
-        onClick={() => onToggle(!isEnabled)}
-        className={`w-12 h-7 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
-      >
-        <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} />
-      </button>
+      <div className="w-12 h-7 flex-shrink-0"> {/* Fixed width container for toggle */}
+        <button 
+          onClick={() => onToggle(!isEnabled)}
+          className={`w-full h-full rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
+        >
+          <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
+        </button>
+      </div>
     </div>
     
     {isEnabled && (
@@ -314,11 +335,13 @@ const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, colo
           step={0.01}
           value={vol}
           onChange={(e) => setVol(parseFloat(e.target.value))}
-          className="flex-1 h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary"
+          className="flex-1 h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary touch-none"
         />
-        <span className="text-[10px] font-bold text-apple-text-secondary w-8 tabular-nums">{Math.round(vol * 100)}%</span>
+        <span className="text-[10px] font-bold text-apple-text-secondary w-8 tabular-nums flex-shrink-0 text-right">{Math.round(vol * 100)}%</span>
       </div>
     )}
+    
+    {isEnabled && children}
   </div>
 );
 

@@ -11,9 +11,10 @@ interface AudioContextType {
   removeTrack: (id: string) => void;
   removeSubliminalTrack: (id: string) => void;
   
-  createPlaylist: (name: string) => Promise<void>;
+  createPlaylist: (name: string, initialTrackIds?: string[]) => Promise<void>;
   deletePlaylist: (id: string) => Promise<void>;
   addTrackToPlaylist: (trackId: string, playlistId: string) => Promise<void>;
+  addTracksToPlaylist: (trackIds: string[], playlistId: string) => Promise<void>;
   removeTrackFromPlaylist: (trackId: string, playlistId: string) => Promise<void>;
   
   settings: AppSettings;
@@ -448,11 +449,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const createPlaylist = async (name: string) => {
+  const createPlaylist = async (name: string, initialTrackIds: string[] = []) => {
     const playlist: Playlist = {
       id: Math.random().toString(36).substr(2, 9),
       name,
-      trackIds: [],
+      trackIds: initialTrackIds,
       createdAt: Date.now()
     };
     await db.savePlaylist(playlist);
@@ -465,17 +466,25 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setPlaylists(prev => prev.filter(p => p.id !== id));
   };
 
-  const addTrackToPlaylist = async (trackId: string, playlistId: string) => {
+  const addTracksToPlaylist = async (trackIds: string[], playlistId: string) => {
     const playlist = playlists.find(p => p.id === playlistId);
     if (!playlist) return;
-    if (playlist.trackIds.includes(trackId)) {
-      showToast("Already in playlist");
+    
+    // Filter out duplicates
+    const newIds = trackIds.filter(id => !playlist.trackIds.includes(id));
+    if (newIds.length === 0) {
+      showToast("Tracks already in playlist");
       return;
     }
-    const updated = { ...playlist, trackIds: [...playlist.trackIds, trackId] };
+
+    const updated = { ...playlist, trackIds: [...playlist.trackIds, ...newIds] };
     await db.savePlaylist(updated);
     setPlaylists(prev => prev.map(p => p.id === playlistId ? updated : p));
-    showToast("Added to playlist");
+    showToast(`Added ${newIds.length} track${newIds.length > 1 ? 's' : ''} to playlist`);
+  };
+
+  const addTrackToPlaylist = async (trackId: string, playlistId: string) => {
+    await addTracksToPlaylist([trackId], playlistId);
   };
 
   const removeTrackFromPlaylist = async (trackId: string, playlistId: string) => {
@@ -586,6 +595,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       createPlaylist,
       deletePlaylist,
       addTrackToPlaylist,
+      addTracksToPlaylist,
       removeTrackFromPlaylist,
       settings,
       updateSettings,

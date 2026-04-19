@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useAudio } from '../AudioContext';
 
 export default function AudioEngine() {
@@ -233,7 +233,11 @@ export default function AudioEngine() {
   }, [seekRequest]);
 
   const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
-  const subTrack = subliminalTracks.find(t => t.id === settings.subliminal.selectedTrackId);
+  // Unified sourcing: Check both lists for the subliminal track
+  const subTrack = useMemo(() => {
+    return subliminalTracks.find(t => t.id === settings.subliminal.selectedTrackId) || 
+           tracks.find(t => t.id === settings.subliminal.selectedTrackId);
+  }, [subliminalTracks, tracks, settings.subliminal.selectedTrackId]);
 
   // Initialize main audio
   useEffect(() => {
