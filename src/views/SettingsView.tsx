@@ -33,28 +33,29 @@ export default function SettingsView() {
   };
 
   const Section = ({ id, title, subtitle, icon: Icon, color, children, isEnabled, onToggle }: any) => (
-    <div className="bg-apple-card rounded-[2rem] border border-black/5 shadow-sm overflow-hidden mb-4">
-      <div className="flex items-center">
+    <div className="bg-apple-card rounded-[2rem] border border-black/5 shadow-sm overflow-hidden mb-4 transition-all duration-300">
+      <div className="flex items-center min-h-[72px]">
         <button 
           onClick={() => toggleSection(id)}
-          className="flex-1 p-5 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors"
+          className="flex-1 p-5 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors h-full"
         >
-          <div className={`w-10 h-10 ${color} rounded-2xl flex items-center justify-center`}>
+          <div className={`w-10 h-10 ${color} rounded-2xl flex-shrink-0 flex items-center justify-center`}>
             <Icon size={20} />
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-sm">{title}</h3>
-            <p className="text-[10px] text-apple-text-secondary font-medium uppercase tracking-wider">{subtitle}</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm truncate">{title}</h3>
+            <p className="text-[10px] text-apple-text-secondary font-medium uppercase tracking-wider truncate">{subtitle}</p>
           </div>
           <motion.div
             animate={{ rotate: expandedSection === id ? 90 : 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="flex-shrink-0"
           >
             <ChevronRight size={18} className="text-apple-text-secondary" />
           </motion.div>
         </button>
         {onToggle && (
-          <div className="pr-5">
+          <div className="pr-5 flex-shrink-0 h-full flex items-center">
             <button 
               onClick={() => onToggle(!isEnabled)}
               className={`w-10 h-6 rounded-full relative transition-colors duration-200 ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
@@ -62,19 +63,21 @@ export default function SettingsView() {
               <motion.div 
                 className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full"
                 animate={{ x: isEnabled ? 16 : 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
               />
             </button>
           </div>
         )}
       </div>
       
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {expandedSection === id && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-black/5 bg-gray-50/30"
+            transition={{ type: 'spring', stiffness: 300, damping: 35, mass: 0.8 }}
+            className="border-t border-black/5 bg-gray-50/30 overflow-hidden"
           >
             <div className="p-6">
               {children}

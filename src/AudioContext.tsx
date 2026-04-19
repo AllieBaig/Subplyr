@@ -1,14 +1,20 @@
-import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
-import { Track, AppSettings } from './types';
+import { useState, createContext, useContext, ReactNode, useEffect, useMemo } from 'react';
+import { Track, AppSettings, Playlist, SortOption, GroupOption } from './types';
 import * as db from './db';
 
 interface AudioContextType {
   tracks: Track[];
   subliminalTracks: Track[];
+  playlists: Playlist[];
   addTrack: (file: File) => void;
   addSubliminalTrack: (file: File) => void;
   removeTrack: (id: string) => void;
   removeSubliminalTrack: (id: string) => void;
+  
+  createPlaylist: (name: string) => Promise<void>;
+  deletePlaylist: (id: string) => Promise<void>;
+  addTrackToPlaylist: (trackId: string, playlistId: string) => Promise<void>;
+  removeTrackFromPlaylist: (trackId: string, playlistId: string) => Promise<void>;
   
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
@@ -16,6 +22,7 @@ interface AudioContextType {
   updateBinauralSettings: (newSettings: Partial<AppSettings['binaural']>) => void;
   updateNatureSettings: (newSettings: Partial<AppSettings['nature']>) => void;
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
+  updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   exportAppData: () => Promise<void>;
   
   currentTrackIndex: number | null;
@@ -46,6 +53,7 @@ const AudioContext = createContext<AudioContextType | undefined>(undefined);
 export function AudioProvider({ children }: { children: ReactNode }) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [subliminalTracks, setSubliminalTracks] = useState<Track[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -81,6 +89,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     },
     fadeInOut: true,
     syncPlayback: true,
+    library: {
+      sort: 'recent',
+      group: 'none'
+    }
   };
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -152,6 +164,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           setSubliminalTracks(subTracksWithUrls);
         }
 
+        const savedPlaylists = await db.getPlaylists();
+        if (isMounted) setPlaylists(savedPlaylists);
+
         // Check for shared files from Share Target
         const urlParams = new URLSearchParams(window.location.search);
         const sharedCount = urlParams.get('shared-count');
@@ -214,12 +229,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       name: file.name.replace(/\.[^/.]+$/, ""),
       url: URL.createObjectURL(file), // temporary URL
       artist: 'Unknown Artist',
-      blob: file
+      blob: file,
+      createdAt: Date.now()
     };
     
     await db.saveTrack(newTrack, false);
     setTracks(prev => [...prev, newTrack]);
-    if (currentTrackIndex === null) setCurrentTrackIndex(tracks.length);
+    if (currentTrackIndex === null) setCurrentTrackIndex(0);
   };
 
   const addSubliminalTrack = async (file: File) => {
@@ -234,7 +250,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       id,
       name: file.name.replace(/\.[^/.]+$/, ""),
       url: URL.createObjectURL(file), // temporary URL
-      blob: file
+      blob: file,
+      createdAt: Date.now()
     };
     
     await db.saveTrack(newTrack, true);
@@ -284,6 +301,51 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       ...prev,
       noise: { ...prev.noise, ...newNoi }
     }));
+  };
+
+  const updateLibrarySettings = (newLib: Partial<AppSettings['library']>) => {
+    setSettings(prev => ({
+      ...prev,
+      library: { ...prev.library, ...newLib }
+    }));
+  };
+
+  const createPlaylist = async (name: string) => {
+    const playlist: Playlist = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      trackIds: [],
+      createdAt: Date.now()
+    };
+    await db.savePlaylist(playlist);
+    setPlaylists(prev => [...prev, playlist]);
+    showToast(`Created playlist "${name}"`);
+  };
+
+  const deletePlaylist = async (id: string) => {
+    await db.deletePlaylist(id);
+    setPlaylists(prev => prev.filter(p => p.id !== id));
+  };
+
+  const addTrackToPlaylist = async (trackId: string, playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist) return;
+    if (playlist.trackIds.includes(trackId)) {
+      showToast("Already in playlist");
+      return;
+    }
+    const updated = { ...playlist, trackIds: [...playlist.trackIds, trackId] };
+    await db.savePlaylist(updated);
+    setPlaylists(prev => prev.map(p => p.id === playlistId ? updated : p));
+    showToast("Added to playlist");
+  };
+
+  const removeTrackFromPlaylist = async (trackId: string, playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist) return;
+    const updated = { ...playlist, trackIds: playlist.trackIds.filter(id => id !== trackId) };
+    await db.savePlaylist(updated);
+    setPlaylists(prev => prev.map(p => p.id === playlistId ? updated : p));
   };
 
   const exportAppData = async () => {
@@ -378,16 +440,22 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     <AudioContext.Provider value={{
       tracks,
       subliminalTracks,
+      playlists,
       addTrack,
       addSubliminalTrack,
       removeTrack,
       removeSubliminalTrack,
+      createPlaylist,
+      deletePlaylist,
+      addTrackToPlaylist,
+      removeTrackFromPlaylist,
       settings,
       updateSettings,
       updateSubliminalSettings,
       updateBinauralSettings,
       updateNatureSettings,
       updateNoiseSettings,
+      updateLibrarySettings,
       exportAppData,
       currentTrackIndex,
       setCurrentTrackIndex,

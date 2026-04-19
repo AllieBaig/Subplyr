@@ -4,7 +4,18 @@ export interface Track {
   url: string;
   artist?: string;
   artwork?: string;
+  createdAt: number;
 }
+
+export interface Playlist {
+  id: string;
+  name: string;
+  trackIds: string[];
+  createdAt: number;
+}
+
+export type SortOption = 'date' | 'alphabetical' | 'recent';
+export type GroupOption = 'none' | 'day' | 'week' | 'month';
 
 export interface SubliminalSettings {
   isEnabled: boolean;
@@ -40,4 +51,8 @@ export interface AppSettings {
   noise: NoiseSettings;
   fadeInOut: boolean;
   syncPlayback: boolean;
+  library: {
+    sort: SortOption;
+    group: GroupOption;
+  };
 }

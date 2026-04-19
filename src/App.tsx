@@ -43,7 +43,7 @@ function AppContent() {
   // If initError exists, we show error UI in main but keep TabBar for navigation (if possible) or just focus on repair
 
   return (
-    <div className="max-w-md mx-auto min-h-screen relative flex flex-col pt-12 bg-apple-bg transition-colors duration-500">
+    <div className="fixed inset-0 max-w-md mx-auto bg-apple-bg overflow-hidden flex flex-col pt-safe select-none h-[100dvh]">
       <AudioEngine />
       
       {/* Dynamic Status Overlays */}
@@ -67,14 +67,14 @@ function AppContent() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] bg-black/90 backdrop-blur-xl text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-white/10"
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-black/90 backdrop-blur-xl text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-white/10"
           >
             {toast}
           </motion.div>
         )}
       </AnimatePresence>
       
-      <main className="flex-1 px-6 pb-32">
+      <main className="flex-1 relative overflow-hidden flex flex-col">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div 
@@ -82,7 +82,7 @@ function AppContent() {
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               className="h-full"
+               className="h-full px-6"
             >
               <LoadingPlaceholder />
             </motion.div>
@@ -92,7 +92,7 @@ function AppContent() {
                initial={{ opacity: 0, scale: 0.9 }}
                animate={{ opacity: 1, scale: 1 }}
                exit={{ opacity: 0, scale: 0.9 }}
-               className="h-full flex items-center justify-center pt-20"
+               className="h-full flex items-center justify-center px-6"
             >
               <div className="w-full bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-2xl text-center">
                 <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -112,11 +112,11 @@ function AppContent() {
           ) : (
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, scale: 0.98, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 1.02, y: -10 }}
-              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }} // Apple-style Bezier
-              className="h-full"
+              initial={{ opacity: 0, x: activeTab === 'library' ? -20 : 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: activeTab === 'library' ? 20 : -20 }}
+              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }} 
+              className="h-full flex flex-col px-6 pb-24 overflow-y-auto no-scrollbar"
             >
               {renderView()}
             </motion.div>
@@ -125,7 +125,9 @@ function AppContent() {
       </main>
       
       {!isLoading && !initError && (
-        <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <div className="h-24 flex-shrink-0">
+          <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
       )}
     </div>
   );

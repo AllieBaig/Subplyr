@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { Upload, Plus, Trash2, Share } from 'lucide-react';
+import { Upload, Plus, Trash2, Share, SortAsc, LayoutGrid, List, Calendar } from 'lucide-react';
+import { Track, SortOption, GroupOption } from '../types';
 
 export default function LibraryView() {
-  const { tracks, addTrack, removeTrack, setCurrentTrackIndex, setIsPlaying, currentTrackIndex, showToast } = useAudio();
+  const { 
+    tracks, 
+    addTrack, 
+    removeTrack, 
+    setCurrentTrackIndex, 
+    setIsPlaying, 
+    currentTrackIndex, 
+    showToast,
+    settings,
+    updateLibrarySettings,
+    playlists,
+    createPlaylist,
+    deletePlaylist,
+    addTrackToPlaylist
+  } = useAudio();
+
+  const [view, setView] = useState<'tracks' | 'playlists'>('tracks');
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -14,18 +32,80 @@ export default function LibraryView() {
     }
   };
 
+  const sortedTracks = useMemo(() => {
+    const sorted = [...tracks];
+    const { sort } = settings.library;
+
+    if (sort === 'alphabetical') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === 'date' || sort === 'recent') {
+      sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+    return sorted;
+  }, [tracks, settings.library.sort]);
+
+  const groupedTracks = useMemo(() => {
+    const { group } = settings.library;
+    if (group === 'none') return [{ label: '', items: sortedTracks }];
+
+    const groups: { [key: string]: Track[] } = {};
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    sortedTracks.forEach(track => {
+      const diff = now - (track.createdAt || 0);
+      let label = 'Older';
+
+      if (group === 'day') {
+        if (diff < dayMs) label = 'Today';
+        else if (diff < 2 * dayMs) label = 'Yesterday';
+        else label = new Date(track.createdAt).toLocaleDateString(undefined, { weekday: 'long' });
+      } else if (group === 'week') {
+        if (diff < 7 * dayMs) label = 'This Week';
+        else label = 'Earlier';
+      } else if (group === 'month') {
+        label = new Date(track.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+      }
+
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(track);
+    });
+
+    return Object.entries(groups).map(([label, items]) => ({ label, items }));
+  }, [sortedTracks, settings.library.group]);
+
   return (
-    <div className="flex flex-col gap-8 pb-24">
-      <header className="flex justify-between items-end">
+    <div className="flex flex-col gap-6 pb-24 h-full overflow-y-auto no-scrollbar">
+      <header className="flex justify-between items-end sticky top-0 bg-apple-bg/80 backdrop-blur-md pt-4 pb-2 z-10">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Library</h1>
-          <p className="text-apple-text-secondary">Your offline collection</p>
+          <div className="flex gap-4 mt-1">
+            <button 
+              onClick={() => setView('tracks')}
+              className={`text-sm font-semibold transition-colors ${view === 'tracks' ? 'text-apple-text-primary' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
+            >
+              Tracks
+            </button>
+            <button 
+              onClick={() => setView('playlists')}
+              className={`text-sm font-semibold transition-colors ${view === 'playlists' ? 'text-apple-text-primary' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
+            >
+              Playlists
+            </button>
+          </div>
         </div>
         <div className="flex gap-2">
+          {view === 'tracks' && (
+            <button 
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className={`bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl transition-colors ${showSortMenu ? 'text-apple-blue font-bold' : 'text-apple-text-secondary'}`}
+            >
+              <SortAsc size={20} />
+            </button>
+          )}
           <button 
             onClick={() => showToast("Tip: Share any audio file from 'Files' app to this app directly!")}
             className="bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors text-apple-blue"
-            title="How to Import via Share Sheet"
           >
             <Share size={20} />
           </button>
@@ -36,61 +116,220 @@ export default function LibraryView() {
         </div>
       </header>
 
-      {tracks.length === 0 ? (
-        <div className="bg-apple-card rounded-[2.5rem] p-12 border border-black/5 flex flex-col items-center justify-center text-center gap-4">
-          <div className="w-16 h-16 bg-apple-bg rounded-full flex items-center justify-center text-apple-text-secondary">
-             <Upload size={32} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg">No music yet</h3>
-            <p className="text-sm text-apple-text-secondary px-6">Upload your favorite tracks (MP3, M4A, WAV, AAC) to listen offline.</p>
-          </div>
-          <label className="mt-2 text-apple-blue font-medium cursor-pointer">
-            Select files
-            <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
-          </label>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {tracks.map((track, index) => (
-            <div 
-              key={track.id}
-              className={`group flex items-center gap-4 p-4 rounded-3xl transition-all duration-200 ${
-                currentTrackIndex === index 
-                ? 'bg-apple-blue/5 border-apple-blue/10' 
-                : 'hover:bg-apple-card/60'
-              }`}
-            >
-              <button 
-                onClick={() => {
-                  setCurrentTrackIndex(index);
-                  setIsPlaying(true);
-                }}
-                className="flex-1 flex items-center gap-4 text-left"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center overflow-hidden">
-                   {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-400" size={20} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className={`font-medium truncate ${currentTrackIndex === index ? 'text-apple-blue' : ''}`}>
-                    {track.name}
-                  </h4>
-                  <p className="text-xs text-apple-text-secondary truncate">{track.artist}</p>
-                </div>
-              </button>
-              <button 
-                onClick={() => removeTrack(track.id)}
-                className="p-2 text-apple-text-secondary hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash2 size={16} />
-              </button>
+      {showSortMenu && view === 'tracks' && (
+        <div className="bg-apple-card rounded-3xl border border-black/5 p-4 flex flex-col gap-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Sort By</span>
+            <div className="flex bg-gray-100 rounded-xl p-1">
+              {(['recent', 'alphabetical'] as SortOption[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => updateLibrarySettings({ sort: s })}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${settings.library.sort === s ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Group By</span>
+            <div className="flex bg-gray-100 rounded-xl p-1">
+              {(['none', 'day', 'week', 'month'] as GroupOption[]).map(g => (
+                <button
+                  key={g}
+                  onClick={() => updateLibrarySettings({ group: g })}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${settings.library.group === g ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                >
+                  {g.charAt(0).toUpperCase() + g.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+      )}
+
+      {view === 'tracks' ? (
+        tracks.length === 0 ? (
+          <EmptyState onFileUpload={handleFileUpload} />
+        ) : (
+          <div className="flex flex-col gap-6">
+            {groupedTracks.map((group, gIdx) => (
+              <div key={gIdx} className="flex flex-col gap-2">
+                {group.label && (
+                  <h3 className="text-[10px] font-bold uppercase tracking-[.2em] text-apple-text-secondary px-2 mt-2">
+                    {group.label}
+                  </h3>
+                )}
+                {group.items.map((track) => {
+                  const trueIndex = tracks.findIndex(t => t.id === track.id);
+                  return (
+                    <TrackItem 
+                      key={track.id} 
+                      track={track} 
+                      isActive={currentTrackIndex === trueIndex}
+                      onPlay={() => {
+                        setCurrentTrackIndex(trueIndex);
+                        setIsPlaying(true);
+                      }}
+                      onRemove={() => removeTrack(track.id)}
+                      playlists={playlists}
+                      onAddToPlaylist={(pid) => addTrackToPlaylist(track.id, pid)}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        <PlaylistView 
+          playlists={playlists} 
+          onCreate={() => {
+            const name = prompt("Playlist name:");
+            if (name) createPlaylist(name);
+          }}
+          onDelete={deletePlaylist}
+          tracks={tracks}
+          onTrackPlay={(id) => {
+            const idx = tracks.findIndex(t => t.id === id);
+            if (idx !== -1) {
+              setCurrentTrackIndex(idx);
+              setIsPlaying(true);
+            }
+          }}
+        />
       )}
     </div>
   );
 }
+
+const EmptyState = ({ onFileUpload }: any) => (
+  <div className="bg-apple-card rounded-[2.5rem] p-12 border border-black/5 flex flex-col items-center justify-center text-center gap-4">
+    <div className="w-16 h-16 bg-apple-bg rounded-full flex items-center justify-center text-apple-text-secondary">
+       <Upload size={32} />
+    </div>
+    <div>
+      <h3 className="font-semibold text-lg">No music yet</h3>
+      <p className="text-sm text-apple-text-secondary px-6">Upload your favorite tracks to listen offline.</p>
+    </div>
+    <label className="mt-2 text-apple-blue font-medium cursor-pointer">
+      Select files
+      <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={onFileUpload} />
+    </label>
+  </div>
+);
+
+const TrackItem = ({ track, isActive, onPlay, onRemove, playlists, onAddToPlaylist }: any) => {
+  const [showActions, setShowActions] = useState(false);
+
+  return (
+    <div className={`group flex flex-col rounded-3xl transition-all duration-300 ${isActive ? 'bg-apple-blue/5 border border-apple-blue/10' : 'hover:bg-apple-card/60 border border-transparent'}`}>
+      <div className="flex items-center gap-4 p-4">
+        <button onClick={onPlay} className="flex-1 flex items-center gap-4 text-left min-w-0">
+          <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center overflow-hidden shadow-sm">
+             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-400" size={20} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className={`font-semibold truncate text-sm ${isActive ? 'text-apple-blue' : 'text-apple-text-primary'}`}>
+              {track.name}
+            </h4>
+            <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider">{track.artist}</p>
+          </div>
+        </button>
+        <div className="flex gap-1">
+          <button 
+            onClick={() => setShowActions(!showActions)}
+            className={`p-2 rounded-full transition-colors ${showActions ? 'bg-apple-blue/10 text-apple-blue' : 'text-apple-text-secondary hover:bg-gray-100'}`}
+          >
+            <Plus size={16} />
+          </button>
+          <button onClick={onRemove} className="p-2 text-apple-text-secondary hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      {showActions && (
+        <div className="px-4 pb-4 animate-in slide-in-from-top-1 duration-200">
+          <div className="bg-white/50 backdrop-blur rounded-2xl p-2 border border-black/5 flex flex-col gap-1">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary px-2 py-1">Add to Playlist</p>
+            {playlists.length === 0 ? (
+              <p className="text-[10px] text-apple-text-secondary px-2 py-2 italic text-center">No playlists yet</p>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {playlists.map((p: any) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      onAddToPlaylist(p.id);
+                      setShowActions(false);
+                    }}
+                    className="whitespace-nowrap px-3 py-1.5 bg-apple-blue text-white rounded-xl text-[10px] font-bold"
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay }: any) => (
+  <div className="flex flex-col gap-6">
+    <button 
+      onClick={onCreate}
+      className="w-full p-6 bg-apple-card border border-dashed border-apple-blue/30 rounded-[2rem] flex flex-col items-center gap-2 text-apple-blue hover:bg-apple-blue/5 transition-colors"
+    >
+      <div className="w-12 h-12 rounded-full bg-apple-blue/10 flex items-center justify-center">
+        <Plus size={24} />
+      </div>
+      <span className="font-bold text-sm">Create New Playlist</span>
+    </button>
+
+    <div className="grid grid-cols-1 gap-4">
+      {playlists.map((playlist: any) => (
+        <div key={playlist.id} className="bg-apple-card rounded-[2.5rem] p-6 border border-black/5 shadow-sm">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h3 className="text-xl font-bold tracking-tight">{playlist.name}</h3>
+              <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-widest">{playlist.trackIds.length} tracks</p>
+            </div>
+            <button onClick={() => onDelete(playlist.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+              <Trash2 size={18} />
+            </button>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            {playlist.trackIds.map((tid: string) => {
+              const track = tracks.find((t: any) => t.id === tid);
+              if (!track) return null;
+              return (
+                <button 
+                  key={tid}
+                  onClick={() => onTrackPlay(tid)}
+                  className="flex items-center gap-3 p-2 hover:bg-apple-bg rounded-2xl text-left transition-colors"
+                >
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                    {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-300" size={12} />}
+                  </div>
+                  <span className="text-xs font-semibold truncate flex-1">{track.name}</span>
+                </button>
+              );
+            })}
+            {playlist.trackIds.length === 0 && (
+              <p className="text-[10px] text-apple-text-secondary italic text-center py-4 bg-apple-bg rounded-2xl border border-dashed border-gray-100">No tracks in this playlist yet</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const Music = ({ className, size }: { className?: string, size?: number }) => (
   <svg 

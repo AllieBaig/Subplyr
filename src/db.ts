@@ -5,6 +5,7 @@ const DB_NAME = 'subliminal-db';
 const TRACKS_STORE = 'tracks';
 const SUB_TRACKS_STORE = 'subliminal-tracks';
 const SETTINGS_STORE = 'settings';
+const PLAYLISTS_STORE = 'playlists';
 
 export interface DBTrack extends Track {
   blob: Blob;
@@ -12,8 +13,8 @@ export interface DBTrack extends Track {
 
 export async function initDB() {
   try {
-    return await openDB(DB_NAME, 1, {
-      upgrade(db) {
+    return await openDB(DB_NAME, 2, {
+      upgrade(db, oldVersion) {
         if (!db.objectStoreNames.contains(TRACKS_STORE)) {
           db.createObjectStore(TRACKS_STORE, { keyPath: 'id' });
         }
@@ -22,6 +23,9 @@ export async function initDB() {
         }
         if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
           db.createObjectStore(SETTINGS_STORE);
+        }
+        if (!db.objectStoreNames.contains(PLAYLISTS_STORE)) {
+          db.createObjectStore(PLAYLISTS_STORE, { keyPath: 'id' });
         }
       },
     });
@@ -91,5 +95,33 @@ export async function getSettings(): Promise<AppSettings | null> {
   } catch (err) {
     console.warn("Recovering from settings read failure:", err);
     return null; 
+  }
+}
+
+export async function savePlaylist(playlist: any) {
+  try {
+    const db = await initDB();
+    await db.put(PLAYLISTS_STORE, playlist);
+  } catch (err) {
+    console.error("Failed to save playlist:", err);
+  }
+}
+
+export async function getPlaylists(): Promise<any[]> {
+  try {
+    const db = await initDB();
+    return db.getAll(PLAYLISTS_STORE);
+  } catch (err) {
+    console.error("Failed to retrieve playlists:", err);
+    return [];
+  }
+}
+
+export async function deletePlaylist(id: string) {
+  try {
+    const db = await initDB();
+    await db.delete(PLAYLISTS_STORE, id);
+  } catch (err) {
+    console.error("Failed to delete playlist:", err);
   }
 }
