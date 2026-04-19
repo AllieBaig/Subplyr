@@ -155,8 +155,11 @@ export default function AudioEngine() {
 
   const setupNoise = () => {
     try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
       if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -174,8 +177,11 @@ export default function AudioEngine() {
 
   const setupBinaural = () => {
     try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
       if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
 
@@ -239,15 +245,25 @@ export default function AudioEngine() {
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
     const onLoadedMetadata = () => setDuration(audio.duration);
     const onEnded = () => setIsPlaying(false);
+    const onError = (e: any) => {
+      console.warn("Main Engine: Audio resource stall detected. Retrying state.", e);
+      if (isPlaying) {
+        setTimeout(() => audio.play().catch(() => {}), 1000);
+      }
+    };
 
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
     audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+    audio.addEventListener('stalled', onError);
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
+      audio.removeEventListener('stalled', onError);
       audio.pause();
     };
   }, []);

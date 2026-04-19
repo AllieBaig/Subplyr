@@ -72,9 +72,22 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [swStatus, setSwStatus] = useState<'active' | 'waiting' | 'installing' | 'none'>('none');
   const swSupported = 'serviceWorker' in navigator;
 
+  const CURRENT_VERSION = '1.0.4';
+
   // Monitor Service Worker Status
   useEffect(() => {
     if (!swSupported) return;
+    
+    // Defensive: Version Check & Cache Busting
+    const lastVersion = localStorage.getItem('app_version');
+    if (lastVersion && lastVersion !== CURRENT_VERSION) {
+      console.warn("System Update: Version mismatch detected. Stabilizing environment.");
+      localStorage.clear(); // Clear transient UI state
+      localStorage.setItem('app_version', CURRENT_VERSION);
+      window.location.reload();
+      return;
+    }
+    localStorage.setItem('app_version', CURRENT_VERSION);
 
     const updateStatus = async () => {
       try {
@@ -247,21 +260,30 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   // Load from DB on mount
   useEffect(() => {
     let isMounted = true;
-    const timeoutId = setTimeout(() => {
+    
+    // Safety: 10s absolute timeout for startup
+    const startupGuard = setTimeout(() => {
       if (isMounted && isLoading) {
-        setInitError("Application initialization is taking longer than expected. Please try refreshing.");
+        setInitError("Environment synchronization delay. Attempting system recovery.");
         setIsLoading(false);
       }
-    }, 5000);
+    }, 10000);
 
     async function loadData() {
       try {
         const savedSettings = await db.getSettings();
-        if (isMounted && savedSettings) setSettings(savedSettings);
+        if (isMounted) {
+          if (savedSettings) {
+            setSettings(savedSettings);
+          } else {
+            console.log("No settings found, using defaults");
+          }
+        }
 
         const savedTracks = await db.getTracks(false);
         if (isMounted) {
-          const tracksWithUrls = savedTracks.map(t => ({
+          const validTracks = (savedTracks || []).filter(t => t && t.id && t.blob);
+          const tracksWithUrls = validTracks.map(t => ({
             ...t,
             url: URL.createObjectURL(t.blob)
           }));
@@ -270,7 +292,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
         const savedSubTracks = await db.getTracks(true);
         if (isMounted) {
-          const subTracksWithUrls = savedSubTracks.map(t => ({
+          const validSubTracks = (savedSubTracks || []).filter(t => t && t.id && t.blob);
+          const subTracksWithUrls = validSubTracks.map(t => ({
             ...t,
             url: URL.createObjectURL(t.blob)
           }));
@@ -278,7 +301,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         }
 
         const savedPlaylists = await db.getPlaylists();
-        if (isMounted) setPlaylists(savedPlaylists);
+        if (isMounted) {
+          setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
+        }
 
         // Check for shared files from Share Target
         const urlParams = new URLSearchParams(window.location.search);
@@ -310,14 +335,14 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       } finally {
         if (isMounted) {
           setIsLoading(false);
-          clearTimeout(timeoutId);
+          clearTimeout(startupGuard);
         }
       }
     }
     loadData();
     return () => { 
       isMounted = false; 
-      clearTimeout(timeoutId); 
+      clearTimeout(startupGuard); 
       // Memory Safety: Revoke all object URLs on cleanup
       tracks.forEach(t => { if (t.url.startsWith('blob:')) URL.revokeObjectURL(t.url); });
       subliminalTracks.forEach(t => { if (t.url.startsWith('blob:')) URL.revokeObjectURL(t.url); });

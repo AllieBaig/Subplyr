@@ -9,23 +9,44 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+// Version tracking for cache-busting
+const APP_VERSION = '1.0.4';
+
+// Safety: Hide shell once React is stable
+// Transition smoothly to prevent flash
+setTimeout(() => {
+  const shell = document.getElementById('app-shell');
+  if (shell) {
+    shell.style.opacity = '0';
+    setTimeout(() => {
+      shell.style.display = 'none';
+      shell.classList.add('hidden');
+    }, 400); // Wait for transition
+  }
+}, 800);
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // Aggressive SW registration with immediate claim
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
       .then(registration => {
-        console.log('[SW] Registration successful with scope:', registration.scope);
+        console.log('[SW] PWA System Active:', registration.scope);
         
-        // Handle updates
+        // Auto-update SW if new version is found
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
-          console.log('[SW] New update found, state:', newWorker?.state);
+          if (newWorker) {
+            newWorker.onstatechange = () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[SW] New version available, ready for reload');
+              }
+            };
+          }
         });
       })
       .catch(err => {
-        console.error('[SW] Registration failed:', err);
+        console.error('[SW] System offline fallback failed:', err);
       });
   });
-} else {
-  console.warn('[SW] Service workers are not supported in this browser/context');
 }
 
