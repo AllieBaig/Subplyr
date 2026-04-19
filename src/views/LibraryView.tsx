@@ -23,7 +23,7 @@ export default function LibraryView() {
         </div>
         <label className="bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
           <Plus size={20} />
-          <input type="file" multiple accept="audio/*" className="hidden" onChange={handleFileUpload} />
+          <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
         </label>
       </header>
 
@@ -34,11 +34,11 @@ export default function LibraryView() {
           </div>
           <div>
             <h3 className="font-semibold text-lg">No music yet</h3>
-            <p className="text-sm text-apple-text-secondary px-6">Upload your favorite tracks to start listening offline.</p>
+            <p className="text-sm text-apple-text-secondary px-6">Upload your favorite tracks (MP3, M4A, WAV, AAC) to listen offline.</p>
           </div>
           <label className="mt-2 text-apple-blue font-medium cursor-pointer">
             Select files
-            <input type="file" multiple accept="audio/*" className="hidden" onChange={handleFileUpload} />
+            <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
           </label>
         </div>
       ) : (

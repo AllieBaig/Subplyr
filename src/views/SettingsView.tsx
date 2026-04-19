@@ -126,8 +126,8 @@ export default function SettingsView() {
                 </button>
               ))}
               <label className="flex items-center justify-center p-3 rounded-xl border border-dashed border-black/10 hover:bg-white cursor-pointer text-xs font-semibold text-apple-text-secondary gap-2">
-                <Plus size={14} /> <span>Upload Audio</span>
-                <input type="file" accept="audio/*" className="hidden" onChange={handleSubliminalUpload} />
+                <Plus size={14} /> <span>Upload Audio (M4A Supported)</span>
+                <input type="file" accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleSubliminalUpload} />
               </label>
             </div>
           </div>

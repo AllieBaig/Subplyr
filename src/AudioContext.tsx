@@ -83,6 +83,40 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
+  const validateAudioFile = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      const url = URL.createObjectURL(file);
+      
+      const cleanup = () => {
+        audio.removeEventListener('canplaythrough', onCanPlay);
+        audio.removeEventListener('error', onError);
+        URL.revokeObjectURL(url);
+      };
+
+      const onCanPlay = () => {
+        cleanup();
+        resolve(true);
+      };
+
+      const onError = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      audio.addEventListener('canplaythrough', onCanPlay);
+      audio.addEventListener('error', onError);
+      audio.src = url;
+      audio.load();
+      
+      // Safety timeout for validation
+      setTimeout(() => {
+        cleanup();
+        resolve(false);
+      }, 5000);
+    });
+  };
+
   // Load from DB on mount
   useEffect(() => {
     let isMounted = true;
@@ -141,6 +175,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }, [settings]);
 
   const addTrack = async (file: File) => {
+    const isValid = await validateAudioFile(file);
+    if (!isValid) {
+      showToast(`Unable to use "${file.name}". Format may be unsupported or corrupted.`);
+      return;
+    }
+
     const id = Math.random().toString(36).substr(2, 9);
     const newTrack: db.DBTrack = {
       id,
@@ -156,6 +196,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addSubliminalTrack = async (file: File) => {
+    const isValid = await validateAudioFile(file);
+    if (!isValid) {
+      showToast(`Unsupported format: "${file.name}"`);
+      return;
+    }
+
     const id = Math.random().toString(36).substr(2, 9);
     const newTrack: db.DBTrack = {
       id,
