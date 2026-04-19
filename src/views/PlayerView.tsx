@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Activity, Wind, CloudRain } from 'lucide-react';
+import { 
+  Play, Pause, SkipBack, SkipForward, 
+  Volume2, Activity, Wind, CloudRain, 
+  Sliders, ChevronDown, Check, X, 
+  Moon, Zap, Focus as FocusIcon 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PlayerView() {
@@ -13,11 +18,16 @@ export default function PlayerView() {
     duration, 
     seekTo,
     settings,
+    playNext,
+    playPrevious,
     updateSubliminalSettings,
     updateBinauralSettings,
     updateNatureSettings,
     updateNoiseSettings
   } = useAudio();
+
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
   const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
 
   const formatTime = (time: number) => {
@@ -27,174 +37,278 @@ export default function PlayerView() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    seekTo(time);
+  const activeLayers = [
+    settings.subliminal.isEnabled && "Subliminal",
+    settings.binaural.isEnabled && "Binaural",
+    settings.nature.isEnabled && settings.nature.type,
+    settings.noise.isEnabled && `${settings.noise.type} noise`
+  ].filter(Boolean) as string[];
+
+  const applyPreset = (mode: 'sleep' | 'focus' | 'relax') => {
+    if (mode === 'sleep') {
+      updateSubliminalSettings({ isEnabled: true, volume: 0.1 });
+      updateBinauralSettings({ isEnabled: true, leftFreq: 150, rightFreq: 152, volume: 0.03 });
+      updateNatureSettings({ isEnabled: true, type: 'rain', volume: 0.4 });
+      updateNoiseSettings({ isEnabled: false });
+    } else if (mode === 'focus') {
+      updateSubliminalSettings({ isEnabled: true, volume: 0.15 });
+      updateBinauralSettings({ isEnabled: true, leftFreq: 200, rightFreq: 214, volume: 0.06 });
+      updateNatureSettings({ isEnabled: false });
+      updateNoiseSettings({ isEnabled: true, type: 'white', volume: 0.15 });
+    } else if (mode === 'relax') {
+      updateSubliminalSettings({ isEnabled: true, volume: 0.12 });
+      updateBinauralSettings({ isEnabled: true, leftFreq: 200, rightFreq: 208, volume: 0.05 });
+      updateNatureSettings({ isEnabled: true, type: 'ocean', volume: 0.5 });
+      updateNoiseSettings({ isEnabled: false });
+    }
   };
 
   if (!currentTrack) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-center gap-4 px-12">
-        <div className="w-64 h-64 bg-apple-card rounded-[3rem] shadow-2xl shadow-black/5 flex items-center justify-center">
-            <Music size={64} className="text-apple-bg" />
+      <div className="h-full flex flex-col items-center justify-center text-center gap-4 px-12 pt-20">
+        <div className="w-64 h-64 bg-white rounded-[3rem] shadow-2xl border border-black/5 flex items-center justify-center">
+            <Music size={64} className="text-gray-100" />
         </div>
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold">Select a track</h2>
-          <p className="text-apple-text-secondary mt-2">Pick something from your library to start listening.</p>
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold tracking-tight">Your music awaits</h2>
+          <p className="text-apple-text-secondary mt-3 text-sm leading-relaxed px-4">Visit your library to select a track and start your mindful session.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col items-center justify-between py-8 px-6">
-      {/* Artwork Area */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm">
+    <div className="h-full flex flex-col items-center justify-between pb-12">
+      {/* Top Header */}
+      <header className="w-full flex items-center justify-between mt-4">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center text-apple-text-secondary">
+          <ChevronDown size={24} />
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary">Now Playing</p>
+        </div>
+        <button 
+          onClick={() => setIsPanelOpen(true)}
+          className="w-10 h-10 rounded-full bg-apple-card border border-black/5 flex items-center justify-center text-apple-text-primary shadow-sm active:scale-95 transition-transform"
+        >
+          <Sliders size={18} />
+        </button>
+      </header>
+
+      {/* Main Art & Info */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm px-2">
         <motion.div 
-          className="w-full aspect-square bg-apple-card rounded-[3rem] shadow-2xl shadow-black/10 flex items-center justify-center overflow-hidden"
-          animate={{ 
-            scale: isPlaying ? 1 : 0.9,
-            rotate: isPlaying ? 0 : -2
-          }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          className="w-full aspect-square bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] border border-black/[0.03] flex items-center justify-center overflow-hidden"
+          animate={{ scale: isPlaying ? 1 : 0.92 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
           {currentTrack.artwork ? (
-            <img src={currentTrack.artwork} className="w-full h-full object-cover" />
+            <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-tr from-gray-50 to-gray-200 flex items-center justify-center">
-               <Music size={120} className="text-gray-300" />
+            <div className="w-full h-full bg-gradient-to-tr from-gray-50 to-gray-100 flex items-center justify-center">
+               <Music size={120} className="text-gray-200" />
             </div>
           )}
         </motion.div>
         
-        <div className="mt-12 text-center w-full">
-          <motion.h2 
-            className="text-2xl font-bold tracking-tight truncate"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+        <div className="mt-12 text-center w-full px-4">
+          <h2 className="text-2xl font-bold tracking-tight text-apple-text-primary mb-1 truncate">{currentTrack.name}</h2>
+          <p className="text-apple-text-secondary font-medium">{currentTrack.artist}</p>
+          
+          {/* Layer Indicator Pill */}
+          <button 
+            onClick={() => setIsPanelOpen(true)}
+            className="inline-flex items-center gap-2 mt-6 px-4 py-2 bg-apple-card border border-black/5 rounded-full text-[10px] font-bold tracking-wide uppercase text-apple-text-secondary shadow-sm hover:bg-gray-50 transition-colors"
           >
-            {currentTrack.name}
-          </motion.h2>
-          <motion.p 
-            className="text-apple-text-secondary mt-1"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {currentTrack.artist}
-          </motion.p>
+            <div className="flex gap-1">
+              {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
+              {settings.binaural.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
+              {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+              {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+            </div>
+            <span>{activeLayers.length > 0 ? activeLayers.join(' • ') : 'Standard Audio'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Controls Area */}
-      <div className="w-full max-w-sm flex flex-col gap-8 pb-12">
-        {/* Progress Bar */}
-        <div className="flex flex-col gap-2">
-          <input 
-            type="range"
-            min={0}
-            max={duration || 100}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-1.5 bg-black/5 rounded-full appearance-none cursor-pointer accent-apple-blue overflow-hidden"
-          />
-          <div className="flex justify-between text-[10px] font-semibold text-apple-text-secondary tabular-nums">
+      {/* Playback Controls */}
+      <div className="w-full max-w-sm flex flex-col gap-10 px-4 mt-8">
+        <div className="flex flex-col gap-3">
+          <div className="relative group">
+            <input 
+              type="range"
+              min={0}
+              max={duration || 100}
+              value={currentTime}
+              onChange={(e) => seekTo(parseFloat(e.target.value))}
+              className="w-full h-1 bg-black/5 rounded-full appearance-none cursor-pointer accent-apple-text-primary"
+            />
+          </div>
+          <div className="flex justify-between text-[11px] font-bold text-apple-text-secondary/60 tabular-nums uppercase tracking-widest">
             <span>{formatTime(currentTime)}</span>
-            <span>-{formatTime((duration || 0) - currentTime)}</span>
+            <span>{formatTime(duration)}</span>
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex items-center justify-center gap-10">
-          <button className="text-apple-text-primary active:scale-95 transition-transform">
-            <SkipBack size={28} fill="currentColor" stroke="none" />
+        <div className="flex items-center justify-between px-4 pb-4">
+          <button onClick={playPrevious} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
+            <SkipBack size={32} fill="currentColor" stroke="none" />
           </button>
+          
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-20 h-20 bg-apple-text-primary text-apple-card rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+            className="w-20 h-20 bg-apple-text-primary text-white rounded-full flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.15)] active:scale-95 transition-transform"
           >
             {isPlaying ? <Pause size={32} fill="currentColor" stroke="none" /> : <Play size={32} fill="currentColor" stroke="none" className="ml-1" />}
           </button>
-          <button className="text-apple-text-primary active:scale-95 transition-transform">
-            <SkipForward size={28} fill="currentColor" stroke="none" />
+
+          <button onClick={playNext} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
+            <SkipForward size={32} fill="currentColor" stroke="none" />
           </button>
         </div>
-
-        {/* Layer Toggles */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Subliminal Mini Toggle */}
-          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
-            <div className="flex items-center justify-between">
-              <div className={settings.subliminal.isEnabled ? "text-apple-blue" : "text-apple-text-secondary"}>
-                <Volume2 size={16} />
-              </div>
-              <button 
-                onClick={() => updateSubliminalSettings({ isEnabled: !settings.subliminal.isEnabled })}
-                className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.subliminal.isEnabled ? 'bg-apple-blue' : 'bg-gray-200'}`}
-              >
-                <motion.div 
-                  className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full"
-                  animate={{ x: settings.subliminal.isEnabled ? 12 : 0 }}
-                />
-              </button>
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Subliminal</span>
-          </div>
-
-          {/* Binaural Mini Toggle */}
-          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
-            <div className="flex items-center justify-between">
-              <div className={settings.binaural.isEnabled ? "text-purple-500" : "text-apple-text-secondary"}>
-                <Activity size={16} />
-              </div>
-              <button 
-                onClick={() => updateBinauralSettings({ isEnabled: !settings.binaural.isEnabled })}
-                className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.binaural.isEnabled ? 'bg-purple-500' : 'bg-gray-200'}`}
-              >
-                <motion.div 
-                  className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full"
-                  animate={{ x: settings.binaural.isEnabled ? 12 : 0 }}
-                />
-              </button>
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Binaural</span>
-          </div>
-
-          {/* Nature Mini Toggle */}
-          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
-             <div className="flex items-center justify-between">
-                <div className={settings.nature.isEnabled ? "text-green-500" : "text-apple-text-secondary"}>
-                   <CloudRain size={16} />
-                </div>
-                <button 
-                  onClick={() => updateNatureSettings({ isEnabled: !settings.nature.isEnabled })}
-                  className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.nature.isEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
-                >
-                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.nature.isEnabled ? 12 : 0 }} />
-                </button>
-             </div>
-             <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Nature</span>
-          </div>
-
-          {/* Noise Mini Toggle */}
-          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
-             <div className="flex items-center justify-between">
-                <div className={settings.noise.isEnabled ? "text-orange-500" : "text-apple-text-secondary"}>
-                   <Wind size={16} />
-                </div>
-                <button 
-                  onClick={() => updateNoiseSettings({ isEnabled: !settings.noise.isEnabled })}
-                  className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.noise.isEnabled ? 'bg-orange-500' : 'bg-gray-200'}`}
-                >
-                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.noise.isEnabled ? 12 : 0 }} />
-                </button>
-             </div>
-             <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Noise</span>
-          </div>
-        </div>
       </div>
+
+      {/* Layer Control Panel (Bottom Sheet) */}
+      <AnimatePresence>
+        {isPanelOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPanelOpen(false)}
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[150]"
+            />
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[3rem] z-[200] max-h-[85vh] overflow-y-auto shadow-[0_-20px_40px_rgba(0,0,0,0.1)]"
+            >
+              <div className="sticky top-0 bg-white/80 backdrop-blur-xl px-8 py-6 border-b border-black/[0.03] flex items-center justify-between z-10">
+                <h3 className="text-xl font-bold tracking-tight">Sound Layers</h3>
+                <button 
+                  onClick={() => setIsPanelOpen(false)}
+                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-apple-text-primary active:scale-90"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-8 pb-32 space-y-10">
+                {/* Mode Presets */}
+                <div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary mb-4">Quick Sessions</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <PresetButton icon={Moon} label="Sleep" color="bg-apple-blue" onClick={() => applyPreset('sleep')} />
+                    <PresetButton icon={Zap} label="Focus" color="bg-orange-500" onClick={() => applyPreset('focus')} />
+                    <PresetButton icon={FocusIcon} label="Relax" color="bg-green-500" onClick={() => applyPreset('relax')} />
+                  </div>
+                </div>
+
+                {/* Layer Controls */}
+                <div className="space-y-4">
+                  <LayerOption 
+                    icon={Volume2} 
+                    label="Subliminal" 
+                    isEnabled={settings.subliminal.isEnabled} 
+                    onToggle={(v) => updateSubliminalSettings({ isEnabled: v })}
+                    vol={settings.subliminal.volume}
+                    setVol={(v) => updateSubliminalSettings({ volume: v })}
+                    color="text-apple-blue"
+                    maxVol={0.3}
+                    subtitle="Hidden affirmations layer"
+                  />
+                  <LayerOption 
+                    icon={Activity} 
+                    label="Binaural" 
+                    isEnabled={settings.binaural.isEnabled} 
+                    onToggle={(v) => updateBinauralSettings({ isEnabled: v })}
+                    vol={settings.binaural.volume}
+                    setVol={(v) => updateBinauralSettings({ volume: v })}
+                    color="text-purple-500"
+                    maxVol={0.1}
+                    subtitle={`${settings.binaural.leftFreq}Hz • ${settings.binaural.rightFreq}Hz`}
+                  />
+                  <LayerOption 
+                    icon={CloudRain} 
+                    label="Nature" 
+                    isEnabled={settings.nature.isEnabled} 
+                    onToggle={(v) => updateNatureSettings({ isEnabled: v })}
+                    vol={settings.nature.volume}
+                    setVol={(v) => updateNatureSettings({ volume: v })}
+                    color="text-green-500"
+                    subtitle={settings.nature.type}
+                  />
+                  <LayerOption 
+                    icon={Wind} 
+                    label="Noise" 
+                    isEnabled={settings.noise.isEnabled} 
+                    onToggle={(v) => updateNoiseSettings({ isEnabled: v })}
+                    vol={settings.noise.volume}
+                    setVol={(v) => updateNoiseSettings({ volume: v })}
+                    color="text-orange-500"
+                    subtitle={`${settings.noise.type} noise`}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
+const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
+  <button 
+    onClick={onClick}
+    className="flex flex-col items-center gap-3 p-4 bg-apple-card border border-black/[0.03] rounded-[2rem] hover:bg-gray-50 active:scale-95 transition-all"
+  >
+    <div className={`w-12 h-12 ${color} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-${color.split('-')[1]}/20`}>
+      <Icon size={20} />
+    </div>
+    <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">{label}</span>
+  </button>
+);
+
+const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle }: any) => (
+  <div className="bg-apple-card p-5 rounded-[2.5rem] border border-black/[0.03]">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-4">
+        <div className={`w-10 h-10 ${isEnabled ? 'bg-white shadow-sm' : 'bg-gray-100'} rounded-2xl flex items-center justify-center ${isEnabled ? color : 'text-gray-300'} transition-all`}>
+          <Icon size={20} />
+        </div>
+        <div>
+          <h5 className="text-sm font-bold tracking-tight">{label}</h5>
+          {subtitle && <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider">{subtitle}</p>}
+        </div>
+      </div>
+      <button 
+        onClick={() => onToggle(!isEnabled)}
+        className={`w-12 h-7 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
+      >
+        <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} />
+      </button>
+    </div>
+    
+    {isEnabled && (
+      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+        <input 
+          type="range"
+          min={0}
+          max={maxVol}
+          step={0.01}
+          value={vol}
+          onChange={(e) => setVol(parseFloat(e.target.value))}
+          className="flex-1 h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary"
+        />
+        <span className="text-[10px] font-bold text-apple-text-secondary w-8 tabular-nums">{Math.round(vol * 100)}%</span>
+      </div>
+    )}
+  </div>
+);
 
 const Music = ({ className, size }: { className?: string, size?: number }) => (
   <svg 
