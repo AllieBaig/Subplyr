@@ -10,7 +10,10 @@ export default function AudioEngine() {
     settings,
     setCurrentTime,
     setDuration,
-    setIsPlaying
+    setIsPlaying,
+    playNext,
+    playPrevious,
+    seekTo
   } = useAudio();
   
   const { seekRequest, clearSeekRequest } = useAudio();
@@ -36,10 +39,50 @@ export default function AudioEngine() {
     wind: 'https://assets.mixkit.co/sfx/preview/mixkit-wind-whistle-loop-1159.mp3',
   };
 
+  // iOS Background Audio & Media Session Setup
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
+      navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
+      navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
+      navigator.mediaSession.setActionHandler('previoustrack', () => playPrevious());
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined) seekTo(details.seekTime);
+      });
+    }
+
+    return () => {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.setActionHandler('nexttrack', null);
+        navigator.mediaSession.setActionHandler('previoustrack', null);
+        navigator.mediaSession.setActionHandler('seekto', null);
+      }
+    };
+  }, [playNext, playPrevious, setIsPlaying, seekTo]);
+
+  // Sync Media Session Metadata
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentTrackIndex !== null && tracks[currentTrackIndex]) {
+      const track = tracks[currentTrackIndex];
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.name,
+        artist: track.artist || 'Unknown Artist',
+        album: 'Subliminal Journey',
+        artwork: [
+          { src: track.artwork || 'https://picsum.photos/seed/music/512/512', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+    }
+  }, [currentTrackIndex, tracks]);
+
   // Initialize Web Audio and Cleanup
   useEffect(() => {
     natureAudioRef.current = new Audio();
     natureAudioRef.current.loop = true;
+    (natureAudioRef.current as any).playsInline = true;
+    (natureAudioRef.current as any).webkitPlaysInline = true;
 
     // iOS Safari Audio Unlock Helper
     const unlockAudio = () => {
@@ -189,6 +232,8 @@ export default function AudioEngine() {
   // Initialize main audio
   useEffect(() => {
     const audio = new Audio();
+    (audio as any).playsInline = true;
+    (audio as any).webkitPlaysInline = true;
     mainAudioRef.current = audio;
     
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
@@ -210,6 +255,8 @@ export default function AudioEngine() {
   // Initialize subliminal audio
   useEffect(() => {
     const audio = new Audio();
+    (audio as any).playsInline = true;
+    (audio as any).webkitPlaysInline = true;
     subAudioRef.current = audio;
     return () => audio.pause();
   }, []);
@@ -225,7 +272,7 @@ export default function AudioEngine() {
     }
   }, [currentTrack]);
 
-  // Handle Play/Pause
+  // Handle Play/Pause and MediaSession State
   useEffect(() => {
     if (!mainAudioRef.current) return;
 
@@ -234,6 +281,10 @@ export default function AudioEngine() {
         console.error("Playback error:", e);
         setIsPlaying(false);
       });
+      
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
       
       // Start subliminal with delay
       if (settings.subliminal.isEnabled && subTrack && subAudioRef.current) {
@@ -249,6 +300,9 @@ export default function AudioEngine() {
       }
     } else {
       mainAudioRef.current.pause();
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
       if (subAudioRef.current) subAudioRef.current.pause();
       if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
     }

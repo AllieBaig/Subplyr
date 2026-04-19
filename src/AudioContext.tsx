@@ -20,6 +20,8 @@ interface AudioContextType {
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
+  playNext: () => void;
+  playPrevious: () => void;
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   
@@ -358,6 +360,20 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     showToast("Cache cleared successfully");
   };
 
+  const playNext = () => {
+    if (tracks.length === 0) return;
+    const nextIndex = currentTrackIndex === null || currentTrackIndex >= tracks.length - 1 ? 0 : currentTrackIndex + 1;
+    setCurrentTrackIndex(nextIndex);
+    setIsPlaying(true);
+  };
+
+  const playPrevious = () => {
+    if (tracks.length === 0) return;
+    const prevIndex = currentTrackIndex === null || currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
+    setCurrentTrackIndex(prevIndex);
+    setIsPlaying(true);
+  };
+
   return (
     <AudioContext.Provider value={{
       tracks,
@@ -375,6 +391,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       exportAppData,
       currentTrackIndex,
       setCurrentTrackIndex,
+      playNext,
+      playPrevious,
       isPlaying,
       setIsPlaying,
       currentTime,
