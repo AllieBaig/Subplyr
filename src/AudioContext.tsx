@@ -32,6 +32,11 @@ interface AudioContextType {
   clearSeekRequest: () => void;
   isLoading: boolean;
   initError: string | null;
+  
+  toast: string | null;
+  showToast: (message: string) => void;
+  resetUISettings: () => void;
+  clearAppCache: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -46,8 +51,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [seekRequest, setSeekRequest] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
-  
-  const [settings, setSettings] = useState<AppSettings>({
+  const [toast, setToast] = useState<string | null>(null);
+
+  const DEFAULT_SETTINGS: AppSettings = {
     subliminal: {
       isEnabled: true,
       selectedTrackId: null,
@@ -73,7 +79,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     },
     fadeInOut: true,
     syncPlayback: true,
-  });
+  };
+  
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
   // Load from DB on mount
   useEffect(() => {
@@ -243,6 +251,32 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const clearSeekRequest = () => setSeekRequest(null);
 
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const resetUISettings = () => {
+    // Preserve track selection if it exists
+    const newSettings = { 
+      ...DEFAULT_SETTINGS,
+      subliminal: {
+        ...DEFAULT_SETTINGS.subliminal,
+        selectedTrackId: settings.subliminal.selectedTrackId
+      }
+    };
+    setSettings(newSettings);
+    showToast("UI settings reset to default");
+  };
+
+  const clearAppCache = () => {
+    // Clear localStorage (non-destructive to IndexedDB)
+    localStorage.clear();
+    // Clear any temporary session data
+    sessionStorage.clear();
+    showToast("Cache cleared successfully");
+  };
+
   return (
     <AudioContext.Provider value={{
       tracks,
@@ -270,7 +304,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       seekRequest,
       clearSeekRequest,
       isLoading,
-      initError
+      initError,
+      toast,
+      showToast,
+      resetUISettings,
+      clearAppCache
     }}>
       {children}
     </AudioContext.Provider>

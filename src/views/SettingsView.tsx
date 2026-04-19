@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SettingsView() {
@@ -14,7 +14,10 @@ export default function SettingsView() {
     updateNatureSettings,
     updateNoiseSettings,
     updateSettings,
-    exportAppData
+    exportAppData,
+    resetUISettings,
+    clearAppCache,
+    showToast
   } = useAudio();
 
   const [expandedSection, setExpandedSection] = useState<string | null>('subliminal');
@@ -293,6 +296,58 @@ export default function SettingsView() {
             <span className="text-sm font-semibold">Export All Data (JSON)</span>
           </button>
         </div>
+      </div>
+
+      {/* 6. App Maintenance */}
+      <div className="mt-8 pt-8 border-t border-black/5">
+        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary mb-4 ml-2">App Maintenance</h4>
+        
+        <div className="bg-apple-card rounded-3xl border border-black/5 overflow-hidden flex flex-col">
+          <button 
+            onClick={() => {
+              showToast("Refreshing UI...");
+              setTimeout(() => window.location.reload(), 500);
+            }}
+            className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors border-b border-black/5"
+          >
+            <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-apple-text-primary">
+              <RotateCw size={16} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-medium">Refresh App UI</p>
+              <p className="text-[10px] text-apple-text-secondary">Reloads all components instantly</p>
+            </div>
+          </button>
+
+          <button 
+            onClick={clearAppCache}
+            className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors border-b border-black/5"
+          >
+            <div className="w-8 h-8 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+              <ShieldCheck size={16} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-medium">Clear Cache</p>
+              <p className="text-[10px] text-apple-text-secondary">Removes temporary data & logs</p>
+            </div>
+          </button>
+
+          <button 
+            onClick={resetUISettings}
+            className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-red-500"
+          >
+            <div className="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center">
+              <RotateCcw size={16} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-medium font-semibold">Reset UI Settings</p>
+              <p className="text-[10px] text-red-400">Revert theme & layout to default</p>
+            </div>
+          </button>
+        </div>
+        <p className="mt-4 px-2 text-[10px] text-apple-text-secondary text-center leading-relaxed italic">
+          Maintenance actions do not affect your saved tracks or playlists.
+        </p>
       </div>
     </div>
   );

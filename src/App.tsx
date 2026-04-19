@@ -77,6 +77,19 @@ function AppContent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {useAudio().toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] bg-black/90 backdrop-blur-xl text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-white/10"
+          >
+            {useAudio().toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <main className="flex-1 px-6 pb-32">
         <AnimatePresence mode="wait">
