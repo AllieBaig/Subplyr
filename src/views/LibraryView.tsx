@@ -5,9 +5,12 @@ import { Upload, Plus, Trash2 } from 'lucide-react';
 export default function LibraryView() {
   const { tracks, addTrack, removeTrack, setCurrentTrackIndex, setIsPlaying, currentTrackIndex } = useAudio();
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      Array.from(e.target.files).forEach(addTrack);
+      const filesArray = Array.from(e.target.files);
+      for (const file of filesArray) {
+        await addTrack(file);
+      }
     }
   };
 

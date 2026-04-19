@@ -1,5 +1,6 @@
 import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 import { Track, AppSettings } from './types';
+import * as db from './db';
 
 interface AudioContextType {
   tracks: Track[];
@@ -42,7 +43,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     subliminal: {
       isEnabled: true,
       selectedTrackId: null,
-      volumeBalance: 0.1, // 10% subliminal by default
+      volumeBalance: 0.1,
       isLooping: true,
       delayMs: 0,
     },
@@ -50,36 +51,72 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     syncPlayback: true,
   });
 
-  const addTrack = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const newTrack: Track = {
-      id: Math.random().toString(36).substr(2, 9),
+  // Load from DB on mount
+  useEffect(() => {
+    async function loadData() {
+      const savedSettings = await db.getSettings();
+      if (savedSettings) setSettings(savedSettings);
+
+      const savedTracks = await db.getTracks(false);
+      const tracksWithUrls = savedTracks.map(t => ({
+        ...t,
+        url: URL.createObjectURL(t.blob)
+      }));
+      setTracks(tracksWithUrls);
+
+      const savedSubTracks = await db.getTracks(true);
+      const subTracksWithUrls = savedSubTracks.map(t => ({
+        ...t,
+        url: URL.createObjectURL(t.blob)
+      }));
+      setSubliminalTracks(subTracksWithUrls);
+    }
+    loadData();
+  }, []);
+
+  // Save settings when changed
+  useEffect(() => {
+    db.saveSettings(settings);
+  }, [settings]);
+
+  const addTrack = async (file: File) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newTrack: db.DBTrack = {
+      id,
       name: file.name.replace(/\.[^/.]+$/, ""),
-      url,
+      url: URL.createObjectURL(file), // temporary URL
       artist: 'Unknown Artist',
+      blob: file
     };
+    
+    await db.saveTrack(newTrack, false);
     setTracks(prev => [...prev, newTrack]);
     if (currentTrackIndex === null) setCurrentTrackIndex(tracks.length);
   };
 
-  const addSubliminalTrack = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const newTrack: Track = {
-      id: Math.random().toString(36).substr(2, 9),
+  const addSubliminalTrack = async (file: File) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newTrack: db.DBTrack = {
+      id,
       name: file.name.replace(/\.[^/.]+$/, ""),
-      url,
+      url: URL.createObjectURL(file), // temporary URL
+      blob: file
     };
+    
+    await db.saveTrack(newTrack, true);
     setSubliminalTracks(prev => [...prev, newTrack]);
     if (!settings.subliminal.selectedTrackId) {
        updateSubliminalSettings({ selectedTrackId: newTrack.id });
     }
   };
 
-  const removeTrack = (id: string) => {
+  const removeTrack = async (id: string) => {
+    await db.deleteTrack(id, false);
     setTracks(prev => prev.filter(t => t.id !== id));
   };
 
-  const removeSubliminalTrack = (id: string) => {
+  const removeSubliminalTrack = async (id: string) => {
+    await db.deleteTrack(id, true);
     setSubliminalTracks(prev => prev.filter(t => t.id !== id));
   };
 
