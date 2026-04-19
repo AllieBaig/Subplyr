@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAudio } from '../AudioContext';
-import { Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PlayerView() {
@@ -16,6 +16,7 @@ export default function PlayerView() {
     updateSubliminalSettings
   } = useAudio();
 
+  const { updateBinauralSettings } = useAudio();
   const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
 
   const formatTime = (time: number) => {
@@ -117,24 +118,45 @@ export default function PlayerView() {
           </button>
         </div>
 
-        {/* Subliminal Mini Toggle */}
-        <div className="flex items-center justify-between bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
-           <div className="flex items-center gap-3">
+        {/* Layer Toggles */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Subliminal Mini Toggle */}
+          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
+            <div className="flex items-center justify-between">
               <div className={settings.subliminal.isEnabled ? "text-apple-blue" : "text-apple-text-secondary"}>
-                <Volume2 size={18} />
+                <Volume2 size={16} />
               </div>
-              <span className="text-sm font-medium">Subliminal Layer</span>
-           </div>
-           <button 
-            onClick={() => updateSubliminalSettings({ isEnabled: !settings.subliminal.isEnabled })}
-            className={`w-10 h-6 rounded-full relative transition-colors duration-200 ${settings.subliminal.isEnabled ? 'bg-apple-blue' : 'bg-gray-200'}`}
-           >
-              <motion.div 
-                className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full"
-                animate={{ x: settings.subliminal.isEnabled ? 16 : 0 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              />
-           </button>
+              <button 
+                onClick={() => updateSubliminalSettings({ isEnabled: !settings.subliminal.isEnabled })}
+                className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.subliminal.isEnabled ? 'bg-apple-blue' : 'bg-gray-200'}`}
+              >
+                <motion.div 
+                  className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full"
+                  animate={{ x: settings.subliminal.isEnabled ? 12 : 0 }}
+                />
+              </button>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Subliminal</span>
+          </div>
+
+          {/* Binaural Mini Toggle */}
+          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
+            <div className="flex items-center justify-between">
+              <div className={settings.binaural.isEnabled ? "text-purple-500" : "text-apple-text-secondary"}>
+                <Activity size={16} />
+              </div>
+              <button 
+                onClick={() => updateBinauralSettings({ isEnabled: !settings.binaural.isEnabled })}
+                className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.binaural.isEnabled ? 'bg-purple-500' : 'bg-gray-200'}`}
+              >
+                <motion.div 
+                  className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full"
+                  animate={{ x: settings.binaural.isEnabled ? 12 : 0 }}
+                />
+              </button>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Binaural</span>
+          </div>
         </div>
       </div>
     </div>

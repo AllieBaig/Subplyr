@@ -18,6 +18,63 @@ export default function AudioEngine() {
   const subAudioRef = useRef<HTMLAudioElement | null>(null);
   const delayTimeoutRef = useRef<number | null>(null);
 
+  // Binaural Web Audio Refs
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const leftOscRef = useRef<OscillatorNode | null>(null);
+  const rightOscRef = useRef<OscillatorNode | null>(null);
+  const binauralGainRef = useRef<GainNode | null>(null);
+
+  // Initialize Web Audio and Cleanup
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(console.error);
+      }
+    };
+  }, []);
+
+  const setupBinaural = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioCtxRef.current;
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(console.error);
+    }
+
+    if (!leftOscRef.current || !rightOscRef.current) {
+      // Create Nodes
+      const leftOsc = ctx.createOscillator();
+      const rightOsc = ctx.createOscillator();
+      const merger = ctx.createChannelMerger(2);
+      const gainNode = ctx.createGain();
+
+      leftOsc.type = 'sine';
+      rightOsc.type = 'sine';
+
+      // Initial frequencies
+      leftOsc.frequency.setValueAtTime(settings.binaural.leftFreq, ctx.currentTime);
+      rightOsc.frequency.setValueAtTime(settings.binaural.rightFreq, ctx.currentTime);
+
+      // Route: Left -> Channel 0, Right -> Channel 1 (Explicit Stereo)
+      leftOsc.connect(merger, 0, 0);
+      rightOsc.connect(merger, 0, 1);
+
+      merger.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+
+      leftOsc.start();
+      rightOsc.start();
+
+      leftOscRef.current = leftOsc;
+      rightOscRef.current = rightOsc;
+      binauralGainRef.current = gainNode;
+    }
+  };
+
   // Handle Seek Request
   useEffect(() => {
     if (seekRequest !== null && mainAudioRef.current) {
@@ -97,20 +154,58 @@ export default function AudioEngine() {
     }
   }, [isPlaying, settings.subliminal.isEnabled, subTrack]);
 
+  // Handle Binaural Playback and Fading
+  useEffect(() => {
+    if (isPlaying && settings.binaural.isEnabled) {
+      setupBinaural();
+      if (binauralGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        binauralGainRef.current.gain.setTargetAtTime(settings.binaural.volume, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (binauralGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        binauralGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+      }
+    }
+  }, [isPlaying, settings.binaural.isEnabled, settings.fadeInOut]);
+
+  // Handle Binaural Frequency/Volume Updates
+  useEffect(() => {
+    if (leftOscRef.current && rightOscRef.current && audioCtxRef.current) {
+      const ctx = audioCtxRef.current;
+      // Safety: Difference <= 30Hz
+      const diff = Math.abs(settings.binaural.leftFreq - settings.binaural.rightFreq);
+      let lFreq = settings.binaural.leftFreq;
+      let rFreq = settings.binaural.rightFreq;
+      
+      if (diff > 30) {
+        rFreq = lFreq + 30; // Force limit
+      }
+
+      leftOscRef.current.frequency.setTargetAtTime(lFreq, ctx.currentTime, 0.1);
+      rightOscRef.current.frequency.setTargetAtTime(rFreq, ctx.currentTime, 0.1);
+    }
+    
+    if (binauralGainRef.current && audioCtxRef.current && isPlaying && settings.binaural.isEnabled) {
+      const ctx = audioCtxRef.current;
+      binauralGainRef.current.gain.setTargetAtTime(settings.binaural.volume, ctx.currentTime, 0.1);
+    }
+  }, [settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume]);
+
   // Handle Volume Balance
   useEffect(() => {
     if (mainAudioRef.current) {
-      // 0 volumeBalance = 100% main, 1 volumeBalance = 100% subliminal
-      // However the user says "Keep subliminal low volume" and "volume balance slider (not decibels)"
-      // Typical balance: 
-      // Main volume = (1 - volumeBalance)
-      // Sub volume = volumeBalance
-      mainAudioRef.current.volume = 1 - settings.subliminal.volumeBalance;
+      // Music is 100% base layer
+      mainAudioRef.current.volume = 1;
     }
     if (subAudioRef.current) {
-      subAudioRef.current.volume = settings.subliminal.volumeBalance;
+      // Subliminal is subtle overlay
+      subAudioRef.current.volume = settings.subliminal.volume;
     }
-  }, [settings.subliminal.volumeBalance]);
+  }, [settings.subliminal.volume]);
 
   // Sync handles
   useEffect(() => {

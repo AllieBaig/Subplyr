@@ -13,6 +13,7 @@ interface AudioContextType {
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   updateSubliminalSettings: (newSettings: Partial<AppSettings['subliminal']>) => void;
+  updateBinauralSettings: (newSettings: Partial<AppSettings['binaural']>) => void;
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
@@ -43,9 +44,15 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     subliminal: {
       isEnabled: true,
       selectedTrackId: null,
-      volumeBalance: 0.1,
+      volume: 0.1,
       isLooping: true,
       delayMs: 0,
+    },
+    binaural: {
+      isEnabled: false,
+      leftFreq: 200,
+      rightFreq: 210,
+      volume: 0.05,
     },
     fadeInOut: true,
     syncPlayback: true,
@@ -131,6 +138,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const updateBinauralSettings = (newBin: Partial<AppSettings['binaural']>) => {
+    setSettings(prev => ({
+      ...prev,
+      binaural: { ...prev.binaural, ...newBin }
+    }));
+  };
+
   const seekTo = (time: number) => {
     setSeekRequest(time);
     setCurrentTime(time);
@@ -149,6 +163,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       settings,
       updateSettings,
       updateSubliminalSettings,
+      updateBinauralSettings,
       currentTrackIndex,
       setCurrentTrackIndex,
       isPlaying,

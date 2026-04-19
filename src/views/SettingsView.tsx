@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SettingsView() {
@@ -10,6 +10,7 @@ export default function SettingsView() {
     removeSubliminalTrack,
     settings, 
     updateSubliminalSettings,
+    updateBinauralSettings,
     updateSettings 
   } = useAudio();
 
@@ -98,24 +99,22 @@ export default function SettingsView() {
           <div className="flex flex-col gap-3">
             <div className="flex justify-between items-end ml-1">
               <label className="text-xs font-semibold uppercase tracking-widest text-apple-text-secondary">
-                Volume Balance
+                Overlay Volume
               </label>
               <span className="text-[10px] font-bold text-apple-blue bg-apple-blue/10 px-2 py-0.5 rounded-full">
-                {Math.round(settings.subliminal.volumeBalance * 100)}% Subliminal
+                {Math.round(settings.subliminal.volume * 100)}% Subtle
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-[10px] font-bold text-apple-text-secondary">MAIN</span>
               <input 
                 type="range"
                 min={0}
-                max={1}
+                max={0.3}
                 step={0.01}
-                value={settings.subliminal.volumeBalance}
-                onChange={(e) => updateSubliminalSettings({ volumeBalance: parseFloat(e.target.value) })}
+                value={settings.subliminal.volume}
+                onChange={(e) => updateSubliminalSettings({ volume: parseFloat(e.target.value) })}
                 className="flex-1 h-2 bg-black/5 rounded-full appearance-none cursor-pointer accent-apple-blue"
               />
-              <span className="text-[10px] font-bold text-apple-text-secondary">SUB</span>
             </div>
           </div>
 
@@ -144,6 +143,95 @@ export default function SettingsView() {
                   {settings.subliminal.delayMs === 0 ? 'Instant' : `${settings.subliminal.delayMs / 1000}s`}
                 </span>
              </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Binaural Section */}
+      <section className="bg-apple-card rounded-[2.5rem] border border-black/5 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-black/5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-purple-500/10 text-purple-600 rounded-full flex items-center justify-center">
+                <Activity size={20} />
+             </div>
+             <div>
+                <h3 className="font-semibold">Binaural Beats</h3>
+                <p className="text-xs text-apple-text-secondary">Stereo frequency layer</p>
+             </div>
+          </div>
+          <button 
+            onClick={() => updateBinauralSettings({ isEnabled: !settings.binaural.isEnabled })}
+            className={`w-10 h-6 rounded-full relative transition-colors duration-200 ${settings.binaural.isEnabled ? 'bg-purple-500' : 'bg-gray-200'}`}
+          >
+            <motion.div 
+              className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full"
+              animate={{ x: settings.binaural.isEnabled ? 16 : 0 }}
+            />
+          </button>
+        </div>
+
+        <div className="p-6 flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Left Freq (Hz)</label>
+              <input 
+                type="number" 
+                value={settings.binaural.leftFreq}
+                onChange={(e) => {
+                   const val = parseInt(e.target.value) || 0;
+                   updateBinauralSettings({ leftFreq: val });
+                }}
+                className="w-full bg-apple-bg px-4 py-3 rounded-2xl border border-black/5 font-mono text-sm"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Right Freq (Hz)</label>
+              <input 
+                type="number" 
+                value={settings.binaural.rightFreq}
+                onChange={(e) => {
+                   const val = parseInt(e.target.value) || 0;
+                   updateBinauralSettings({ rightFreq: val });
+                }}
+                className="w-full bg-apple-bg px-4 py-3 rounded-2xl border border-black/5 font-mono text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+             <div className="flex justify-between items-end">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Binaural Volume</label>
+                <span className="text-[10px] font-bold text-purple-600">{Math.round(settings.binaural.volume * 100)}%</span>
+             </div>
+             <input 
+                type="range"
+                min={0}
+                max={0.2}
+                step={0.01}
+                value={settings.binaural.volume}
+                onChange={(e) => updateBinauralSettings({ volume: parseFloat(e.target.value) })}
+                className="w-full h-2 bg-black/5 rounded-full appearance-none cursor-pointer accent-purple-500"
+              />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Quick Presets</label>
+            <div className="grid grid-cols-4 gap-2">
+               {[
+                 { label: 'Delta', l: 200, r: 202 },
+                 { label: 'Theta', l: 200, r: 206 },
+                 { label: 'Alpha', l: 200, r: 210 },
+                 { label: 'Beta', l: 200, r: 220 }
+               ].map(preset => (
+                 <button 
+                  key={preset.label}
+                  onClick={() => updateBinauralSettings({ leftFreq: preset.l, rightFreq: preset.r })}
+                  className="bg-apple-bg border border-black/5 rounded-xl py-2 text-[10px] font-bold hover:bg-apple-blue hover:text-white transition-colors"
+                 >
+                   {preset.label}
+                 </button>
+               ))}
+            </div>
           </div>
         </div>
       </section>
