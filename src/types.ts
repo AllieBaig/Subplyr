@@ -55,4 +55,5 @@ export interface AppSettings {
     sort: SortOption;
     group: GroupOption;
   };
+  miniMode: boolean;
 }

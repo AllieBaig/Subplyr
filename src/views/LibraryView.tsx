@@ -75,11 +75,11 @@ export default function LibraryView() {
   }, [sortedTracks, settings.library.group]);
 
   return (
-    <div className="flex flex-col gap-6 pb-24 h-full overflow-y-auto no-scrollbar">
-      <header className="flex justify-between items-end sticky top-0 bg-apple-bg/80 backdrop-blur-md pt-4 pb-2 z-10">
+    <div className={`flex flex-col h-full overflow-y-auto no-scrollbar ${settings.miniMode ? 'gap-3' : 'gap-6'}`}>
+      <header className={`flex justify-between items-end sticky top-0 bg-apple-bg/80 backdrop-blur-md z-10 ${settings.miniMode ? 'pt-2 pb-1' : 'pt-4 pb-2'}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Library</h1>
-          <div className="flex gap-4 mt-1">
+          <h1 className={`${settings.miniMode ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>Library</h1>
+          <div className={`flex gap-4 ${settings.miniMode ? 'mt-0' : 'mt-1'}`}>
             <button 
               onClick={() => setView('tracks')}
               className={`text-sm font-semibold transition-colors ${view === 'tracks' ? 'text-apple-text-primary' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
@@ -98,26 +98,26 @@ export default function LibraryView() {
           {view === 'tracks' && (
             <button 
               onClick={() => setShowSortMenu(!showSortMenu)}
-              className={`bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl transition-colors ${showSortMenu ? 'text-apple-blue font-bold' : 'text-apple-text-secondary'}`}
+              className={`bg-apple-card border border-black/5 p-3 rounded-2xl transition-colors ${settings.miniMode ? 'p-2 rounded-xl' : 'p-3 rounded-2xl shadow-sm'} ${showSortMenu ? 'text-apple-blue font-bold' : 'text-apple-text-secondary'}`}
             >
-              <SortAsc size={20} />
+              <SortAsc size={settings.miniMode ? 18 : 20} />
             </button>
           )}
           <button 
-            onClick={() => showToast("Tip: Share any audio file from 'Files' app to this app directly!")}
-            className="bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors text-apple-blue"
+            onClick={() => showToast("Tip: Share any audio file to this app directly!")}
+            className={`bg-apple-card border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors text-apple-blue ${settings.miniMode ? 'p-2 rounded-xl' : 'p-3 rounded-2xl shadow-sm'}`}
           >
-            <Share size={20} />
+            <Share size={settings.miniMode ? 18 : 20} />
           </button>
-          <label className="bg-apple-card shadow-sm border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
-            <Plus size={20} />
+          <label className={`bg-apple-card border border-black/5 p-3 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors ${settings.miniMode ? 'p-2 rounded-xl' : 'p-3 rounded-2xl shadow-sm'}`}>
+            <Plus size={settings.miniMode ? 18 : 20} />
             <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
           </label>
         </div>
       </header>
 
       {showSortMenu && view === 'tracks' && (
-        <div className="bg-apple-card rounded-3xl border border-black/5 p-4 flex flex-col gap-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+        <div className={`bg-apple-card border border-black/5 flex flex-col shadow-sm animate-in fade-in slide-in-from-top-2 ${settings.miniMode ? 'rounded-2xl p-3 gap-3' : 'rounded-3xl p-4 gap-4'}`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Sort By</span>
             <div className="flex bg-gray-100 rounded-xl p-1">
@@ -222,13 +222,14 @@ const EmptyState = ({ onFileUpload }: any) => (
 
 const TrackItem = ({ track, isActive, onPlay, onRemove, playlists, onAddToPlaylist }: any) => {
   const [showActions, setShowActions] = useState(false);
+  const { settings } = useAudio();
 
   return (
-    <div className={`group flex flex-col rounded-3xl transition-all duration-300 ${isActive ? 'bg-apple-blue/5 border border-apple-blue/10' : 'hover:bg-apple-card/60 border border-transparent'}`}>
-      <div className="flex items-center gap-4 p-4">
-        <button onClick={onPlay} className="flex-1 flex items-center gap-4 text-left min-w-0">
-          <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center overflow-hidden shadow-sm">
-             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-400" size={20} />}
+    <div className={`group flex flex-col transition-all duration-300 ${settings.miniMode ? 'rounded-xl' : 'rounded-3xl'} ${isActive ? 'bg-apple-blue/5 border border-apple-blue/10' : 'hover:bg-apple-card/60 border border-transparent'}`}>
+      <div className={`flex items-center gap-4 ${settings.miniMode ? 'p-2' : 'p-4'}`}>
+        <button onClick={onPlay} className={`flex-1 flex items-center ${settings.miniMode ? 'gap-3' : 'gap-4'} text-left min-w-0`}>
+          <div className={`${settings.miniMode ? 'w-10 h-10 rounded-xl' : 'w-12 h-12 rounded-2xl'} bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-sm`}>
+             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-400" size={settings.miniMode ? 16 : 20} />}
           </div>
           <div className="flex-1 min-w-0">
             <h4 className={`font-semibold truncate text-sm ${isActive ? 'text-apple-blue' : 'text-apple-text-primary'}`}>
@@ -244,9 +245,11 @@ const TrackItem = ({ track, isActive, onPlay, onRemove, playlists, onAddToPlayli
           >
             <Plus size={16} />
           </button>
-          <button onClick={onRemove} className="p-2 text-apple-text-secondary hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
-            <Trash2 size={16} />
-          </button>
+          {!settings.miniMode && (
+            <button onClick={onRemove} className="p-2 text-apple-text-secondary hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
 

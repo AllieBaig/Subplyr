@@ -96,35 +96,40 @@ export default function PlayerView() {
       </header>
 
       {/* Main Art & Info - Centered with flex-grow but stable containment */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm px-2 overflow-hidden">
-        <div className="w-full relative flex items-center justify-center mb-10">
+      <div className={`flex-1 flex flex-col items-center justify-center w-full max-w-sm overflow-hidden ${settings.miniMode ? 'px-1' : 'px-2'}`}>
+        <div className={`w-full relative flex items-center justify-center ${settings.miniMode ? 'mb-6' : 'mb-10'}`}>
           <motion.div 
-            className="w-full aspect-square bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] border border-black/[0.03] flex items-center justify-center overflow-hidden relative"
+            className={`w-full aspect-square bg-white border border-black/[0.03] flex items-center justify-center overflow-hidden relative ${settings.miniMode ? 'rounded-2xl shadow-md' : 'rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)]'}`}
             animate={{ 
               scale: isPlaying ? 1 : 0.92,
-              filter: isPlaying ? 'blur(0px)' : 'blur(2px)',
-              opacity: isPlaying ? 1 : 0.8
+              filter: settings.miniMode ? 'blur(0px)' : (isPlaying ? 'blur(0px)' : 'blur(2px)'),
+              opacity: settings.miniMode ? (isPlaying ? 1 : 0.9) : (isPlaying ? 1 : 0.8)
             }}
-            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+            transition={{ 
+              type: 'spring', 
+              stiffness: settings.miniMode ? 300 : 200, 
+              damping: settings.miniMode ? 30 : 25 
+            }}
+            style={{ willChange: 'transform, opacity' }}
           >
             {currentTrack.artwork ? (
               <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-full h-full bg-gradient-to-tr from-gray-50 to-gray-100 flex items-center justify-center">
-                 <Music size={120} className="text-gray-200" />
+                 <Music size={settings.miniMode ? 80 : 120} className="text-gray-200" />
               </div>
             )}
           </motion.div>
         </div>
         
-        <div className="text-center w-full px-4 h-32 flex flex-col justify-center">
-          <h2 className="text-2xl font-bold tracking-tight text-apple-text-primary mb-1 truncate leading-tight">{currentTrack.name}</h2>
+        <div className={`text-center w-full px-4 flex flex-col justify-center ${settings.miniMode ? 'h-24' : 'h-32'}`}>
+          <h2 className={`${settings.miniMode ? 'text-xl' : 'text-2xl'} font-bold tracking-tight text-apple-text-primary mb-1 truncate leading-tight`}>{currentTrack.name}</h2>
           <p className="text-apple-text-secondary font-medium text-sm">{currentTrack.artist}</p>
           
           <div className="flex justify-center">
             <button 
               onClick={() => setIsPanelOpen(true)}
-              className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-apple-card border border-black/5 rounded-full text-[10px] font-bold tracking-wide uppercase text-apple-text-secondary shadow-sm hover:bg-gray-50 transition-colors"
+              className={`inline-flex items-center gap-2 bg-apple-card border border-black/5 rounded-full text-[10px] font-bold tracking-wide uppercase text-apple-text-secondary ${settings.miniMode ? 'mt-2 px-3 py-1.5' : 'mt-4 px-4 py-2 shadow-sm'} transition-colors`}
             >
               <div className="flex gap-1">
                 {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
@@ -139,7 +144,7 @@ export default function PlayerView() {
       </div>
 
       {/* Playback Controls - Fixed at Bottom */}
-      <div className="w-full max-w-sm flex flex-col gap-8 px-4 mt-4 flex-shrink-0">
+      <div className={`w-full max-w-sm flex flex-col px-4 flex-shrink-0 ${settings.miniMode ? 'gap-4 mt-2' : 'gap-8 mt-4'}`}>
         <div className="flex flex-col gap-3">
           <div className="relative h-6 flex items-center">
             <input 
@@ -148,7 +153,7 @@ export default function PlayerView() {
               max={duration || 100}
               value={currentTime}
               onChange={(e) => seekTo(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-black/5 rounded-full appearance-none cursor-pointer accent-apple-text-primary"
+              className={`w-full bg-black/5 rounded-full appearance-none cursor-pointer accent-apple-text-primary ${settings.miniMode ? 'h-1' : 'h-1.5'}`}
             />
           </div>
           <div className="flex justify-between text-[11px] font-bold text-apple-text-secondary/50 tabular-nums tracking-widest leading-none">
@@ -157,20 +162,20 @@ export default function PlayerView() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-6 pb-2">
+        <div className={`flex items-center justify-between px-6 ${settings.miniMode ? 'pb-0' : 'pb-2'}`}>
           <button onClick={playPrevious} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
-            <SkipBack size={36} fill="currentColor" stroke="none" />
+            <SkipBack size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" />
           </button>
           
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-20 h-20 bg-apple-text-primary text-white rounded-full flex items-center justify-center shadow-[0_12px_32px_rgba(0,0,0,0.2)] active:scale-95 transition-all"
+            className={`bg-apple-text-primary text-white rounded-full flex items-center justify-center active:scale-95 transition-all ${settings.miniMode ? 'w-16 h-16 shadow-lg' : 'w-20 h-20 shadow-[0_12px_32px_rgba(0,0,0,0.2)]'}`}
           >
-            {isPlaying ? <Pause size={36} fill="currentColor" stroke="none" /> : <Play size={36} fill="currentColor" stroke="none" className="ml-1" />}
+            {isPlaying ? <Pause size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" /> : <Play size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" className="ml-1" />}
           </button>
 
           <button onClick={playNext} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
-            <SkipForward size={36} fill="currentColor" stroke="none" />
+            <SkipForward size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" />
           </button>
         </div>
       </div>

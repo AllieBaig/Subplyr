@@ -14,7 +14,7 @@ export type TabType = 'library' | 'player' | 'settings';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('player');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const { isLoading, initError, toast } = useAudio();
+  const { isLoading, initError, toast, settings } = useAudio();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -43,7 +43,7 @@ function AppContent() {
   // If initError exists, we show error UI in main but keep TabBar for navigation (if possible) or just focus on repair
 
   return (
-    <div className="fixed inset-0 max-w-md mx-auto bg-apple-bg overflow-hidden flex flex-col pt-safe select-none h-[100dvh]">
+    <div className={`fixed inset-0 max-w-md mx-auto bg-apple-bg overflow-hidden flex flex-col pt-safe select-none h-[100dvh] transition-[padding,background] duration-500 ease-in-out ${settings.miniMode ? 'p-1' : ''}`}>
       <AudioEngine />
       
       {/* Dynamic Status Overlays */}
@@ -67,7 +67,7 @@ function AppContent() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-black/90 backdrop-blur-xl text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-white/10"
+            className={`fixed ${settings.miniMode ? 'bottom-20' : 'bottom-28'} left-1/2 -translate-x-1/2 z-[100] bg-black/90 backdrop-blur-xl text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-white/10`}
           >
             {toast}
           </motion.div>
@@ -82,7 +82,7 @@ function AppContent() {
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               className="h-full px-6"
+               className={`h-full ${settings.miniMode ? 'px-3' : 'px-6'}`}
             >
               <LoadingPlaceholder />
             </motion.div>
@@ -92,9 +92,9 @@ function AppContent() {
                initial={{ opacity: 0, scale: 0.9 }}
                animate={{ opacity: 1, scale: 1 }}
                exit={{ opacity: 0, scale: 0.9 }}
-               className="h-full flex items-center justify-center px-6"
+               className={`h-full flex items-center justify-center ${settings.miniMode ? 'px-3' : 'px-6'}`}
             >
-              <div className="w-full bg-white rounded-[2.5rem] p-8 border border-black/5 shadow-2xl text-center">
+              <div className={`w-full bg-white ${settings.miniMode ? 'rounded-2xl p-6' : 'rounded-[2.5rem] p-8'} border border-black/5 shadow-2xl text-center`}>
                 <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <AlertCircle size={32} />
                 </div>
@@ -115,8 +115,12 @@ function AppContent() {
               initial={{ opacity: 0, x: activeTab === 'library' ? -20 : 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: activeTab === 'library' ? 20 : -20 }}
-              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }} 
-              className="h-full flex flex-col px-6 pb-24 overflow-y-auto no-scrollbar"
+              transition={{ 
+                duration: settings.miniMode ? 0.35 : 0.5, 
+                ease: [0.23, 1, 0.32, 1] 
+              }} 
+              className={`h-full flex flex-col overflow-y-auto no-scrollbar ${settings.miniMode ? 'px-3 pb-20' : 'px-6 pb-24'}`}
+              style={{ willChange: 'transform, opacity' }}
             >
               {renderView()}
             </motion.div>
@@ -125,7 +129,7 @@ function AppContent() {
       </main>
       
       {!isLoading && !initError && (
-        <div className="h-24 flex-shrink-0">
+        <div className={settings.miniMode ? "h-20 flex-shrink-0" : "h-24 flex-shrink-0"}>
           <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
       )}

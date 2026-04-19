@@ -275,6 +275,24 @@ export default function SettingsView() {
         
         <div className="bg-apple-card rounded-3xl border border-black/5 overflow-hidden">
           <button 
+            onClick={() => updateSettings({ miniMode: !settings.miniMode })}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-black/5"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-apple-card rounded-xl border border-black/5 flex items-center justify-center text-apple-text-primary">
+                <Music size={14} className={settings.miniMode ? "scale-90" : ""} />
+              </div>
+              <div className="text-left">
+                <span className="text-sm font-medium">Mini Mode</span>
+                {settings.miniMode && <p className="text-[10px] text-apple-blue font-bold">Optimized for 60fps</p>}
+              </div>
+            </div>
+            <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.miniMode ? 'bg-apple-blue' : 'bg-gray-200'}`}>
+              <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.miniMode ? 12 : 0 }} />
+            </div>
+          </button>
+
+          <button 
             onClick={() => updateSettings({ fadeInOut: !settings.fadeInOut })}
             className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-black/5"
           >

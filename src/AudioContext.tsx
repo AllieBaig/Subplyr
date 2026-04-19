@@ -92,7 +92,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     library: {
       sort: 'recent',
       group: 'none'
-    }
+    },
+    miniMode: false
   };
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
