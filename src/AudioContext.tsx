@@ -30,6 +30,8 @@ interface AudioContextType {
   seekTo: (time: number) => void;
   seekRequest: number | null;
   clearSeekRequest: () => void;
+  isLoading: boolean;
+  initError: string | null;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -42,6 +44,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [seekRequest, setSeekRequest] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
   
   const [settings, setSettings] = useState<AppSettings>({
     subliminal: {
@@ -73,25 +77,44 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   // Load from DB on mount
   useEffect(() => {
+    let isMounted = true;
+    const timeoutId = setTimeout(() => {
+      if (isMounted && isLoading) {
+        setInitError("Application initialization is taking longer than expected. Please try refreshing.");
+        setIsLoading(false);
+      }
+    }, 5000);
+
     async function loadData() {
-      const savedSettings = await db.getSettings();
-      if (savedSettings) setSettings(savedSettings);
+      try {
+        const savedSettings = await db.getSettings();
+        if (isMounted && savedSettings) setSettings(savedSettings);
 
-      const savedTracks = await db.getTracks(false);
-      const tracksWithUrls = savedTracks.map(t => ({
-        ...t,
-        url: URL.createObjectURL(t.blob)
-      }));
-      setTracks(tracksWithUrls);
+        const savedTracks = await db.getTracks(false);
+        const tracksWithUrls = savedTracks.map(t => ({
+          ...t,
+          url: URL.createObjectURL(t.blob)
+        }));
+        if (isMounted) setTracks(tracksWithUrls);
 
-      const savedSubTracks = await db.getTracks(true);
-      const subTracksWithUrls = savedSubTracks.map(t => ({
-        ...t,
-        url: URL.createObjectURL(t.blob)
-      }));
-      setSubliminalTracks(subTracksWithUrls);
+        const savedSubTracks = await db.getTracks(true);
+        const subTracksWithUrls = savedSubTracks.map(t => ({
+          ...t,
+          url: URL.createObjectURL(t.blob)
+        }));
+        if (isMounted) setSubliminalTracks(subTracksWithUrls);
+      } catch (err) {
+        console.error("Critical DB error:", err);
+        if (isMounted) setInitError("Failed to load your library. Data might be corrupted.");
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          clearTimeout(timeoutId);
+        }
+      }
     }
     loadData();
+    return () => { isMounted = false; clearTimeout(timeoutId); };
   }, []);
 
   // Save settings when changed
@@ -245,7 +268,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       setDuration,
       seekTo,
       seekRequest,
-      clearSeekRequest
+      clearSeekRequest,
+      isLoading,
+      initError
     }}>
       {children}
     </AudioContext.Provider>

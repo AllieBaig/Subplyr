@@ -50,6 +50,20 @@ export async function saveSettings(settings: AppSettings) {
 }
 
 export async function getSettings(): Promise<AppSettings | null> {
-  const db = await initDB();
-  return db.get(SETTINGS_STORE, 'current');
+  try {
+    const db = await initDB();
+    const settings = await db.get(SETTINGS_STORE, 'current');
+    
+    if (settings) {
+      // Basic validation: ensure critical top-level keys exist
+      if (settings.subliminal && typeof settings.fadeInOut === 'boolean') {
+        return settings;
+      }
+      console.warn("Settings found but seem incomplete. Ignoring corrupted data.");
+    }
+    return null;
+  } catch (err) {
+    console.error("Failed to read settings from IndexedDB:", err);
+    return null; // Fallback to defaults
+  }
 }

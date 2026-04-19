@@ -89,57 +89,67 @@ export default function AudioEngine() {
   };
 
   const setupNoise = () => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioCtxRef.current;
-    if (!noiseGainRef.current) {
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.connect(ctx.destination);
-      noiseGainRef.current = gain;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      
+      if (!noiseGainRef.current) {
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.connect(ctx.destination);
+        noiseGainRef.current = gain;
+      }
+    } catch (err) {
+      console.error("Failed to setup noise context:", err);
     }
   };
 
   const setupBinaural = () => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioCtxRef.current;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(console.error);
-    }
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
 
-    if (!leftOscRef.current || !rightOscRef.current) {
-      // Create Nodes
-      const leftOsc = ctx.createOscillator();
-      const rightOsc = ctx.createOscillator();
-      const merger = ctx.createChannelMerger(2);
-      const gainNode = ctx.createGain();
+      if (!leftOscRef.current || !rightOscRef.current) {
+        // Create Nodes
+        const leftOsc = ctx.createOscillator();
+        const rightOsc = ctx.createOscillator();
+        const merger = ctx.createChannelMerger(2);
+        const gainNode = ctx.createGain();
 
-      leftOsc.type = 'sine';
-      rightOsc.type = 'sine';
+        leftOsc.type = 'sine';
+        rightOsc.type = 'sine';
 
-      // Initial frequencies
-      leftOsc.frequency.setValueAtTime(settings.binaural.leftFreq, ctx.currentTime);
-      rightOsc.frequency.setValueAtTime(settings.binaural.rightFreq, ctx.currentTime);
+        // Initial frequencies
+        leftOsc.frequency.setValueAtTime(settings.binaural.leftFreq, ctx.currentTime);
+        rightOsc.frequency.setValueAtTime(settings.binaural.rightFreq, ctx.currentTime);
 
-      // Route: Left -> Channel 0, Right -> Channel 1 (Explicit Stereo)
-      leftOsc.connect(merger, 0, 0);
-      rightOsc.connect(merger, 0, 1);
+        // Route: Left -> Channel 0, Right -> Channel 1 (Explicit Stereo)
+        leftOsc.connect(merger, 0, 0);
+        rightOsc.connect(merger, 0, 1);
 
-      merger.connect(gainNode);
-      gainNode.connect(ctx.destination);
+        merger.connect(gainNode);
+        gainNode.connect(ctx.destination);
 
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0, ctx.currentTime);
 
-      leftOsc.start();
-      rightOsc.start();
+        leftOsc.start();
+        rightOsc.start();
 
-      leftOscRef.current = leftOsc;
-      rightOscRef.current = rightOsc;
-      binauralGainRef.current = gainNode;
+        leftOscRef.current = leftOsc;
+        rightOscRef.current = rightOsc;
+        binauralGainRef.current = gainNode;
+      }
+    } catch (err) {
+      console.error("Binaural setup failed:", err);
     }
   };
 
