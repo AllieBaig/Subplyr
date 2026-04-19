@@ -14,6 +14,9 @@ interface AudioContextType {
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   updateSubliminalSettings: (newSettings: Partial<AppSettings['subliminal']>) => void;
   updateBinauralSettings: (newSettings: Partial<AppSettings['binaural']>) => void;
+  updateNatureSettings: (newSettings: Partial<AppSettings['nature']>) => void;
+  updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
+  exportAppData: () => Promise<void>;
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
@@ -53,6 +56,16 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       leftFreq: 200,
       rightFreq: 210,
       volume: 0.05,
+    },
+    nature: {
+      isEnabled: false,
+      type: 'rain',
+      volume: 0.5,
+    },
+    noise: {
+      isEnabled: false,
+      type: 'white',
+      volume: 0.2,
     },
     fadeInOut: true,
     syncPlayback: true,
@@ -145,6 +158,61 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const updateNatureSettings = (newNat: Partial<AppSettings['nature']>) => {
+    setSettings(prev => ({
+      ...prev,
+      nature: { ...prev.nature, ...newNat }
+    }));
+  };
+
+  const updateNoiseSettings = (newNoi: Partial<AppSettings['noise']>) => {
+    setSettings(prev => ({
+      ...prev,
+      noise: { ...prev.noise, ...newNoi }
+    }));
+  };
+
+  const exportAppData = async () => {
+    const musicTracks = await db.getTracks(false);
+    const subTracks = await db.getTracks(true);
+    
+    // Helper to convert Blob to base64 for JSON export
+    const blobToBase64 = (blob: Blob): Promise<string> => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    };
+
+    const tracksData = await Promise.all(musicTracks.map(async t => ({
+      ...t,
+      blob: await blobToBase64(t.blob)
+    })));
+
+    const subTracksData = await Promise.all(subTracks.map(async t => ({
+      ...t,
+      blob: await blobToBase64(t.blob)
+    })));
+
+    const exportObject = {
+      version: "1.0.0",
+      exportedAt: new Date().toISOString(),
+      tracks: tracksData,
+      subliminalTracks: subTracksData,
+      settings: settings
+    };
+
+    const blob = new Blob([JSON.stringify(exportObject, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = `appdata_${timestamp}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const seekTo = (time: number) => {
     setSeekRequest(time);
     setCurrentTime(time);
@@ -164,6 +232,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateSettings,
       updateSubliminalSettings,
       updateBinauralSettings,
+      updateNatureSettings,
+      updateNoiseSettings,
+      exportAppData,
       currentTrackIndex,
       setCurrentTrackIndex,
       isPlaying,

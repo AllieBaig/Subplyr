@@ -9,21 +9,35 @@ export interface Track {
 export interface SubliminalSettings {
   isEnabled: boolean;
   selectedTrackId: string | null;
-  volume: number; // 0 to 0.3 (as per 30% limit)
+  volume: number; // 0 to 0.3
   isLooping: boolean;
   delayMs: number;
-}
-
-export interface AppSettings {
-  subliminal: SubliminalSettings;
-  binaural: BinauralSettings;
-  fadeInOut: boolean;
-  syncPlayback: boolean;
 }
 
 export interface BinauralSettings {
   isEnabled: boolean;
   leftFreq: number;
   rightFreq: number;
-  volume: number; // 0 to 1, but should be kept low
+  volume: number;
+}
+
+export interface NatureSettings {
+  isEnabled: boolean;
+  type: 'rain' | 'ocean' | 'forest' | 'wind';
+  volume: number;
+}
+
+export interface NoiseSettings {
+  isEnabled: boolean;
+  type: 'white' | 'pink' | 'brown';
+  volume: number;
+}
+
+export interface AppSettings {
+  subliminal: SubliminalSettings;
+  binaural: BinauralSettings;
+  nature: NatureSettings;
+  noise: NoiseSettings;
+  fadeInOut: boolean;
+  syncPlayback: boolean;
 }

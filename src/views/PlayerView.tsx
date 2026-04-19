@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAudio } from '../AudioContext';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Activity } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Activity, Wind, CloudRain } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PlayerView() {
@@ -13,10 +13,11 @@ export default function PlayerView() {
     duration, 
     seekTo,
     settings,
-    updateSubliminalSettings
+    updateSubliminalSettings,
+    updateBinauralSettings,
+    updateNatureSettings,
+    updateNoiseSettings
   } = useAudio();
-
-  const { updateBinauralSettings } = useAudio();
   const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
 
   const formatTime = (time: number) => {
@@ -156,6 +157,38 @@ export default function PlayerView() {
               </button>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Binaural</span>
+          </div>
+
+          {/* Nature Mini Toggle */}
+          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
+             <div className="flex items-center justify-between">
+                <div className={settings.nature.isEnabled ? "text-green-500" : "text-apple-text-secondary"}>
+                   <CloudRain size={16} />
+                </div>
+                <button 
+                  onClick={() => updateNatureSettings({ isEnabled: !settings.nature.isEnabled })}
+                  className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.nature.isEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.nature.isEnabled ? 12 : 0 }} />
+                </button>
+             </div>
+             <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Nature</span>
+          </div>
+
+          {/* Noise Mini Toggle */}
+          <div className="flex flex-col gap-2 bg-apple-card/50 px-4 py-3 rounded-2xl border border-black/5">
+             <div className="flex items-center justify-between">
+                <div className={settings.noise.isEnabled ? "text-orange-500" : "text-apple-text-secondary"}>
+                   <Wind size={16} />
+                </div>
+                <button 
+                  onClick={() => updateNoiseSettings({ isEnabled: !settings.noise.isEnabled })}
+                  className={`w-8 h-5 rounded-full relative transition-colors duration-200 ${settings.noise.isEnabled ? 'bg-orange-500' : 'bg-gray-200'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.noise.isEnabled ? 12 : 0 }} />
+                </button>
+             </div>
+             <span className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Noise</span>
           </div>
         </div>
       </div>
