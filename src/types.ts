@@ -52,6 +52,12 @@ export interface AudioTools {
   normalizeTargetDb: number | null;
 }
 
+export interface PlaylistMemory {
+  trackId: string;
+  position: number;
+  timestamp: number;
+}
+
 export interface AppSettings {
   subliminal: SubliminalSettings;
   binaural: BinauralSettings;
@@ -67,4 +73,6 @@ export interface AppSettings {
     group: GroupOption;
   };
   miniMode: boolean;
+  hiddenLayersPosition: 'top' | 'bottom';
+  playlistMemory: Record<string, PlaylistMemory>;
 }

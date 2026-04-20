@@ -19,6 +19,10 @@ interface AudioContextType {
   removeTracksFromPlaylist: (trackIds: string[], playlistId: string) => Promise<void>;
   renamePlaylist: (id: string, name: string) => Promise<void>;
   
+  playingPlaylistId: string | null;
+  setPlayingPlaylistId: (id: string | null) => void;
+  resumePlaylist: (id: string) => void;
+  
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   updateSubliminalSettings: (newSettings: Partial<AppSettings['subliminal']>) => void;
@@ -68,6 +72,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [subliminalTracks, setSubliminalTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
+  const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -232,7 +237,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       sort: 'recent',
       group: 'none'
     },
-    miniMode: false
+    miniMode: false,
+    hiddenLayersPosition: 'bottom',
+    playlistMemory: {}
   };
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -369,6 +376,34 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     db.saveSettings(settings);
   }, [settings]);
+
+  // Playlist Memory Tracker
+  useEffect(() => {
+    if (!playingPlaylistId || isLoading || currentTrackIndex === null || !isPlaying) return;
+    
+    const playlist = playlists.find(p => p.id === playingPlaylistId);
+    if (!playlist) return;
+
+    const currentTrackId = playlist.trackIds[currentTrackIndex];
+    if (!currentTrackId) return;
+
+    // Throttle memory updates to once every 5 seconds to minimize DB writes
+    const timer = setTimeout(() => {
+      setSettings(prev => ({
+        ...prev,
+        playlistMemory: {
+          ...prev.playlistMemory,
+          [playingPlaylistId]: {
+            trackId: currentTrackId,
+            position: currentTime,
+            timestamp: Date.now()
+          }
+        }
+      }));
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [playingPlaylistId, currentTrackIndex, Math.floor(currentTime / 5), isPlaying, isLoading]);
 
   const addTrack = async (file: File) => {
     const isValid = await validateAudioFile(file);
@@ -528,6 +563,32 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     await db.savePlaylist(updated);
     setPlaylists(prev => prev.map(p => p.id === id ? updated : p));
     showToast(`Playlist renamed to "${name}"`);
+  };
+
+  const resumePlaylist = (playlistId: string) => {
+    const memory = settings.playlistMemory[playlistId];
+    const playlist = playlists.find(p => p.id === playlistId);
+    
+    if (playlist && playlist.trackIds.length > 0) {
+      let trackIndex = 0;
+      let position = 0;
+      
+      if (memory) {
+        const foundIndex = playlist.trackIds.indexOf(memory.trackId);
+        if (foundIndex !== -1) {
+          trackIndex = foundIndex;
+          position = memory.position;
+        }
+      }
+      
+      setPlayingPlaylistId(playlistId);
+      setCurrentTrackIndex(trackIndex);
+      if (position > 0) {
+        setTimeout(() => seekTo(position), 100);
+      }
+      setIsPlaying(true);
+      showToast(memory ? `Resuming "${playlist.name}"` : `Playing "${playlist.name}"`);
+    }
   };
 
   const exportAppData = async () => {
@@ -736,6 +797,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       relinkTrack,
       removeTracksFromPlaylist,
       renamePlaylist,
+      playingPlaylistId,
+      setPlayingPlaylistId,
+      resumePlaylist,
       currentTrackIndex,
       setCurrentTrackIndex,
       playNext,

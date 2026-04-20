@@ -28,7 +28,10 @@ export default function LibraryView() {
     addTracksToPlaylist,
     removeTracksFromPlaylist,
     relinkTrack,
-    renamePlaylist
+    renamePlaylist,
+    playingPlaylistId,
+    setPlayingPlaylistId,
+    resumePlaylist
   } = useAudio();
 
   const [view, setView] = useState<'tracks' | 'playlists' | 'playlist_detail'>('tracks');
@@ -250,6 +253,7 @@ export default function LibraryView() {
             onTrackPlay={(id) => {
               const idx = tracks.findIndex(t => t.id === id);
               if (idx !== -1) {
+                setPlayingPlaylistId(activePlaylistId);
                 setCurrentTrackIndex(idx);
                 setIsPlaying(true);
               }
@@ -270,6 +274,8 @@ export default function LibraryView() {
             showSettings={showPlaylistSettings}
             onToggleSettings={() => setShowPlaylistSettings(!showPlaylistSettings)}
             playlists={playlists}
+            settings={settings}
+            resumePlaylist={resumePlaylist}
          />
       ) : view === 'tracks' ? (
         tracks.length === 0 ? (
@@ -758,9 +764,13 @@ const PlaylistDetailView = ({
   onSort,
   showSettings,
   onToggleSettings,
-  playlists
+  playlists,
+  settings,
+  resumePlaylist
 }: any) => {
   
+  const memory = settings?.playlistMemory?.[playlist.id];
+
   const sortedTracks = useMemo(() => {
     let list = playlist.trackIds.map((tid: string) => tracks.find((t: any) => t.id === tid)).filter(Boolean);
     
@@ -788,6 +798,15 @@ const PlaylistDetailView = ({
           <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-widest">{playlist.trackIds.length} tracks</p>
         </div>
         <div className="flex gap-2">
+          {!isSelectMode && memory && (
+             <button 
+                onClick={() => resumePlaylist(playlist.id)}
+                className="flex items-center gap-2 text-[10px] font-bold text-white uppercase tracking-widest px-4 py-1.5 bg-apple-blue rounded-full shadow-lg shadow-apple-blue/20 active:scale-95 transition-all"
+              >
+                <Zap size={12} fill="currentColor" />
+                Resume
+              </button>
+          )}
           {!isSelectMode && playlist.trackIds.length > 0 && (
              <button 
                 onClick={onEnterSelect}
@@ -866,9 +885,16 @@ const PlaylistDetailView = ({
       <div className="flex flex-col gap-2">
         {sortedTracks.map(track => {
           const isSelected = selectedTrackIds.has(track.id);
+          const isLastPlayed = memory?.trackId === track.id;
+
           return (
-            <div key={track.id} className={`flex items-center gap-4 p-3 rounded-2xl transition-all ${isSelected ? 'bg-apple-blue/5' : 'hover:bg-apple-card/60'}`}>
-              {isSelectMode && (
+            <div key={track.id} className={`flex items-center gap-4 p-3 rounded-[1.5rem] transition-all relative ${isSelected ? 'bg-apple-blue shadow-lg scale-[1.02] text-white' : isLastPlayed && !isSelectMode ? 'bg-apple-blue/[0.03] ring-1 ring-apple-blue/10' : 'hover:bg-apple-card/60'}`}>
+               {isLastPlayed && !isSelectMode && (
+                 <div className="absolute top-1 right-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-apple-blue animate-pulse" />
+                 </div>
+               )}
+               {isSelectMode && (
                 <button 
                   onClick={() => onToggleSelection(track.id)}
                   className={`flex-shrink-0 transition-transform ${isSelected ? 'scale-110' : 'scale-100'}`}

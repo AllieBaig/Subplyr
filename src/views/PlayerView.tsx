@@ -188,7 +188,7 @@ export default function PlayerView() {
         </div>
       </div>
 
-      {/* Layer Control Panel (Bottom Sheet) */}
+      {/* Layer Control Panel (Bottom/Top Sheet) */}
       <AnimatePresence>
         {isPanelOpen && (
           <>
@@ -200,20 +200,31 @@ export default function PlayerView() {
               className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[150]"
             />
             <motion.div 
-              initial={{ y: '100%' }}
+              initial={{ y: settings.hiddenLayersPosition === 'top' ? '-100%' : '100%' }}
               animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              exit={{ y: settings.hiddenLayersPosition === 'top' ? '-100%' : '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[3rem] z-[200] max-h-[85vh] overflow-y-auto shadow-[0_-20px_40px_rgba(0,0,0,0.1)]"
+              className={`fixed ${settings.hiddenLayersPosition === 'top' ? 'top-0 rounded-b-[3rem] shadow-[0_20px_40px_rgba(0,0,0,0.1)]' : 'bottom-0 rounded-t-[3rem] shadow-[0_-20px_40px_rgba(0,0,0,0.1)]'} left-0 right-0 max-w-md mx-auto bg-white z-[200] max-h-[85vh] overflow-y-auto no-scrollbar`}
             >
               <div className="sticky top-0 bg-white/80 backdrop-blur-xl px-8 py-6 border-b border-black/[0.03] flex items-center justify-between z-10">
                 <h3 className="text-xl font-bold tracking-tight">Sound Layers</h3>
-                <button 
-                  onClick={() => setIsPanelOpen(false)}
-                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-apple-text-primary active:scale-90"
-                >
-                  <X size={20} />
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                        const newPos = settings.hiddenLayersPosition === 'bottom' ? 'top' : 'bottom';
+                        updateSettings({ hiddenLayersPosition: newPos });
+                    }}
+                    className="text-[10px] font-bold text-apple-blue uppercase tracking-widest bg-apple-blue/5 px-3 py-1.5 rounded-full"
+                  >
+                    {settings.hiddenLayersPosition}
+                  </button>
+                  <button 
+                    onClick={() => setIsPanelOpen(false)}
+                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-apple-text-primary active:scale-90"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
 
               <div className="p-8 pb-32 space-y-10">

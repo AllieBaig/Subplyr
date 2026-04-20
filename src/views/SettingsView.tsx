@@ -609,6 +609,29 @@ export default function SettingsView() {
             </div>
           </button>
 
+          <div className="w-full p-4 flex items-center justify-between border-b border-black/5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center text-apple-text-primary">
+                <Sliders size={16} />
+              </div>
+              <div className="text-left">
+                <span className="text-sm font-medium">Panel Position</span>
+                <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-widest">Now Playing Layers</p>
+              </div>
+            </div>
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+               {['top', 'bottom'].map(pos => (
+                 <button
+                   key={pos}
+                   onClick={() => updateSettings({ hiddenLayersPosition: pos as any })}
+                   className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all ${settings.hiddenLayersPosition === pos ? 'bg-white shadow-sm text-apple-blue' : 'text-gray-400'}`}
+                 >
+                   {pos}
+                 </button>
+               ))}
+            </div>
+          </div>
+
           <button 
             onClick={exportAppData}
             className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-apple-blue border-b border-black/5"
