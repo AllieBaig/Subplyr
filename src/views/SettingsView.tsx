@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function SettingsView() {
   const { 
+    tracks,
+    playlists,
     subliminalTracks, 
     addSubliminalTrack, 
     removeSubliminalTrack,
@@ -118,9 +120,51 @@ export default function SettingsView() {
       >
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Selected Track</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Subliminal Mode</label>
+            <div className="bg-gray-100 p-1 rounded-2xl flex items-center h-10">
+              <button 
+                onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
+                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+              >
+                Track
+              </button>
+              <button 
+                onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
+                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+              >
+                Playlist
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">
+              {settings.subliminal.isPlaylistMode ? 'Source Playlist' : 'Selected Track'}
+            </label>
             <div className="flex flex-col gap-2">
-              {subliminalTracks.map(track => (
+              {settings.subliminal.isPlaylistMode ? (
+                <div className="flex flex-col gap-2">
+                  {playlists.length === 0 ? (
+                    <p className="text-[10px] text-apple-text-secondary italic px-2 py-4 bg-white/50 border border-dashed border-black/5 rounded-xl text-center">No playlists created yet</p>
+                  ) : (
+                    playlists.map(playlist => (
+                      <button
+                        key={playlist.id}
+                        onClick={() => updateSubliminalSettings({ sourcePlaylistId: playlist.id })}
+                        className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${settings.subliminal.sourcePlaylistId === playlist.id ? 'border-apple-blue bg-apple-blue/5' : 'border-black/5 bg-white'}`}
+                      >
+                        <div>
+                           <p className={`text-xs font-bold ${settings.subliminal.sourcePlaylistId === playlist.id ? 'text-apple-blue' : ''}`}>{playlist.name}</p>
+                           <p className="text-[9px] font-bold text-apple-text-secondary uppercase tracking-widest">{playlist.trackIds.length} tracks</p>
+                        </div>
+                        {settings.subliminal.sourcePlaylistId === playlist.id && <Check size={14} className="text-apple-blue" />}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <>
+                  {subliminalTracks.map(track => (
                 <div 
                   key={track.id}
                   className={`flex flex-col rounded-xl border transition-all ${
@@ -166,10 +210,12 @@ export default function SettingsView() {
                 <Plus size={14} /> <span>Upload Audio (M4A Supported)</span>
                 <input type="file" accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleSubliminalUpload} />
               </label>
-            </div>
-          </div>
-          
-          <div className="flex flex-col gap-2">
+            </>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex flex-col gap-2">
             <div className="flex justify-between items-end">
               <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Subliminal Intensity</label>
               <span className="text-[10px] font-bold text-apple-blue">{Math.round(settings.subliminal.volume * 100)}%</span>
@@ -181,6 +227,47 @@ export default function SettingsView() {
               className="w-full h-1.5 bg-black/5 rounded-full appearance-none accent-apple-blue"
             />
             <p className="text-[9px] text-apple-text-secondary italic">Volume is limited to 30% for safety.</p>
+          </div>
+
+          <div className="flex flex-col gap-4 p-4 bg-white/50 rounded-2xl border border-black/[0.03]">
+             <div className="flex items-center justify-between">
+                <div>
+                   <p className="text-xs font-semibold">Continuous Loop</p>
+                   <p className="text-[9px] text-apple-text-secondary font-bold uppercase tracking-widest mt-0.5">Repeat subliminal layer</p>
+                </div>
+                <button 
+                  onClick={() => updateSubliminalSettings({ isLooping: !settings.subliminal.isLooping })}
+                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.subliminal.isLooping ? 'bg-apple-blue' : 'bg-gray-200'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.subliminal.isLooping ? 12 : 0 }} />
+                </button>
+             </div>
+
+             <div className="flex items-center justify-between">
+                <div>
+                   <p className="text-xs font-semibold">Sync Main Timing</p>
+                   <p className="text-[9px] text-apple-text-secondary font-bold uppercase tracking-widest mt-0.5">Match progress with music</p>
+                </div>
+                <button 
+                  onClick={() => updateSettings({ syncPlayback: !settings.syncPlayback })}
+                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.syncPlayback ? 'bg-apple-blue' : 'bg-gray-200'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.syncPlayback ? 12 : 0 }} />
+                </button>
+             </div>
+
+             <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-end">
+                   <p className="text-[10px] font-bold text-apple-text-secondary uppercase tracking-widest">Start Delay</p>
+                   <span className="text-[10px] font-bold text-apple-blue">{settings.subliminal.delayMs}ms</span>
+                </div>
+                <input 
+                  type="range" min={0} max={5000} step={100} 
+                  value={settings.subliminal.delayMs} 
+                  onChange={(e) => updateSubliminalSettings({ delayMs: parseInt(e.target.value) })}
+                  className="w-full h-1 bg-black/5 rounded-full appearance-none accent-apple-blue"
+                />
+             </div>
           </div>
         </div>
       </Section>
@@ -213,6 +300,20 @@ export default function SettingsView() {
                 className="bg-white px-3 py-2 rounded-xl border border-black/5 font-mono text-sm"
               />
             </div>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+             <div className="flex justify-between items-end">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Beats Volume</label>
+                <span className="text-[10px] font-bold text-purple-600">{Math.round(settings.binaural.volume * 100)}%</span>
+             </div>
+             <input 
+                type="range" min={0} max={0.2} step={0.01} 
+                value={settings.binaural.volume} 
+                onChange={(e) => updateBinauralSettings({ volume: parseFloat(e.target.value) })}
+                className="w-full h-1.5 bg-black/5 rounded-full appearance-none accent-purple-500"
+              />
+             <p className="text-[9px] text-apple-text-secondary italic">Volume is limited to 20% for pure frequencies.</p>
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Quick Presets</label>

@@ -500,12 +500,36 @@ export default function AudioEngine() {
     }
   }, [settings.subliminal.volume]);
 
-  // Sync handles
+  // Sync Subliminal with Main Track if enabled
   useEffect(() => {
-    if (subAudioRef.current && subTrack) {
-      subAudioRef.current.loop = settings.subliminal.isLooping;
+    if (isPlaying && settings.syncPlayback && settings.subliminal.isEnabled && mainAudioRef.current && subAudioRef.current && !settings.subliminal.isPlaylistMode) {
+      const syncInterval = setInterval(() => {
+        if (mainAudioRef.current && subAudioRef.current && subAudioRef.current.readyState >= 2) {
+          const mainTime = mainAudioRef.current.currentTime;
+          const subTime = subAudioRef.current.currentTime;
+          const duration = subAudioRef.current.duration;
+          
+          if (duration > 0) {
+             const targetTime = mainTime % duration;
+             const diff = Math.abs(targetTime - subTime);
+             
+             // Only sync if they drift by more than 0.5s to avoid stutter
+             if (diff > 0.5) {
+               subAudioRef.current.currentTime = targetTime;
+             }
+          }
+        }
+      }, 2000);
+      return () => clearInterval(syncInterval);
     }
-  }, [settings.subliminal.isLooping, subTrack]);
+  }, [isPlaying, settings.syncPlayback, settings.subliminal.isEnabled, settings.subliminal.isPlaylistMode]);
+
+  // Handle Subliminal Looping State
+  useEffect(() => {
+    if (subAudioRef.current) {
+      subAudioRef.current.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
+    }
+  }, [settings.subliminal.isLooping, settings.subliminal.isPlaylistMode]);
 
   return null;
 }
