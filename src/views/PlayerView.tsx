@@ -26,6 +26,7 @@ export default function PlayerView() {
     updateBinauralSettings,
     updateNatureSettings,
     updateNoiseSettings,
+    updateSettings,
     addTrack
   } = useAudio();
 
@@ -224,6 +225,45 @@ export default function PlayerView() {
                   </div>
                 </div>
 
+                {/* Main Audio & Speed */}
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary mb-4">Main Audio Control</h4>
+                  
+                  <LayerOption 
+                    icon={Music} 
+                    label="Main Track" 
+                    isEnabled={true}
+                    onToggle={() => {}}
+                    vol={settings.mainVolume}
+                    setVol={(v: number) => updateSettings({ mainVolume: v })}
+                    color="text-apple-text-primary"
+                    subtitle="Primary audio layer"
+                  />
+
+                  <div className="bg-apple-card p-5 rounded-[2.5rem] border border-black/[0.03] space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gray-100 rounded-2xl flex items-center justify-center text-apple-text-secondary">
+                        <Activity size={20} />
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-bold tracking-tight">Playback Speed</h5>
+                        <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider">Stable Pitch</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                       {[1, 1.5, 2, 2.5].map(rate => (
+                         <button
+                           key={rate}
+                           onClick={() => updateSettings({ playbackRate: rate })}
+                           className={`flex-1 py-2.5 rounded-xl text-[10px] font-extrabold transition-all border ${settings.playbackRate === rate ? 'bg-apple-text-primary text-white border-apple-text-primary shadow-md' : 'bg-gray-50 text-apple-text-secondary border-black/5 hover:bg-gray-100'}`}
+                         >
+                           {rate}x
+                         </button>
+                       ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Layer Controls */}
                 <div className="space-y-4">
                   <LayerOption 
@@ -367,46 +407,78 @@ const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
   </button>
 );
 
-const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle, children }: any) => (
-  <div className="bg-apple-card p-5 rounded-[2.5rem] border border-black/[0.03] flex flex-col">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className={`flex-shrink-0 w-10 h-10 ${isEnabled ? 'bg-white shadow-sm' : 'bg-gray-100'} rounded-2xl flex items-center justify-center ${isEnabled ? color : 'text-gray-300'} transition-all`}>
-          <Icon size={20} />
+const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle, children }: any) => {
+  const [inputValue, setInputValue] = useState(Math.round(vol * 100).toString());
+
+  // Sync input value with vol prop
+  React.useEffect(() => {
+    setInputValue(Math.round(vol * 100).toString());
+  }, [vol]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    
+    const num = parseInt(val);
+    if (!isNaN(num)) {
+      const normalized = Math.min(Math.max(num, 0), maxVol * 100) / 100;
+      setVol(normalized);
+    }
+  };
+
+  return (
+    <div className="bg-apple-card p-5 rounded-[2.5rem] border border-black/[0.03] flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className={`flex-shrink-0 w-10 h-10 ${isEnabled ? 'bg-white shadow-sm' : 'bg-gray-100'} rounded-2xl flex items-center justify-center ${isEnabled ? color : 'text-gray-300'} transition-all`}>
+            <Icon size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h5 className="text-sm font-bold tracking-tight truncate">{label}</h5>
+            {subtitle && <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider truncate">{subtitle}</p>}
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h5 className="text-sm font-bold tracking-tight truncate">{label}</h5>
-          {subtitle && <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider truncate">{subtitle}</p>}
+        {label !== "Main Track" && (
+          <div className="w-12 h-7 flex-shrink-0"> {/* Fixed width container for toggle */}
+            <button 
+              onClick={() => onToggle(!isEnabled)}
+              className={`w-full h-full rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
+            >
+              <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
+            </button>
+          </div>
+        )}
+      </div>
+      
+      {isEnabled && (
+        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-4">
+            <input 
+              type="range"
+              min={0}
+              max={maxVol}
+              step={0.01}
+              value={vol}
+              onChange={(e) => setVol(parseFloat(e.target.value))}
+              className="flex-1 h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary touch-none"
+            />
+            <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-black/5">
+              <input 
+                type="text"
+                value={inputValue}
+                onChange={handleInputChange}
+                className="w-7 text-[10px] font-bold text-apple-text-primary bg-transparent text-right outline-none"
+              />
+              <span className="text-[10px] font-bold text-apple-text-secondary">%</span>
+            </div>
+          </div>
+          
+          {children}
         </div>
-      </div>
-      <div className="w-12 h-7 flex-shrink-0"> {/* Fixed width container for toggle */}
-        <button 
-          onClick={() => onToggle(!isEnabled)}
-          className={`w-full h-full rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
-        >
-          <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
-        </button>
-      </div>
+      )}
     </div>
-    
-    {isEnabled && (
-      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-        <input 
-          type="range"
-          min={0}
-          max={maxVol}
-          step={0.01}
-          value={vol}
-          onChange={(e) => setVol(parseFloat(e.target.value))}
-          className="flex-1 h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary touch-none"
-        />
-        <span className="text-[10px] font-bold text-apple-text-secondary w-8 tabular-nums flex-shrink-0 text-right">{Math.round(vol * 100)}%</span>
-      </div>
-    )}
-    
-    {isEnabled && children}
-  </div>
-);
+  );
+};
 
 const Music = ({ className, size }: { className?: string, size?: number }) => (
   <svg 

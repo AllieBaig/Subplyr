@@ -45,6 +45,46 @@ export default function SettingsView() {
     }
   };
 
+  const VolumeSlider = ({ label, value, onChange, min = 0, max = 1, step = 0.01, color = 'apple-blue' }: any) => {
+    const [inputValue, setInputValue] = useState(Math.round(value * 100).toString());
+
+    React.useEffect(() => {
+      setInputValue(Math.round(value * 100).toString());
+    }, [value]);
+
+    const handleTextChange = (val: string) => {
+      setInputValue(val);
+      const num = parseInt(val);
+      if (!isNaN(num)) {
+        const normalized = Math.min(Math.max(num, 0), max * 100) / 100;
+        onChange(normalized);
+      }
+    };
+
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between items-end">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">{label}</label>
+          <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-black/5">
+            <input 
+              type="text"
+              value={inputValue}
+              onChange={(e) => handleTextChange(e.target.value)}
+              className="w-7 text-[10px] font-bold text-apple-text-primary bg-transparent text-right outline-none"
+            />
+            <span className="text-[10px] font-bold text-apple-text-secondary">%</span>
+          </div>
+        </div>
+        <input 
+          type="range" min={min} max={max} step={step} 
+          value={value} 
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          className={`w-full h-1.5 bg-black/5 rounded-full appearance-none accent-${color}`}
+        />
+      </div>
+    );
+  };
+
   const Section = ({ id, title, subtitle, icon: Icon, color, children, isEnabled, onToggle }: any) => (
     <div className="bg-apple-card rounded-[2rem] border border-black/5 shadow-sm overflow-hidden mb-4 transition-all duration-300">
       <div className="flex items-center min-h-[72px]">
@@ -215,16 +255,13 @@ export default function SettingsView() {
         </div>
       </div>
       
-      <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-end">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Subliminal Intensity</label>
-              <span className="text-[10px] font-bold text-apple-blue">{Math.round(settings.subliminal.volume * 100)}%</span>
-            </div>
-            <input 
-              type="range" min={0.1} max={0.3} step={0.01} 
-              value={settings.subliminal.volume} 
-              onChange={(e) => updateSubliminalSettings({ volume: parseFloat(e.target.value) })}
-              className="w-full h-1.5 bg-black/5 rounded-full appearance-none accent-apple-blue"
+      <div className="flex flex-col gap-2 pt-2">
+            <VolumeSlider 
+              label="Subliminal Intensity"
+              value={settings.subliminal.volume}
+              onChange={(v: number) => updateSubliminalSettings({ volume: v })}
+              max={0.3}
+              color="apple-blue"
             />
             <p className="text-[9px] text-apple-text-secondary italic">Volume is limited to 30% for safety.</p>
           </div>
@@ -302,19 +339,14 @@ export default function SettingsView() {
             </div>
           </div>
           
-          <div className="flex flex-col gap-2">
-             <div className="flex justify-between items-end">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Beats Volume</label>
-                <span className="text-[10px] font-bold text-purple-600">{Math.round(settings.binaural.volume * 100)}%</span>
-             </div>
-             <input 
-                type="range" min={0} max={0.2} step={0.01} 
-                value={settings.binaural.volume} 
-                onChange={(e) => updateBinauralSettings({ volume: parseFloat(e.target.value) })}
-                className="w-full h-1.5 bg-black/5 rounded-full appearance-none accent-purple-500"
-              />
-             <p className="text-[9px] text-apple-text-secondary italic">Volume is limited to 20% for pure frequencies.</p>
-          </div>
+          <VolumeSlider 
+            label="Beats Volume"
+            value={settings.binaural.volume}
+            onChange={(v: number) => updateBinauralSettings({ volume: v })}
+            max={0.2}
+            color="purple-500"
+          />
+          <p className="text-[9px] text-apple-text-secondary italic">Volume is limited to 20% for pure frequencies.</p>
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Quick Presets</label>
             <div className="grid grid-cols-3 gap-2">
@@ -352,18 +384,12 @@ export default function SettingsView() {
               </button>
             ))}
           </div>
-          <div className="flex flex-col gap-2">
-             <div className="flex justify-between items-end">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Volume</label>
-                <span className="text-[10px] font-bold text-green-600">{Math.round(settings.nature.volume * 100)}%</span>
-             </div>
-             <input 
-                type="range" min={0} max={1} step={0.01} 
-                value={settings.nature.volume} 
-                onChange={(e) => updateNatureSettings({ volume: parseFloat(e.target.value) })}
-                className="w-full h-1.5 bg-black/5 rounded-full appearance-none accent-green-500"
-              />
-          </div>
+          <VolumeSlider 
+             label="Ambience Volume"
+             value={settings.nature.volume}
+             onChange={(v: number) => updateNatureSettings({ volume: v })}
+             color="green-500"
+          />
         </div>
       </Section>
 
@@ -389,18 +415,13 @@ export default function SettingsView() {
               </button>
             ))}
           </div>
-          <div className="flex flex-col gap-2">
-             <div className="flex justify-between items-end">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Masking Level</label>
-                <span className="text-[10px] font-bold text-orange-600">{Math.round(settings.noise.volume * 100)}%</span>
-             </div>
-             <input 
-                type="range" min={0} max={0.5} step={0.01} 
-                value={settings.noise.volume} 
-                onChange={(e) => updateNoiseSettings({ volume: parseFloat(e.target.value) })}
-                className="w-full h-1.5 bg-black/5 rounded-full appearance-none accent-orange-500"
-              />
-          </div>
+          <VolumeSlider 
+             label="Masking Level"
+             value={settings.noise.volume}
+             onChange={(v: number) => updateNoiseSettings({ volume: v })}
+             max={0.5}
+             color="orange-500"
+          />
         </div>
       </Section>
 
@@ -409,6 +430,35 @@ export default function SettingsView() {
         <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary mb-4 ml-2">App Management</h4>
         
         <div className="bg-apple-card rounded-3xl border border-black/5 overflow-hidden">
+          <div className="p-4 border-b border-black/5 bg-gray-50/20">
+            <VolumeSlider 
+              label="Master Music Volume"
+              value={settings.mainVolume}
+              onChange={(v: number) => updateSettings({ mainVolume: v })}
+              color="apple-text-primary"
+            />
+          </div>
+
+          <div className="p-4 border-b border-black/5 bg-gray-50/20">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 bg-white rounded-xl border border-black/5 flex items-center justify-center text-apple-text-primary">
+                <Activity size={14} />
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Playback Speed</p>
+            </div>
+            <div className="flex gap-2">
+               {[1, 1.5, 2, 2.5].map(rate => (
+                 <button
+                   key={rate}
+                   onClick={() => updateSettings({ playbackRate: rate })}
+                   className={`flex-1 py-2.5 rounded-xl text-[10px] font-extrabold transition-all border ${settings.playbackRate === rate ? 'bg-apple-text-primary text-white border-apple-text-primary shadow-md' : 'bg-white text-apple-text-secondary border-black/5 hover:bg-gray-100'}`}
+                 >
+                   {rate}x
+                 </button>
+               ))}
+            </div>
+          </div>
+
           <button 
             onClick={() => updateSettings({ miniMode: !settings.miniMode })}
             className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-black/5"

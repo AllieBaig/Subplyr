@@ -217,6 +217,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       type: 'white',
       volume: 0.2,
     },
+    mainVolume: 1.0,
+    playbackRate: 1.0,
     fadeInOut: true,
     syncPlayback: true,
     library: {

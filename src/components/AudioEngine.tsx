@@ -491,14 +491,19 @@ export default function AudioEngine() {
   // Handle Volume Balance
   useEffect(() => {
     if (mainAudioRef.current) {
-      // Music is 100% base layer
-      mainAudioRef.current.volume = 1;
+      mainAudioRef.current.volume = settings.mainVolume;
     }
     if (subAudioRef.current) {
-      // Subliminal is subtle overlay
       subAudioRef.current.volume = settings.subliminal.volume;
     }
-  }, [settings.subliminal.volume]);
+  }, [settings.mainVolume, settings.subliminal.volume, currentTrack]);
+
+  // Handle Playback Rate
+  useEffect(() => {
+    if (mainAudioRef.current) {
+      mainAudioRef.current.playbackRate = settings.playbackRate;
+    }
+  }, [settings.playbackRate, currentTrack]);
 
   // Sync Subliminal with Main Track if enabled
   useEffect(() => {

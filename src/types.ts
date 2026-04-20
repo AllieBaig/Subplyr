@@ -52,6 +52,8 @@ export interface AppSettings {
   binaural: BinauralSettings;
   nature: NatureSettings;
   noise: NoiseSettings;
+  mainVolume: number;
+  playbackRate: number;
   fadeInOut: boolean;
   syncPlayback: boolean;
   library: {
