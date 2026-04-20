@@ -91,6 +91,8 @@ export default function PlayerView() {
     );
   }
 
+  const isTopPosition = settings.hiddenLayersPosition === 'top';
+
   return (
     <div className="h-full flex flex-col items-center justify-between pb-12 overflow-hidden select-none relative">
       {/* Top Header - Fixed Height */}
@@ -102,10 +104,10 @@ export default function PlayerView() {
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary leading-none">Now Playing</p>
         </div>
         <div className="w-10 flex justify-end">
-          {settings.hiddenLayersPosition === 'top' && (
+          {isTopPosition && (
             <button 
               onClick={() => setIsPanelOpen(true)}
-              className="w-10 h-10 rounded-full bg-apple-card border border-black/5 flex items-center justify-center text-apple-text-primary shadow-sm active:scale-95 transition-transform"
+              className="w-10 h-10 mr-4 rounded-full bg-apple-card border border-black/5 flex items-center justify-center text-apple-text-primary shadow-sm active:scale-95 transition-transform"
             >
               <Sliders size={18} />
             </button>
@@ -240,32 +242,33 @@ export default function PlayerView() {
       </div>
 
       {/* Layer Control Panel (Corner Floating Panel) */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isPanelOpen && (
-          <>
+          <div className="absolute inset-0 z-[150]">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsPanelOpen(false)}
-              className="absolute inset-0 bg-black/5 backdrop-blur-[2px] z-[150]"
+              className="absolute inset-0 bg-black/10 backdrop-blur-[4px]"
             />
             <motion.div 
+              key={settings.hiddenLayersPosition}
               initial={{ 
                 opacity: 0, 
-                scale: 0.9, 
-                y: settings.hiddenLayersPosition === 'top' ? -20 : 20,
-                x: 20
+                scale: 0.95, 
+                y: isTopPosition ? -40 : 40,
+                x: 0
               }}
               animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
               exit={{ 
                 opacity: 0, 
-                scale: 0.9, 
-                y: settings.hiddenLayersPosition === 'top' ? -20 : 20,
-                x: 20
+                scale: 0.95, 
+                y: isTopPosition ? -40 : 40,
+                x: 0
               }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className={`absolute ${settings.hiddenLayersPosition === 'top' ? 'top-4' : 'bottom-20'} right-4 left-4 max-w-[340px] ml-auto bg-white rounded-[2.5rem] z-[200] max-h-[75vh] overflow-y-auto no-scrollbar shadow-[0_32px_80px_rgba(0,0,0,0.15)] border border-black/5`}
+              transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+              className={`absolute ${isTopPosition ? 'top-10' : 'bottom-32'} right-6 left-6 max-w-[340px] ml-auto bg-white rounded-[2.5rem] z-[200] max-h-[70vh] overflow-y-auto no-scrollbar shadow-[0_40px_100px_rgba(0,0,0,0.25)] border border-black/[0.03]`}
             >
               <div className="sticky top-0 bg-white/80 backdrop-blur-xl px-8 py-6 border-b border-black/[0.03] flex items-center justify-between z-10">
                 <h3 className="text-xl font-bold tracking-tight">Sound Layers</h3>
@@ -555,7 +558,7 @@ export default function PlayerView() {
                 </div>
               </div>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
     </div>
