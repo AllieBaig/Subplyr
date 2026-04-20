@@ -74,5 +74,7 @@ export interface AppSettings {
   };
   miniMode: boolean;
   hiddenLayersPosition: 'top' | 'bottom';
+  loop: 'none' | 'one' | 'all';
+  shuffle: boolean;
   playlistMemory: Record<string, PlaylistMemory>;
 }

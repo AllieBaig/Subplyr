@@ -4,7 +4,8 @@ import {
   Play, Pause, SkipBack, SkipForward, 
   Volume2, Activity, Wind, CloudRain, 
   Sliders, ChevronDown, Check, X, 
-  Moon, Zap, Focus as FocusIcon, List, Plus
+  Moon, Zap, Focus as FocusIcon, List, Plus,
+  Shuffle, Repeat, Repeat1
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -22,6 +23,10 @@ export default function PlayerView() {
     settings,
     playNext,
     playPrevious,
+    toggleShuffle,
+    toggleLoop,
+    playingPlaylistId,
+    currentPlaybackList,
     updateSubliminalSettings,
     updateBinauralSettings,
     updateNatureSettings,
@@ -34,7 +39,10 @@ export default function PlayerView() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isAudioToolsOpen, setIsAudioToolsOpen] = useState(false);
 
-  const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
+  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
+
+  const currentPlaylist = playingPlaylistId ? playlists.find(p => p.id === playingPlaylistId) : null;
+  const currentPosition = currentTrackIndex !== null ? `${currentTrackIndex + 1}/${currentPlaybackList.length}` : "";
 
   const formatTime = (time: number) => {
     if (isNaN(time)) return "0:00";
@@ -84,7 +92,7 @@ export default function PlayerView() {
   }
 
   return (
-    <div className="h-full flex flex-col items-center justify-between pb-12 overflow-hidden select-none">
+    <div className="h-full flex flex-col items-center justify-between pb-12 overflow-hidden select-none relative">
       {/* Top Header - Fixed Height */}
       <header className="w-full flex items-center justify-between mt-4 h-12 flex-shrink-0">
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-apple-text-secondary">
@@ -93,17 +101,21 @@ export default function PlayerView() {
         <div className="text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary leading-none">Now Playing</p>
         </div>
-        <button 
-          onClick={() => setIsPanelOpen(true)}
-          className="w-10 h-10 rounded-full bg-apple-card border border-black/5 flex items-center justify-center text-apple-text-primary shadow-sm active:scale-95 transition-transform"
-        >
-          <Sliders size={18} />
-        </button>
+        <div className="w-10 flex justify-end">
+          {settings.hiddenLayersPosition === 'top' && (
+            <button 
+              onClick={() => setIsPanelOpen(true)}
+              className="w-10 h-10 rounded-full bg-apple-card border border-black/5 flex items-center justify-center text-apple-text-primary shadow-sm active:scale-95 transition-transform"
+            >
+              <Sliders size={18} />
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main Art & Info - Centered with flex-grow but stable containment */}
       <div className={`flex-1 flex flex-col items-center justify-center w-full max-w-sm overflow-hidden ${settings.miniMode ? 'px-1' : 'px-2'}`}>
-        <div className={`w-full relative flex items-center justify-center ${settings.miniMode ? 'mb-6' : 'mb-10'}`}>
+        <div onClick={() => setIsPanelOpen(!isPanelOpen)} className={`w-full relative flex items-center justify-center ${settings.miniMode ? 'mb-6' : 'mb-10'} cursor-pointer`}>
           <motion.div 
             className={`w-full aspect-square bg-white border border-black/[0.03] flex items-center justify-center overflow-hidden relative ${settings.miniMode ? 'rounded-2xl shadow-md' : 'rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)]'}`}
             animate={{ 
@@ -129,6 +141,15 @@ export default function PlayerView() {
         </div>
         
         <div className={`text-center w-full px-4 flex flex-col justify-center ${settings.miniMode ? 'h-28' : 'h-36'}`}>
+          {currentPlaylist && (
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] font-bold text-apple-blue uppercase tracking-[0.2em] mb-2"
+            >
+              {currentPlaylist.name} • {currentPosition}
+            </motion.p>
+          )}
           <h2 className={`${settings.miniMode ? 'text-xl' : 'text-2xl'} font-extrabold tracking-tight text-apple-text-primary mb-1.5 line-clamp-2 leading-tight overflow-hidden text-ellipsis`}>
             {currentTrack.name}
           </h2>
@@ -151,6 +172,20 @@ export default function PlayerView() {
         </div>
       </div>
 
+      {/* Floating Bottom Panel Trigger */}
+      {settings.hiddenLayersPosition === 'bottom' && (
+        <div className="absolute bottom-32 right-6 z-[140]">
+           <motion.button 
+             initial={{ scale: 0, opacity: 0 }}
+             animate={{ scale: 1, opacity: 1 }}
+             onClick={() => setIsPanelOpen(true)}
+             className="w-12 h-12 rounded-full bg-apple-text-primary text-white shadow-2xl flex items-center justify-center active:scale-90 transition-transform"
+           >
+             <Sliders size={20} />
+           </motion.button>
+        </div>
+      )}
+
       {/* Playback Controls - Fixed at Bottom */}
       <div className={`w-full max-w-sm flex flex-col px-4 flex-shrink-0 ${settings.miniMode ? 'gap-4 mt-2' : 'gap-8 mt-4'}`}>
         <div className="flex flex-col gap-3">
@@ -170,10 +205,18 @@ export default function PlayerView() {
           </div>
         </div>
 
-        <div className={`flex items-center justify-between px-6 ${settings.miniMode ? 'pb-0' : 'pb-2'}`}>
-          <button onClick={playPrevious} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
-            <SkipBack size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" />
-          </button>
+        <div className={`flex items-center justify-between px-2 ${settings.miniMode ? 'pb-0' : 'pb-2'}`}>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={toggleShuffle}
+              className={`p-2 transition-colors ${settings.shuffle ? 'text-apple-blue' : 'text-gray-300'}`}
+            >
+              <Shuffle size={settings.miniMode ? 16 : 20} />
+            </button>
+            <button onClick={() => playPrevious()} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
+              <SkipBack size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" />
+            </button>
+          </div>
           
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
@@ -182,13 +225,21 @@ export default function PlayerView() {
             {isPlaying ? <Pause size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" /> : <Play size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" className="ml-1" />}
           </button>
 
-          <button onClick={playNext} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
-            <SkipForward size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => playNext()} className="p-3 text-apple-text-primary active:scale-90 transition-transform">
+              <SkipForward size={settings.miniMode ? 28 : 36} fill="currentColor" stroke="none" />
+            </button>
+            <button 
+              onClick={toggleLoop}
+              className={`p-2 transition-colors ${settings.loop !== 'none' ? 'text-apple-blue' : 'text-gray-300'}`}
+            >
+              {settings.loop === 'one' ? <Repeat1 size={settings.miniMode ? 16 : 20} /> : <Repeat size={settings.miniMode ? 16 : 20} />}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Layer Control Panel (Bottom/Top Sheet) */}
+      {/* Layer Control Panel (Corner Floating Panel) */}
       <AnimatePresence>
         {isPanelOpen && (
           <>
@@ -197,34 +248,33 @@ export default function PlayerView() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsPanelOpen(false)}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[150]"
+              className="absolute inset-0 bg-black/5 backdrop-blur-[2px] z-[150]"
             />
             <motion.div 
-              initial={{ y: settings.hiddenLayersPosition === 'top' ? '-100%' : '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: settings.hiddenLayersPosition === 'top' ? '-100%' : '100%' }}
+              initial={{ 
+                opacity: 0, 
+                scale: 0.9, 
+                y: settings.hiddenLayersPosition === 'top' ? -20 : 20,
+                x: 20
+              }}
+              animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+              exit={{ 
+                opacity: 0, 
+                scale: 0.9, 
+                y: settings.hiddenLayersPosition === 'top' ? -20 : 20,
+                x: 20
+              }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className={`fixed ${settings.hiddenLayersPosition === 'top' ? 'top-0 rounded-b-[3rem] shadow-[0_20px_40px_rgba(0,0,0,0.1)]' : 'bottom-0 rounded-t-[3rem] shadow-[0_-20px_40px_rgba(0,0,0,0.1)]'} left-0 right-0 max-w-md mx-auto bg-white z-[200] max-h-[85vh] overflow-y-auto no-scrollbar`}
+              className={`absolute ${settings.hiddenLayersPosition === 'top' ? 'top-4' : 'bottom-20'} right-4 left-4 max-w-[340px] ml-auto bg-white rounded-[2.5rem] z-[200] max-h-[75vh] overflow-y-auto no-scrollbar shadow-[0_32px_80px_rgba(0,0,0,0.15)] border border-black/5`}
             >
               <div className="sticky top-0 bg-white/80 backdrop-blur-xl px-8 py-6 border-b border-black/[0.03] flex items-center justify-between z-10">
                 <h3 className="text-xl font-bold tracking-tight">Sound Layers</h3>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => {
-                        const newPos = settings.hiddenLayersPosition === 'bottom' ? 'top' : 'bottom';
-                        updateSettings({ hiddenLayersPosition: newPos });
-                    }}
-                    className="text-[10px] font-bold text-apple-blue uppercase tracking-widest bg-apple-blue/5 px-3 py-1.5 rounded-full"
-                  >
-                    {settings.hiddenLayersPosition}
-                  </button>
-                  <button 
-                    onClick={() => setIsPanelOpen(false)}
-                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-apple-text-primary active:scale-90"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
+                <button 
+                  onClick={() => setIsPanelOpen(false)}
+                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-apple-text-primary active:scale-90"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
               <div className="p-8 pb-32 space-y-10">

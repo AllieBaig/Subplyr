@@ -1,10 +1,11 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useAudio } from '../AudioContext';
 import { 
   Upload, Plus, Trash2, Share, SortAsc, 
   LayoutGrid, List, Calendar, CheckCircle2, 
   Circle, X, FolderPlus, ListPlus, Zap,
-  AlertCircle, Link, ArrowLeft, MoreVertical, Edit2
+  AlertCircle, Link, ArrowLeft, MoreVertical, Edit2,
+  Play, Pause
 } from 'lucide-react';
 import { Track, SortOption, GroupOption } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,7 +32,8 @@ export default function LibraryView() {
     renamePlaylist,
     playingPlaylistId,
     setPlayingPlaylistId,
-    resumePlaylist
+    resumePlaylist,
+    isPlaying
   } = useAudio();
 
   const [view, setView] = useState<'tracks' | 'playlists' | 'playlist_detail'>('tracks');
@@ -251,11 +253,14 @@ export default function LibraryView() {
               setSelectedTrackIds(new Set());
             }}
             onTrackPlay={(id) => {
-              const idx = tracks.findIndex(t => t.id === id);
-              if (idx !== -1) {
-                setPlayingPlaylistId(activePlaylistId);
-                setCurrentTrackIndex(idx);
-                setIsPlaying(true);
+              const p = playlists.find(p => p.id === activePlaylistId);
+              if (p) {
+                const idx = p.trackIds.findIndex(tid => tid === id);
+                if (idx !== -1) {
+                  setPlayingPlaylistId(activePlaylistId);
+                  setCurrentTrackIndex(idx);
+                  setIsPlaying(true);
+                }
               }
             }}
             onRename={(id, name) => renamePlaylist(id, name)}
@@ -276,6 +281,9 @@ export default function LibraryView() {
             playlists={playlists}
             settings={settings}
             resumePlaylist={resumePlaylist}
+            playingPlaylistId={playingPlaylistId}
+            currentTrackIndex={currentTrackIndex}
+            isPlaying={isPlaying}
          />
       ) : view === 'tracks' ? (
         tracks.length === 0 ? (
@@ -766,9 +774,12 @@ const PlaylistDetailView = ({
   onToggleSettings,
   playlists,
   settings,
-  resumePlaylist
+  resumePlaylist,
+  playingPlaylistId,
+  currentTrackIndex,
+  isPlaying
 }: any) => {
-  
+  const activeTrackRef = React.useRef<HTMLDivElement>(null);
   const memory = settings?.playlistMemory?.[playlist.id];
 
   const sortedTracks = useMemo(() => {
@@ -779,13 +790,18 @@ const PlaylistDetailView = ({
     } else if (sort === 'date') {
       list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
     } else if (sort === 'recent') {
-      // Assuming recently added means last in array if we don't have per-item timestamps
-      // But if we want recently added to playlist, we just reverse the trackIds order
       list = [...list].reverse();
     }
     
     return list;
   }, [playlist.trackIds, tracks, sort]);
+
+  // Autoscroll to active track
+  useEffect(() => {
+    if (activeTrackRef.current && playingPlaylistId === playlist.id) {
+       activeTrackRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [currentTrackIndex, playingPlaylistId, playlist.id]);
 
   return (
     <div className="flex flex-col gap-6 animate-in slide-in-from-right duration-300 pb-32">
@@ -883,13 +899,36 @@ const PlaylistDetailView = ({
       </AnimatePresence>
 
       <div className="flex flex-col gap-2">
-        {sortedTracks.map(track => {
+        {sortedTracks.map((track, sIdx) => {
           const isSelected = selectedTrackIds.has(track.id);
           const isLastPlayed = memory?.trackId === track.id;
+          
+          // Determine if this specific track is the one playing in THIS playlist
+          const isActuallyPlaying = playingPlaylistId === playlist.id && 
+                                   currentTrackIndex !== null && 
+                                   playlist.trackIds[currentTrackIndex] === track.id;
 
           return (
-            <div key={track.id} className={`flex items-center gap-4 p-3 rounded-[1.5rem] transition-all relative ${isSelected ? 'bg-apple-blue shadow-lg scale-[1.02] text-white' : isLastPlayed && !isSelectMode ? 'bg-apple-blue/[0.03] ring-1 ring-apple-blue/10' : 'hover:bg-apple-card/60'}`}>
-               {isLastPlayed && !isSelectMode && (
+            <div 
+              key={track.id} 
+              ref={isActuallyPlaying ? activeTrackRef : null}
+              className={`flex items-center gap-4 p-3 rounded-[1.5rem] transition-all relative ${isSelected ? 'bg-apple-blue shadow-lg scale-[1.02] text-white' : isActuallyPlaying ? 'bg-apple-blue/10 ring-2 ring-apple-blue shadow-sm' : isLastPlayed && !isSelectMode ? 'bg-apple-blue/[0.03] ring-1 ring-apple-blue/10' : 'hover:bg-apple-card/60'}`}
+            >
+               {isActuallyPlaying && isPlaying && (
+                 <div className="absolute top-2 right-4">
+                    <div className="flex items-end gap-[2px] h-3">
+                       {[0.6, 1, 0.4, 0.8].map((h, i) => (
+                         <motion.div 
+                           key={i}
+                           animate={{ height: ['40%', '100%', '40%'] }} 
+                           transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.1 }}
+                           className="w-[2px] bg-apple-blue rounded-full"
+                         />
+                       ))}
+                    </div>
+                 </div>
+               )}
+               {!isActuallyPlaying && isLastPlayed && !isSelectMode && (
                  <div className="absolute top-1 right-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-apple-blue animate-pulse" />
                  </div>
@@ -910,12 +949,17 @@ const PlaylistDetailView = ({
                 onClick={() => !isSelectMode && onTrackPlay(track.id)}
                 className="flex-1 flex items-center gap-4 text-left min-w-0"
               >
-                <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center overflow-hidden">
+                <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center overflow-hidden relative">
                    {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-300" size={20} />}
+                   {isActuallyPlaying && (
+                     <div className="absolute inset-0 bg-apple-blue/20 flex items-center justify-center">
+                        {isPlaying ? <Pause size={20} className="text-apple-blue" fill="currentColor" /> : <Play size={20} className="text-apple-blue" fill="currentColor" />}
+                     </div>
+                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className={`font-semibold truncate text-sm ${isSelected ? 'text-apple-blue' : 'text-apple-text-primary'}`}>{track.name}</h4>
-                  <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider">{track.artist}</p>
+                  <h4 className={`font-semibold truncate text-sm ${isSelected ? 'text-white' : isActuallyPlaying ? 'text-apple-blue font-extrabold' : 'text-apple-text-primary'}`}>{track.name}</h4>
+                  <p className={`text-[10px] uppercase font-bold tracking-wider ${isSelected ? 'text-white/70' : 'text-apple-text-secondary'}`}>{track.artist}</p>
                 </div>
               </button>
             </div>

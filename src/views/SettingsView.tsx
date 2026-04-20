@@ -620,13 +620,16 @@ export default function SettingsView() {
               </div>
             </div>
             <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-               {['top', 'bottom'].map(pos => (
+               {[
+                 { id: 'top', label: 'Above' },
+                 { id: 'bottom', label: 'Bottom' }
+               ].map(pos => (
                  <button
-                   key={pos}
-                   onClick={() => updateSettings({ hiddenLayersPosition: pos as any })}
-                   className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all ${settings.hiddenLayersPosition === pos ? 'bg-white shadow-sm text-apple-blue' : 'text-gray-400'}`}
+                   key={pos.id}
+                   onClick={() => updateSettings({ hiddenLayersPosition: pos.id as any })}
+                   className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase transition-all ${settings.hiddenLayersPosition === pos.id ? 'bg-white shadow-sm text-apple-blue' : 'text-gray-400'}`}
                  >
-                   {pos}
+                   {pos.label}
                  </button>
                ))}
             </div>

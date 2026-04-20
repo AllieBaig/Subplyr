@@ -15,7 +15,8 @@ export default function AudioEngine() {
     setIsPlaying,
     playNext,
     playPrevious,
-    seekTo
+    seekTo,
+    currentPlaybackList
   } = useAudio();
   
   const { seekRequest, clearSeekRequest } = useAudio();
@@ -234,7 +235,7 @@ export default function AudioEngine() {
     }
   }, [seekRequest]);
 
-  const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
+  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
   // Unified sourcing: Check both lists for the subliminal track
   const subTrack = useMemo(() => {
     // If playlist mode is on, we derive track from the selected playlist and our internal index
@@ -265,7 +266,7 @@ export default function AudioEngine() {
     
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
     const onLoadedMetadata = () => setDuration(audio.duration);
-    const onEnded = () => setIsPlaying(false);
+    const onEnded = () => playNext(true);
     const onError = (e: any) => {
       console.warn("Main Engine: Audio resource stall detected. Retrying state.", e);
       if (isPlaying) {

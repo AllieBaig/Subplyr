@@ -37,8 +37,11 @@ interface AudioContextType {
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
-  playNext: () => void;
+  currentPlaybackList: Track[];
+  playNext: (isAutoEnded?: boolean) => void;
   playPrevious: () => void;
+  toggleShuffle: () => void;
+  toggleLoop: () => void;
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   
@@ -80,6 +83,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  const currentPlaybackList = useMemo(() => {
+    if (playingPlaylistId) {
+      const playlist = playlists.find(p => p.id === playingPlaylistId);
+      if (playlist) {
+        return playlist.trackIds.map(tid => tracks.find(t => t.id === tid)).filter(Boolean) as Track[];
+      }
+    }
+    return tracks;
+  }, [playingPlaylistId, playlists, tracks]);
+
   const [swStatus, setSwStatus] = useState<'active' | 'waiting' | 'installing' | 'none'>('none');
   const swSupported = 'serviceWorker' in navigator;
 
@@ -239,6 +253,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     },
     miniMode: false,
     hiddenLayersPosition: 'bottom',
+    loop: 'none',
+    shuffle: false,
     playlistMemory: {}
   };
   
@@ -736,15 +752,51 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     showToast("Cache cleared successfully");
   };
 
-  const playNext = () => {
-    if (tracks.length === 0) return;
-    let nextIndex = currentTrackIndex === null || currentTrackIndex >= tracks.length - 1 ? 0 : currentTrackIndex + 1;
+  const toggleShuffle = () => {
+    updateSettings({ shuffle: !settings.shuffle });
+    showToast(settings.shuffle ? "Shuffle off" : "Shuffle on");
+  };
+
+  const toggleLoop = () => {
+    const modes: AppSettings['loop'][] = ['none', 'all', 'one'];
+    const next = modes[(modes.indexOf(settings.loop) + 1) % modes.length];
+    updateSettings({ loop: next });
+    showToast(`Loop: ${next.toUpperCase()}`);
+  };
+
+  const playNext = (isAutoEnded = false) => {
+    const list = currentPlaybackList;
+    if (list.length === 0) return;
+    
+    if (isAutoEnded && settings.loop === 'one' && currentTrackIndex !== null) {
+      // Loop one: just restart the same track
+      setCurrentTime(0);
+      setSeekRequest(0);
+      setIsPlaying(true);
+      return;
+    }
+
+    let nextIndex: number;
+    
+    if (settings.shuffle) {
+      nextIndex = Math.floor(Math.random() * list.length);
+    } else {
+      nextIndex = currentTrackIndex === null || currentTrackIndex >= list.length - 1 ? 0 : currentTrackIndex + 1;
+      
+      // If we reached the end and loop is none, stop
+      if (isAutoEnded && settings.loop === 'none' && (currentTrackIndex === null || currentTrackIndex >= list.length - 1)) {
+        setIsPlaying(false);
+        return;
+      }
+    }
+
     let attempts = 0;
-    while (tracks[nextIndex].isMissing && attempts < tracks.length) {
-      nextIndex = nextIndex >= tracks.length - 1 ? 0 : nextIndex + 1;
+    while (list[nextIndex].isMissing && attempts < list.length) {
+      nextIndex = nextIndex >= list.length - 1 ? 0 : nextIndex + 1;
       attempts++;
     }
-    if (!tracks[nextIndex].isMissing) {
+
+    if (!list[nextIndex].isMissing) {
       setCurrentTrackIndex(nextIndex);
       setIsPlaying(true);
     } else {
@@ -754,14 +806,23 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const playPrevious = () => {
-    if (tracks.length === 0) return;
-    let prevIndex = currentTrackIndex === null || currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
+    const list = currentPlaybackList;
+    if (list.length === 0) return;
+    
+    let prevIndex: number;
+    if (settings.shuffle) {
+      prevIndex = Math.floor(Math.random() * list.length);
+    } else {
+      prevIndex = currentTrackIndex === null || currentTrackIndex === 0 ? list.length - 1 : currentTrackIndex - 1;
+    }
+
     let attempts = 0;
-    while (tracks[prevIndex].isMissing && attempts < tracks.length) {
-      prevIndex = prevIndex === 0 ? tracks.length - 1 : prevIndex - 1;
+    while (list[prevIndex].isMissing && attempts < list.length) {
+      prevIndex = prevIndex === 0 ? list.length - 1 : prevIndex - 1;
       attempts++;
     }
-    if (!tracks[prevIndex].isMissing) {
+
+    if (!list[prevIndex].isMissing) {
       setCurrentTrackIndex(prevIndex);
       setIsPlaying(true);
     } else {
@@ -802,8 +863,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       resumePlaylist,
       currentTrackIndex,
       setCurrentTrackIndex,
+      currentPlaybackList,
       playNext,
       playPrevious,
+      toggleShuffle,
+      toggleLoop,
       isPlaying,
       setIsPlaying,
       currentTime,
