@@ -94,9 +94,9 @@ export default function PlayerView() {
   const isTopPosition = settings.hiddenLayersPosition === 'top';
 
   return (
-    <div className="h-full flex flex-col items-center justify-between pb-12 overflow-hidden select-none relative">
+    <div className="h-full flex flex-col items-center justify-between pb-12 select-none relative w-full max-w-2xl mx-auto">
       {/* Top Header - Fixed Height */}
-      <header className="w-full flex items-center justify-between mt-4 h-12 flex-shrink-0">
+      <header className="w-full flex items-center justify-between mt-4 h-12 flex-shrink-0 px-4">
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-apple-text-secondary">
           <ChevronDown size={24} />
         </div>

@@ -192,8 +192,8 @@ export default function LibraryView() {
   }, [playlists, searchQuery]);
 
   return (
-    <div className={`flex flex-col h-full overflow-y-auto no-scrollbar relative ${settings.miniMode ? 'gap-3' : 'gap-6'}`}>
-      <header className={`flex flex-col sticky top-0 bg-apple-bg/95 backdrop-blur-md z-20 ${settings.miniMode ? 'pt-2 pb-2 px-3' : 'pt-4 pb-4 px-6'} gap-4`}>
+    <div className={`flex flex-col relative w-full max-w-7xl mx-auto ${settings.miniMode ? 'gap-4' : 'gap-8'}`}>
+      <header className={`flex flex-col sticky top-[-24px] bg-apple-bg/95 backdrop-blur-md z-20 ${settings.miniMode ? 'py-2 px-2' : 'py-4 px-2'} gap-4 -mx-2`}>
         <div className="flex justify-between items-end">
           <div>
             <h1 className={`${settings.miniMode ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>Library</h1>
@@ -357,13 +357,13 @@ export default function LibraryView() {
              </button>
           </div>
         ) : (
-          <div className={`flex flex-col gap-6 ${isSelectMode ? 'pb-32' : 'pb-8'} px-6 mt-4`}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 ${isSelectMode ? 'pb-32' : 'pb-8'} mt-4`}>
             {groupedTracks.map((group, gIdx) => (
               <div key={gIdx} className="flex flex-col gap-2 relative">
                 {group.label && (
                   <button 
                     onClick={() => toggleSelectAll(group.items.map(t => t.id))}
-                    className="sticky top-[172px] lg:top-[188px] bg-apple-bg/95 backdrop-blur-md z-10 flex items-center justify-between py-2 -mx-2 px-2 hover:bg-gray-50 transition-colors rounded-xl group/header"
+                    className="sticky top-0 bg-apple-bg/95 backdrop-blur-md z-10 flex items-center justify-between py-2 -mx-2 px-2 hover:bg-gray-50 transition-colors rounded-xl group/header"
                   >
                     <h3 className="text-[11px] font-bold uppercase tracking-[.25em] text-apple-text-secondary group-hover/header:text-apple-blue transition-colors">
                       {group.label}
@@ -756,18 +756,18 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
 });
 
 const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSelectMode, editingPlaylistId, selectedTrackIds, onToggleSelection, onEnterSelect, onOpen, searchQuery }: any) => (
-  <div className="flex flex-col gap-6 px-6">
+  <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto">
     <button 
       onClick={onCreate}
-      className={`w-full p-6 bg-apple-card border border-dashed border-apple-blue/30 rounded-[2.5rem] flex flex-col items-center gap-2 text-apple-blue hover:bg-apple-blue/5 transition-colors ${isSelectMode ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`w-full p-8 bg-apple-card border border-dashed border-apple-blue/30 rounded-[2.5rem] flex flex-col items-center gap-3 text-apple-blue hover:bg-apple-blue/5 transition-all active:scale-[0.99] ${isSelectMode ? 'opacity-50 pointer-events-none' : ''}`}
     >
-      <div className="w-12 h-12 rounded-full bg-apple-blue/10 flex items-center justify-center">
-        <Plus size={24} />
+      <div className="w-14 h-14 rounded-full bg-apple-blue/10 flex items-center justify-center">
+        <Plus size={28} />
       </div>
-      <span className="font-bold text-sm">Create New Playlist</span>
+      <span className="font-bold text-base tracking-tight">Create New Playlist</span>
     </button>
 
-    <div className="grid grid-cols-1 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {playlists.map((playlist: any) => {
         const isEditingThis = isSelectMode && editingPlaylistId === playlist.id;
         

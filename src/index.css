@@ -14,6 +14,41 @@
   body {
     @apply font-sans bg-apple-bg text-apple-text-primary antialiased selection:bg-apple-blue/20;
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  /* Global Fixed Height Inputs & Standardization */
+  input[type="text"], 
+  input[type="number"], 
+  input[type="search"],
+  button {
+    @apply h-11 transition-all duration-200 outline-none;
+  }
+
+  input[type="range"] {
+    @apply cursor-pointer;
+  }
+
+  /* Text Overflow Management */
+  .truncate-1 {
+    @apply truncate block;
+  }
+  
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Smooth Scrolling */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
