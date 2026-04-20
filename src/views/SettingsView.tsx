@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SettingsView() {
@@ -15,6 +15,8 @@ export default function SettingsView() {
     updateBinauralSettings,
     updateNatureSettings,
     updateNoiseSettings,
+    updateLibrarySettings,
+    updateAudioTools,
     updateSettings,
     exportAppData,
     importAppData,
@@ -80,6 +82,46 @@ export default function SettingsView() {
           value={value} 
           onChange={(e) => onChange(parseFloat(e.target.value))}
           className={`w-full h-1.5 bg-black/5 rounded-full appearance-none accent-${color}`}
+        />
+      </div>
+    );
+  };
+
+  const DbSlider = ({ label, value, onChange, min = -60, max = 0, unit = 'dB' }: any) => {
+    const [inputValue, setInputValue] = useState(value.toString());
+
+    React.useEffect(() => {
+      setInputValue(value.toString());
+    }, [value]);
+
+    const handleTextChange = (val: string) => {
+      setInputValue(val);
+      const num = parseInt(val);
+      if (!isNaN(num)) {
+        const validated = Math.min(Math.max(num, min), max);
+        onChange(validated);
+      }
+    };
+
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between items-end">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">{label}</label>
+          <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-black/5">
+            <input 
+              type="text"
+              value={inputValue}
+              onChange={(e) => handleTextChange(e.target.value)}
+              className="w-8 text-[10px] font-bold text-apple-text-primary bg-transparent text-right outline-none"
+            />
+            <span className="text-[10px] font-bold text-apple-text-secondary">{unit}</span>
+          </div>
+        </div>
+        <input 
+          type="range" min={min} max={max} step={1} 
+          value={value} 
+          onChange={(e) => onChange(parseInt(e.target.value))}
+          className="w-full h-1.5 bg-black/5 rounded-full appearance-none accent-gray-700"
         />
       </div>
     );
@@ -425,7 +467,64 @@ export default function SettingsView() {
         </div>
       </Section>
 
-      {/* 5. Advanced & Tools */}
+      {/* 5. Audio Tools (Audacity-like) */}
+      <Section
+        id="audio-tools"
+        title="Audio Tools"
+        subtitle="Advanced Effects"
+        icon={Sliders}
+        color="bg-gray-700/10 text-gray-700"
+      >
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3">
+             <div className="flex items-center justify-between px-1">
+                <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-apple-text-primary">Gain Control</h4>
+                <div className="px-2 py-0.5 bg-gray-100 rounded-md text-[8px] font-bold text-gray-500 uppercase">Non-Destructive</div>
+             </div>
+             <DbSlider 
+               label="Output Gain"
+               value={settings.audioTools.gainDb}
+               onChange={(v: number) => updateAudioTools({ gainDb: v })}
+               min={-60}
+               max={0}
+             />
+             <p className="text-[9px] text-apple-text-secondary leading-relaxed italic">
+                Reduces total output volume in decibels. 0dB is original level.
+             </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+             <div className="flex items-center justify-between px-1">
+                <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-apple-text-primary">Normalization</h4>
+                <button 
+                  onClick={() => updateAudioTools({ normalizeTargetDb: settings.audioTools.normalizeTargetDb === null ? -20 : null })}
+                  className={`text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-md transition-colors ${settings.audioTools.normalizeTargetDb === null ? 'bg-gray-100 text-gray-400' : 'bg-gray-700 text-white'}`}
+                >
+                   {settings.audioTools.normalizeTargetDb === null ? 'Disabled' : 'Enabled'}
+                </button>
+             </div>
+             
+             {settings.audioTools.normalizeTargetDb !== null ? (
+               <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <DbSlider 
+                    label="Target Level (Upper Limit)"
+                    value={settings.audioTools.normalizeTargetDb}
+                    onChange={(v: number) => updateAudioTools({ normalizeTargetDb: v })}
+                    min={-40}
+                    max={0}
+                  />
+                  <p className="text-[9px] text-apple-text-secondary leading-relaxed italic">
+                    Ensures all tracks don't exceed this dB level. Useful for consistent playlist volume.
+                  </p>
+               </div>
+             ) : (
+               <p className="text-[10px] text-apple-text-secondary py-2 italic bg-gray-100/50 rounded-xl px-4 border border-dashed border-black/5">
+                 Enable normalization to keep playlist tracks at a consistent target level.
+               </p>
+             )}
+          </div>
+        </div>
+      </Section>
       <div className="mt-8 pt-8 border-t border-black/5">
         <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary mb-4 ml-2">App Management</h4>
         

@@ -28,6 +28,12 @@ export default function AudioEngine() {
   const leftOscRef = useRef<OscillatorNode | null>(null);
   const rightOscRef = useRef<OscillatorNode | null>(null);
   const binauralGainRef = useRef<GainNode | null>(null);
+  
+  // Audio Tools Refs
+  const mainSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const subSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const toolGainRef = useRef<GainNode | null>(null);
+  const toolCompressorRef = useRef<DynamicsCompressorNode | null>(null);
 
   // Noise & Nature Refs
   const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
@@ -328,6 +334,59 @@ export default function AudioEngine() {
     };
   }, [settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId, playlists, tracks, isPlaying]);
 
+  const setupAudioTools = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+      
+      if (!toolGainRef.current) {
+        toolGainRef.current = ctx.createGain();
+        toolCompressorRef.current = ctx.createDynamicsCompressor();
+        
+        // Setup Compressor as a Limiter for Normalization
+        const comp = toolCompressorRef.current;
+        comp.threshold.setValueAtTime(settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0, ctx.currentTime);
+        comp.knee.setValueAtTime(0, ctx.currentTime);
+        comp.ratio.setValueAtTime(20, ctx.currentTime);
+        comp.attack.setValueAtTime(0.003, ctx.currentTime);
+        comp.release.setValueAtTime(0.25, ctx.currentTime);
+        
+        toolGainRef.current.connect(comp);
+        comp.connect(ctx.destination);
+      }
+      
+      if (mainAudioRef.current && !mainSourceRef.current) {
+        mainSourceRef.current = ctx.createMediaElementSource(mainAudioRef.current);
+        mainSourceRef.current.connect(toolGainRef.current);
+      }
+      
+      if (subAudioRef.current && !subSourceRef.current) {
+        subSourceRef.current = ctx.createMediaElementSource(subAudioRef.current);
+        subSourceRef.current.connect(toolGainRef.current);
+      }
+    } catch (err) {
+      console.error("Audio tools setup failed:", err);
+    }
+  };
+
+  // Handle Audio Tools Real-time Updates
+  useEffect(() => {
+    if (audioCtxRef.current && toolGainRef.current && toolCompressorRef.current) {
+      const ctx = audioCtxRef.current;
+      // Convert dB to linear gain: Math.pow(10, db / 20)
+      const gainValue = Math.pow(10, settings.audioTools.gainDb / 20);
+      toolGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
+      
+      const targetDb = settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0;
+      toolCompressorRef.current.threshold.setTargetAtTime(targetDb, ctx.currentTime, 0.1);
+    }
+  }, [settings.audioTools.gainDb, settings.audioTools.normalizeTargetDb]);
+
   // Handle Main Track Source Change
   useEffect(() => {
     if (mainAudioRef.current && currentTrack) {
@@ -357,6 +416,7 @@ export default function AudioEngine() {
         setIsPlaying(false);
         return;
       }
+      setupAudioTools();
       mainAudioRef.current.play().catch(e => {
         console.error("Playback error:", e);
         setIsPlaying(false);

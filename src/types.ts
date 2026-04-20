@@ -47,11 +47,17 @@ export interface NoiseSettings {
   volume: number;
 }
 
+export interface AudioTools {
+  gainDb: number;
+  normalizeTargetDb: number | null;
+}
+
 export interface AppSettings {
   subliminal: SubliminalSettings;
   binaural: BinauralSettings;
   nature: NatureSettings;
   noise: NoiseSettings;
+  audioTools: AudioTools;
   mainVolume: number;
   playbackRate: number;
   fadeInOut: boolean;

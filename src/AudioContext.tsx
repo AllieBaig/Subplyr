@@ -24,6 +24,7 @@ interface AudioContextType {
   updateNatureSettings: (newSettings: Partial<AppSettings['nature']>) => void;
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
+  updateAudioTools: (newSettings: Partial<AppSettings['audioTools']>) => void;
   exportAppData: () => Promise<void>;
   importAppData: (file: File) => Promise<void>;
   relinkTrack: (trackId: string, file: File, isSubliminal: boolean) => Promise<void>;
@@ -216,6 +217,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       isEnabled: false,
       type: 'white',
       volume: 0.2,
+    },
+    audioTools: {
+      gainDb: 0,
+      normalizeTargetDb: null,
     },
     mainVolume: 1.0,
     playbackRate: 1.0,
@@ -454,6 +459,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({
       ...prev,
       library: { ...prev.library, ...newLib }
+    }));
+  };
+
+  const updateAudioTools = (newTools: Partial<AppSettings['audioTools']>) => {
+    setSettings(prev => ({
+      ...prev,
+      audioTools: { ...prev.audioTools, ...newTools }
     }));
   };
 
@@ -703,6 +715,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateNatureSettings,
       updateNoiseSettings,
       updateLibrarySettings,
+      updateAudioTools,
       exportAppData,
       importAppData,
       relinkTrack,
