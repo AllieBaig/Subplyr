@@ -263,7 +263,7 @@ export default function PlayerView() {
                               <button
                                 key={p.id}
                                 onClick={() => updateSubliminalSettings({ sourcePlaylistId: p.id })}
-                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.sourcePlaylistId === p.id ? 'bg-apple-blue text-white border-apple-blue shadow-sm' : 'bg-apple-bg text-apple-text-secondary border-black/[0.05]'}`}
+                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.sourcePlaylistId === p.id ? 'bg-apple-blue text-white border-apple-blue shadow-md' : 'bg-white text-apple-text-secondary border-black/[0.08] hover:border-black/20'}`}
                               >
                                 {p.name}
                               </button>
@@ -281,7 +281,7 @@ export default function PlayerView() {
                               <button
                                 key={t.id}
                                 onClick={() => updateSubliminalSettings({ selectedTrackId: t.id })}
-                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.selectedTrackId === t.id ? 'bg-apple-blue text-white border-apple-blue shadow-sm' : 'bg-apple-bg text-apple-text-secondary border-black/[0.05]'}`}
+                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.selectedTrackId === t.id ? 'bg-apple-blue text-white border-apple-blue shadow-md' : 'bg-white text-apple-text-secondary border-black/[0.08] hover:border-black/20'}`}
                               >
                                 {t.name}
                               </button>

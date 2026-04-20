@@ -351,7 +351,7 @@ export default function AudioEngine() {
         delayTimeoutRef.current = window.setTimeout(() => {
           if (subAudioRef.current && isPlaying) {
             subAudioRef.current.src = subTrack.url;
-            subAudioRef.current.loop = settings.subliminal.isLooping;
+            subAudioRef.current.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
             subAudioRef.current.play().catch(console.error);
           }
         }, settings.subliminal.delayMs);
