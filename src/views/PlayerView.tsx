@@ -109,7 +109,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
           onClick={onBack}
           className="w-10 h-10 -ml-2 flex items-center justify-center text-apple-text-primary hover:bg-gray-50 rounded-full transition-colors"
         >
-          <ChevronLeft size={28} />
+          <ChevronDown size={28} />
         </button>
         <div className="text-center flex-1 overflow-hidden">
           <h1 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary truncate px-4">Now Playing</h1>

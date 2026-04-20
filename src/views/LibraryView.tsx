@@ -192,21 +192,21 @@ export default function LibraryView() {
   }, [playlists, searchQuery]);
 
   return (
-    <div className={`flex flex-col relative w-full max-w-7xl mx-auto ${settings.miniMode ? 'gap-4' : 'gap-8'}`}>
-      <header className={`flex flex-col sticky top-[-24px] bg-apple-bg/95 backdrop-blur-md z-20 ${settings.miniMode ? 'py-2 px-2' : 'py-4 px-2'} gap-4 -mx-2`}>
-        <div className="flex justify-between items-end">
+    <div className={`flex flex-col relative w-full max-w-7xl mx-auto`}>
+      <header className={`flex flex-col sticky top-0 bg-white/80 backdrop-blur-md z-20 py-4 gap-4 mb-2`}>
+        <div className="flex justify-between items-end px-2">
           <div>
-            <h1 className={`${settings.miniMode ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>Library</h1>
-            <div className={`flex gap-4 ${settings.miniMode ? 'mt-0' : 'mt-1'}`}>
+            <h1 className="text-4xl font-extrabold tracking-tight">Library</h1>
+            <div className={`flex gap-4 mt-2`}>
               <button 
                 onClick={() => { setView('tracks'); setIsSelectMode(false); setSelectedTrackIds(new Set()); setEditingPlaylistId(null); setActivePlaylistId(null); }}
-                className={`text-sm font-semibold transition-colors ${view === 'tracks' ? 'text-apple-text-primary' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
+                className={`text-sm font-bold transition-colors ${view === 'tracks' ? 'text-apple-blue' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
               >
                 Tracks
               </button>
               <button 
                 onClick={() => { setView('playlists'); setIsSelectMode(false); setSelectedTrackIds(new Set()); setEditingPlaylistId(null); setActivePlaylistId(null); }}
-                className={`text-sm font-semibold transition-colors ${view === 'playlists' || view === 'playlist_detail' ? 'text-apple-text-primary' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
+                className={`text-sm font-bold transition-colors ${view === 'playlists' || view === 'playlist_detail' ? 'text-apple-blue' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
               >
                 Playlists
               </button>
@@ -219,31 +219,23 @@ export default function LibraryView() {
                   setIsSelectMode(!isSelectMode);
                   if (isSelectMode) setSelectedTrackIds(new Set());
                 }}
-                className={`text-sm font-bold tracking-tight px-4 py-2 rounded-full transition-all border ${isSelectMode ? 'bg-apple-blue text-white border-apple-blue shadow-lg' : 'text-apple-blue border-transparent hover:bg-apple-blue/10 font-semibold'}`}
+                className={`text-sm font-bold tracking-tight px-5 py-2 rounded-full transition-all border ${isSelectMode ? 'bg-apple-blue text-white border-apple-blue shadow-lg' : 'text-apple-blue border-transparent hover:bg-apple-blue/10'}`}
               >
                 {isSelectMode ? 'Cancel' : 'Select'}
               </button>
             )}
-            {view === 'tracks' && !isSelectMode && (
-              <button 
-                onClick={() => setShowSortMenu(!showSortMenu)}
-                className={`bg-apple-card border border-black/5 p-3 flex-shrink-0 transition-colors ${settings.miniMode ? 'p-2 rounded-xl' : 'p-3 rounded-2xl shadow-sm'} ${showSortMenu ? 'text-apple-blue font-bold' : 'text-apple-text-secondary'}`}
-              >
-                <SortAsc size={settings.miniMode ? 18 : 20} />
-              </button>
-            )}
             {!isSelectMode && (
-              <label className={`bg-apple-card border border-black/5 p-3 flex-shrink-0 cursor-pointer hover:bg-gray-50 transition-colors ${settings.miniMode ? 'p-2 rounded-xl' : 'p-3 rounded-2xl shadow-sm'}`}>
-                <Plus size={settings.miniMode ? 18 : 20} />
+              <label className={`bg-white border border-black/5 p-3 flex-shrink-0 cursor-pointer hover:bg-gray-50 transition-colors rounded-2xl shadow-sm active:scale-95`}>
+                <Plus size={20} />
                 <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
               </label>
             )}
           </div>
         </div>
 
-        {/* Search Bar - Real-time Filtering */}
-        <div className="relative group">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-apple-text-secondary group-focus-within:text-apple-blue transition-colors">
+        {/* Search Bar */}
+        <div className="relative group px-2">
+          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-apple-text-secondary group-focus-within:text-apple-blue transition-colors">
             <Search size={16} />
           </div>
           <input 
@@ -251,7 +243,7 @@ export default function LibraryView() {
             placeholder={`Search ${view === 'tracks' ? 'tracks' : 'playlists'}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-apple-card border border-black/[0.03] pl-11 pr-4 py-3 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-apple-blue/10 focus:border-apple-blue/20 transition-all placeholder:text-apple-text-secondary/50 shadow-sm"
+            className="w-full h-12 bg-gray-100/50 border border-transparent pl-11 pr-4 py-3 rounded-2xl text-sm font-medium outline-none focus:bg-white focus:border-black/5 transition-all placeholder:text-apple-text-secondary/50"
           />
           {searchQuery && (
             <button 
@@ -461,7 +453,7 @@ export default function LibraryView() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 left-4 right-4 z-[100] flex flex-col gap-3 px-6 py-5 bg-black/95 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/10 text-white"
+            className="fixed bottom-28 left-4 right-4 z-[100] flex flex-col gap-3 px-6 py-5 bg-black/95 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/10 text-white"
           >
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
@@ -900,13 +892,13 @@ const PlaylistDetailView = ({
   }, [currentTrackIndex, playingPlaylistId, playlist.id]);
 
   return (
-    <div className="flex flex-col gap-6 animate-in slide-in-from-right duration-300 pb-32">
+    <div className={`p-6 flex flex-col gap-6 animate-in slide-in-from-right duration-300 pb-32`}>
       <header className="flex items-center gap-4 px-2">
         <button onClick={onBack} className="p-2 bg-white rounded-full border border-black/5 shadow-sm text-apple-text-primary active:scale-90 transition-transform">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold tracking-tight truncate">{playlist.name}</h2>
+          <h2 className="text-xl font-extrabold tracking-tight truncate">{playlist.name}</h2>
           <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-widest">{playlist.trackIds.length} tracks</p>
         </div>
         <div className="flex gap-2">

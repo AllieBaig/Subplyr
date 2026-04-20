@@ -5,6 +5,7 @@ import TabBar from './components/TabBar';
 import LibraryView from './views/LibraryView';
 import PlayerView from './views/PlayerView';
 import SettingsView from './views/SettingsView';
+import MiniPlayer from './components/MiniPlayer';
 import { motion, AnimatePresence } from 'motion/react';
 import { WifiOff, AlertCircle, RefreshCcw } from 'lucide-react';
 import { GlobalSafetyManager, LoadingPlaceholder } from './components/Safety';
@@ -12,7 +13,7 @@ import { GlobalSafetyManager, LoadingPlaceholder } from './components/Safety';
 export type TabType = 'library' | 'player' | 'settings';
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<TabType>('player');
+  const [activeTab, setActiveTab] = useState<TabType>('library');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { isLoading, initError, toast, settings } = useAudio();
 
@@ -28,19 +29,6 @@ function AppContent() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-
-  const renderView = () => {
-    switch (activeTab) {
-      case 'library': return <LibraryView />;
-      case 'player': return <PlayerView onBack={() => setActiveTab('library')} />;
-      case 'settings': return <SettingsView />;
-      default: return <PlayerView />;
-    }
-  };
-
-  // Defensive State Guard: Ensure settings and tracks exist before heavy rendering
-  // If isLoading is true, we still render the shell but put Placeholder in main
-  // If initError exists, we show error UI in main but keep TabBar for navigation (if possible) or just focus on repair
 
   return (
     <div 
@@ -77,66 +65,92 @@ function AppContent() {
           )}
         </AnimatePresence>
         
-        <main className="flex-1 relative overflow-hidden flex flex-col">
-          <AnimatePresence mode="wait">
-            {isLoading ? (
-              <motion.div 
-                 key="loader"
-                 initial={{ opacity: 0 }}
-                 animate={{ opacity: 1 }}
-                 exit={{ opacity: 0 }}
-                 className="h-full px-4 md:px-8 lg:px-12"
-              >
-                <div className="max-w-2xl mx-auto h-full">
-                  <LoadingPlaceholder />
+        <main className="flex-1 relative overflow-hidden">
+          {isLoading ? (
+            <div className="h-full px-4 md:px-8 lg:px-12">
+              <div className="max-w-2xl mx-auto h-full">
+                <LoadingPlaceholder />
+              </div>
+            </div>
+          ) : initError ? (
+            <div className="h-full flex items-center justify-center px-4 md:px-8 lg:px-12">
+              <div className={`w-full max-w-lg bg-white ${settings.miniMode ? 'rounded-2xl p-6' : 'rounded-[2.5rem] p-8'} border border-black/5 shadow-2xl text-center`}>
+                <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle size={32} />
                 </div>
-              </motion.div>
-            ) : initError ? (
-              <motion.div 
-                 key="error"
-                 initial={{ opacity: 0, scale: 0.9 }}
-                 animate={{ opacity: 1, scale: 1 }}
-                 exit={{ opacity: 0, scale: 0.9 }}
-                 className="h-full flex items-center justify-center px-4 md:px-8 lg:px-12"
-              >
-                <div className={`w-full max-w-lg bg-white ${settings.miniMode ? 'rounded-2xl p-6' : 'rounded-[2.5rem] p-8'} border border-black/5 shadow-2xl text-center`}>
-                  <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <AlertCircle size={32} />
-                  </div>
-                  <h2 className="text-2xl font-bold mb-2">Startup Issue</h2>
-                  <p className="text-apple-text-secondary text-sm mb-8">{initError}</p>
-                  <button 
-                    onClick={() => window.location.reload()}
-                    className="w-full bg-apple-text-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                <h2 className="text-2xl font-bold mb-2">Startup Issue</h2>
+                <p className="text-apple-text-secondary text-sm mb-8">{initError}</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full bg-apple-text-primary text-white py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                >
+                  <RefreshCcw size={20} />
+                  <span>Retry System</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="h-full relative overflow-hidden">
+              {/* Base Layer: Library */}
+              <div className="h-full overflow-y-auto no-scrollbar pb-64 px-4 md:px-8 lg:px-12 pt-6">
+                <LibraryView />
+              </div>
+
+              {/* Mini Player - Only show when NOT in Settings/Full Player */}
+              <AnimatePresence>
+                {activeTab === 'library' && (
+                  <MiniPlayer onExpand={() => setActiveTab('player')} />
+                )}
+              </AnimatePresence>
+
+              {/* Player Overlay (Full Screen Sheet) */}
+              <AnimatePresence>
+                {activeTab === 'player' && (
+                  <motion.div
+                    key="player"
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                    className="fixed inset-0 z-[100] bg-white overflow-hidden"
                   >
-                    <RefreshCcw size={20} />
-                    <span>Retry System</span>
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: activeTab === 'library' ? -20 : 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: activeTab === 'library' ? 20 : -20 }}
-                transition={{ 
-                  duration: settings.miniMode ? 0.35 : 0.5, 
-                  ease: [0.23, 1, 0.32, 1] 
-                }} 
-                className={`h-full flex flex-col overflow-y-auto no-scrollbar pb-32`}
-                style={{ willChange: 'transform, opacity' }}
-              >
-                <div className="w-full px-4 md:px-8 lg:px-12 py-6">
-                  {renderView()}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    <PlayerView onBack={() => setActiveTab('library')} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Settings Overlay (Full Screen Sheet) */}
+              <AnimatePresence>
+                {activeTab === 'settings' && (
+                  <motion.div
+                    key="settings"
+                    initial={{ x: '100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '100%' }}
+                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                    className="fixed inset-0 z-[110] bg-apple-bg overflow-y-auto no-scrollbar"
+                  >
+                    <div className="w-full px-4 md:px-8 lg:px-12 py-6 min-h-full pb-32">
+                       <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-8">
+                         <button 
+                           onClick={() => setActiveTab('library')}
+                           className="px-4 py-2 bg-white rounded-full text-sm font-bold shadow-sm border border-black/5 active:scale-95 transition-transform"
+                         >
+                           Close Settings
+                         </button>
+                         <h2 className="text-sm font-bold uppercase tracking-widest text-apple-text-secondary">App Configuration</h2>
+                       </div>
+                       <SettingsView onBack={() => setActiveTab('library')} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </main>
         
         {!isLoading && !initError && (
-          <div className="absolute bottom-0 left-0 right-0 h-24 flex items-center justify-center pointer-events-none px-4 pb-4">
+          <div className="absolute bottom-0 left-0 right-0 h-24 flex items-center justify-center pointer-events-none px-4 pb-4 z-50">
             <div className="w-full max-w-md pointer-events-auto">
               <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>

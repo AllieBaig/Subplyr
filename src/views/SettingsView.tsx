@@ -4,7 +4,7 @@ import { NATURE_SOUNDS } from '../constants';
 import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export default function SettingsView() {
+export default function SettingsView({ onBack }: { onBack?: () => void }) {
   const { 
     tracks,
     playlists,
@@ -185,12 +185,7 @@ export default function SettingsView() {
   );
 
   return (
-    <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto px-2">
-      <header className="mb-10 mt-4">
-        <h1 className="text-4xl font-extrabold tracking-tight">Audio Settings</h1>
-        <p className="text-apple-text-secondary text-base mt-2">Adjust your high-fidelity sound environment</p>
-      </header>
-
+    <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
         {/* Row 1: Core Layers */}
         <div className="flex flex-col gap-6">
