@@ -16,7 +16,7 @@ export interface Playlist {
 }
 
 export type SortOption = 'date' | 'alphabetical' | 'recent';
-export type GroupOption = 'none' | 'day' | 'week' | 'month';
+export type GroupOption = 'none' | 'day' | 'week' | 'month' | 'alphabetical';
 
 export interface SubliminalSettings {
   isEnabled: boolean;

@@ -249,7 +249,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     syncPlayback: true,
     library: {
       sort: 'recent',
-      group: 'none'
+      group: 'alphabetical'
     },
     miniMode: false,
     hiddenLayersPosition: 'bottom',
