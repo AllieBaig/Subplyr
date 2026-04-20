@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders } from 'lucide-react';
+import { NATURE_SOUNDS } from '../constants';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SettingsView() {
@@ -415,17 +416,34 @@ export default function SettingsView() {
         onToggle={(val: boolean) => updateNatureSettings({ isEnabled: val })}
       >
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-2">
-            {['rain', 'ocean', 'forest', 'wind'].map(type => (
-              <button 
-                key={type}
-                onClick={() => updateNatureSettings({ type: type as any })}
-                className={`p-3 rounded-xl border capitalize text-xs font-semibold ${settings.nature.type === type ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-white border-black/5 hover:bg-gray-50'}`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
+          {NATURE_SOUNDS.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {NATURE_SOUNDS.map(sound => {
+                const Icon = sound.id === 'rain' ? CloudRain : 
+                           sound.id === 'ocean' ? Waves : 
+                           sound.id === 'forest' ? Trees : 
+                           sound.id === 'wind' ? Wind : 
+                           sound.id === 'fire' ? Flame : 
+                           sound.id === 'stream' ? Droplets : CloudRain;
+                return (
+                  <button 
+                    key={sound.id}
+                    onClick={() => updateNatureSettings({ type: sound.id as any })}
+                    className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-white border-black/5 hover:bg-gray-50'}`}
+                  >
+                    <Icon size={14} className={settings.nature.type === sound.id ? 'text-white' : 'text-green-600'} />
+                    <span className="text-[11px] font-bold truncate">{sound.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-dashed border-black/10 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-2">
+              <CloudRain size={32} className="text-gray-300" />
+              <p className="text-xs text-apple-text-secondary font-medium">No nature sounds found</p>
+            </div>
+          )}
+          
           <VolumeSlider 
              label="Ambience Volume"
              value={settings.nature.volume}

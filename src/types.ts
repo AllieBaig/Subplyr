@@ -37,7 +37,7 @@ export interface BinauralSettings {
 
 export interface NatureSettings {
   isEnabled: boolean;
-  type: 'rain' | 'ocean' | 'forest' | 'wind';
+  type: 'rain' | 'ocean' | 'forest' | 'wind' | 'fire' | 'stream';
   volume: number;
 }
 

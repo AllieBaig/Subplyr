@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useAudio } from '../AudioContext';
+import { NATURE_SOUNDS } from '../constants';
 
 export default function AudioEngine() {
   const { 
@@ -39,13 +40,6 @@ export default function AudioEngine() {
   const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const noiseGainRef = useRef<GainNode | null>(null);
   const natureAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const NATURE_URLS = {
-    rain: 'https://assets.mixkit.co/sfx/preview/mixkit-light-rain-loop-2393.mp3',
-    ocean: 'https://assets.mixkit.co/sfx/preview/mixkit-ocean-waves-loop-1196.mp3',
-    forest: 'https://assets.mixkit.co/sfx/preview/mixkit-forest-birds-ambience-loop-1210.mp3',
-    wind: 'https://assets.mixkit.co/sfx/preview/mixkit-wind-whistle-loop-1159.mp3',
-  };
 
   // iOS Background Audio & Media Session Setup
   useEffect(() => {
@@ -532,9 +526,12 @@ export default function AudioEngine() {
   useEffect(() => {
     if (isPlaying && settings.nature.isEnabled && natureAudioRef.current) {
       const audio = natureAudioRef.current;
-      audio.src = NATURE_URLS[settings.nature.type];
-      audio.volume = settings.nature.volume;
-      audio.play().catch(console.error);
+      const sound = NATURE_SOUNDS.find(s => s.id === settings.nature.type);
+      if (sound) {
+        audio.src = sound.url;
+        audio.volume = settings.nature.volume;
+        audio.play().catch(console.error);
+      }
     } else {
       if (natureAudioRef.current) {
         natureAudioRef.current.pause();

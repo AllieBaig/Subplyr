@@ -16,6 +16,7 @@ interface AudioContextType {
   addTrackToPlaylist: (trackId: string, playlistId: string) => Promise<void>;
   addTracksToPlaylist: (trackIds: string[], playlistId: string) => Promise<void>;
   removeTrackFromPlaylist: (trackId: string, playlistId: string) => Promise<void>;
+  removeTracksFromPlaylist: (trackIds: string[], playlistId: string) => Promise<void>;
   
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
@@ -508,9 +509,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const removeTrackFromPlaylist = async (trackId: string, playlistId: string) => {
+    await removeTracksFromPlaylist([trackId], playlistId);
+  };
+
+  const removeTracksFromPlaylist = async (trackIds: string[], playlistId: string) => {
     const playlist = playlists.find(p => p.id === playlistId);
     if (!playlist) return;
-    const updated = { ...playlist, trackIds: playlist.trackIds.filter(id => id !== trackId) };
+    const updated = { ...playlist, trackIds: playlist.trackIds.filter(id => !trackIds.includes(id)) };
     await db.savePlaylist(updated);
     setPlaylists(prev => prev.map(p => p.id === playlistId ? updated : p));
   };
@@ -719,6 +724,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       exportAppData,
       importAppData,
       relinkTrack,
+      removeTracksFromPlaylist,
       currentTrackIndex,
       setCurrentTrackIndex,
       playNext,
