@@ -4,7 +4,7 @@ import {
   Play, Pause, SkipBack, SkipForward, 
   Volume2, Activity, Wind, CloudRain, 
   Sliders, ChevronDown, Check, X, 
-  Moon, Zap, Focus as FocusIcon, List
+  Moon, Zap, Focus as FocusIcon, List, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -25,7 +25,8 @@ export default function PlayerView() {
     updateSubliminalSettings,
     updateBinauralSettings,
     updateNatureSettings,
-    updateNoiseSettings
+    updateNoiseSettings,
+    addTrack
   } = useAudio();
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -234,60 +235,77 @@ export default function PlayerView() {
                     maxVol={0.3}
                     subtitle="Hidden affirmations layer"
                   >
-                    <div className="mt-4 flex flex-col gap-4">
-                      {/* Playlist Mode Toggle */}
-                      <div className="flex items-center justify-between bg-apple-bg px-4 py-3 rounded-2xl border border-black/[0.03]">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${settings.subliminal.isPlaylistMode ? 'bg-apple-blue text-white' : 'bg-gray-100 text-gray-400'}`}>
-                            <List size={14} />
-                          </div>
-                          <span className="text-[11px] font-bold tracking-tight">Play via Playlist</span>
-                        </div>
+                    <div className="mt-6 flex flex-col gap-6">
+                      {/* Segmented Control */}
+                      <div className="bg-gray-100 p-1 rounded-2xl flex items-center h-10">
                         <button 
-                          onClick={() => updateSubliminalSettings({ isPlaylistMode: !settings.subliminal.isPlaylistMode })}
-                          className={`w-10 h-6 rounded-full relative transition-colors ${settings.subliminal.isPlaylistMode ? 'bg-apple-blue' : 'bg-gray-200'}`}
+                          onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
+                          className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
                         >
-                          <motion.div 
-                            className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm"
-                            animate={{ x: settings.subliminal.isPlaylistMode ? 16 : 0 }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                          />
+                          Single Track
+                        </button>
+                        <button 
+                          onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
+                          className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                        >
+                          Play via Playlist
                         </button>
                       </div>
 
                       {settings.subliminal.isPlaylistMode ? (
-                        <div className="flex flex-col gap-2">
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary px-1">Source Playlist</p>
+                        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center justify-between px-1">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary">Source Playlist</p>
+                            {settings.subliminal.sourcePlaylistId && (
+                              <span className="text-[9px] font-bold text-apple-blue uppercase tracking-widest">Selected</span>
+                            )}
+                          </div>
                           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                             {playlists.map(p => (
                               <button
                                 key={p.id}
                                 onClick={() => updateSubliminalSettings({ sourcePlaylistId: p.id })}
-                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.sourcePlaylistId === p.id ? 'bg-apple-blue text-white border-apple-blue shadow-md' : 'bg-white text-apple-text-secondary border-black/[0.08] hover:border-black/20'}`}
+                                className={`whitespace-nowrap px-4 py-2.5 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.sourcePlaylistId === p.id ? 'bg-apple-blue text-white border-apple-blue shadow-md' : 'bg-white text-apple-text-secondary border-black/[0.08] hover:border-black/20'}`}
                               >
                                 {p.name}
                               </button>
                             ))}
                             {playlists.length === 0 && (
-                              <p className="text-[10px] text-gray-400 italic px-2">No playlists created yet</p>
+                              <p className="text-[10px] text-gray-400 italic px-2 py-2">No playlists created yet</p>
                             )}
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-2">
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary px-1">Source Track</p>
+                        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center justify-between px-1">
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary">Source Track</p>
+                            <label className="flex items-center gap-1.5 text-apple-blue cursor-pointer active:opacity-50 transition-opacity">
+                              <Plus size={12} />
+                              <span className="text-[9px] font-bold uppercase tracking-widest">Upload New</span>
+                              <input 
+                                type="file" 
+                                accept="audio/*" 
+                                className="hidden" 
+                                onChange={async (e) => {
+                                  if (e.target.files?.[0]) {
+                                    await addTrack(e.target.files[0]);
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
                           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                             {[...subliminalTracks, ...tracks].map(t => (
                               <button
                                 key={t.id}
                                 onClick={() => updateSubliminalSettings({ selectedTrackId: t.id })}
-                                className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.selectedTrackId === t.id ? 'bg-apple-blue text-white border-apple-blue shadow-md' : 'bg-white text-apple-text-secondary border-black/[0.08] hover:border-black/20'}`}
+                                className={`whitespace-nowrap px-4 py-2.5 rounded-xl text-[10px] font-bold transition-all border ${settings.subliminal.selectedTrackId === t.id ? 'bg-apple-blue text-white border-apple-blue shadow-md' : 'bg-white text-apple-text-secondary border-black/[0.08] hover:border-black/20'}`}
                               >
                                 {t.name}
                               </button>
                             ))}
                             {[...subliminalTracks, ...tracks].length === 0 && (
-                              <p className="text-[10px] text-gray-400 italic px-2">No tracks available</p>
+                              <p className="text-[10px] text-gray-400 italic px-2 py-2">No audio tracks found</p>
                             )}
                           </div>
                         </div>
