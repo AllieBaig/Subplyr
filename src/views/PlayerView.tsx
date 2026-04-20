@@ -125,9 +125,11 @@ export default function PlayerView() {
           </motion.div>
         </div>
         
-        <div className={`text-center w-full px-4 flex flex-col justify-center ${settings.miniMode ? 'h-24' : 'h-32'}`}>
-          <h2 className={`${settings.miniMode ? 'text-xl' : 'text-2xl'} font-bold tracking-tight text-apple-text-primary mb-1 truncate leading-tight`}>{currentTrack.name}</h2>
-          <p className="text-apple-text-secondary font-medium text-sm">{currentTrack.artist}</p>
+        <div className={`text-center w-full px-4 flex flex-col justify-center ${settings.miniMode ? 'h-28' : 'h-36'}`}>
+          <h2 className={`${settings.miniMode ? 'text-xl' : 'text-2xl'} font-extrabold tracking-tight text-apple-text-primary mb-1.5 line-clamp-2 leading-tight overflow-hidden text-ellipsis`}>
+            {currentTrack.name}
+          </h2>
+          <p className="text-apple-text-secondary font-semibold text-sm tracking-wide">{currentTrack.artist}</p>
           
           <div className="flex justify-center">
             <button 
@@ -159,7 +161,7 @@ export default function PlayerView() {
               className={`w-full bg-black/5 rounded-full appearance-none cursor-pointer accent-apple-text-primary ${settings.miniMode ? 'h-1' : 'h-1.5'}`}
             />
           </div>
-          <div className="flex justify-between text-[11px] font-bold text-apple-text-secondary/50 tabular-nums tracking-widest leading-none">
+          <div className="flex justify-between text-[11px] font-bold text-apple-text-secondary tabular-nums tracking-widest leading-none bg-apple-bg px-1 rounded-sm">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>

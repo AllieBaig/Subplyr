@@ -140,14 +140,14 @@ export default function LibraryView() {
             </button>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {view === 'tracks' && tracks.length > 0 && (
             <button 
               onClick={() => {
                 setIsSelectMode(!isSelectMode);
                 if (isSelectMode) setSelectedTrackIds(new Set());
               }}
-              className={`text-sm font-bold tracking-tight px-3 py-1.5 rounded-full transition-all ${isSelectMode ? 'bg-apple-blue text-white' : 'text-apple-blue hover:bg-apple-blue/5'}`}
+              className={`text-sm font-bold tracking-tight px-4 py-2 rounded-full transition-all border ${isSelectMode ? 'bg-apple-blue text-white border-apple-blue shadow-lg' : 'text-apple-blue border-transparent hover:bg-apple-blue/10 font-semibold'}`}
             >
               {isSelectMode ? 'Cancel' : 'Select'}
             </button>
@@ -273,28 +273,60 @@ export default function LibraryView() {
 
       {/* Bulk Action Bar */}
       <AnimatePresence>
-        {isSelectMode && selectedTrackIds.size > 0 && (
+        {isSelectMode && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between px-6 py-4 bg-black/90 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/10 text-white"
+            className="fixed bottom-24 left-4 right-4 z-[100] flex flex-col gap-3 px-6 py-5 bg-black/95 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/10 text-white"
           >
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">{selectedTrackIds.size} Selected</span>
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">{selectedTrackIds.size} Selected</span>
+              </div>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => {
+                    const allIds = tracks.map(t => t.id);
+                    const allSelected = allIds.every(id => selectedTrackIds.has(id));
+                    if (allSelected) setSelectedTrackIds(new Set());
+                    else setSelectedTrackIds(new Set(allIds));
+                  }}
+                  className="text-[10px] font-bold text-apple-blue uppercase tracking-widest active:opacity-50"
+                >
+                  {tracks.every(t => selectedTrackIds.has(t.id)) ? 'Deselect All' : 'Select All'}
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsSelectMode(false);
+                    setSelectedTrackIds(new Set());
+                  }}
+                  className="text-[10px] font-bold text-white/60 uppercase tracking-widest active:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
             
-            <div className="flex gap-4">
+            <div className="h-px bg-white/10 w-full" />
+
+            <div className="flex gap-3 mt-1">
               <button 
-                onClick={() => setShowBulkAddMenu(!showBulkAddMenu)}
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-2xl text-xs font-bold transition-colors"
+                onClick={() => {
+                  if (selectedTrackIds.size > 0) setShowBulkAddMenu(!showBulkAddMenu);
+                  else showToast("Select tracks first");
+                }}
+                disabled={selectedTrackIds.size === 0}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold transition-all active:scale-95 shadow-lg ${selectedTrackIds.size > 0 ? 'bg-apple-blue text-white shadow-apple-blue/20' : 'bg-white/5 text-white/20'}`}
               >
                 <ListPlus size={16} />
                 <span>Add to Playlist</span>
               </button>
               <button 
                 onClick={handleBulkCreatePlaylist}
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 p-2 rounded-2xl transition-colors"
+                disabled={selectedTrackIds.size === 0}
+                className={`flex items-center gap-2 p-3 rounded-2xl transition-all active:scale-95 ${selectedTrackIds.size > 0 ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white/5 text-white/20'}`}
+                title="Create New Playlist"
               >
                 <FolderPlus size={20} />
               </button>
@@ -364,9 +396,15 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
         {isSelectMode && (
           <button 
             onClick={onSelect}
-            className={`flex-shrink-0 transition-colors ${isSelected ? 'text-apple-blue' : 'text-apple-text-secondary/20'}`}
+            className={`flex-shrink-0 transition-all duration-300 transform ${isSelected ? 'scale-110' : 'scale-100'} ${isSelected ? 'text-apple-blue' : 'text-gray-300'}`}
           >
-            {isSelected ? <CheckCircle2 size={24} fill="currentColor" className="text-apple-blue" stroke="white" /> : <Circle size={24} />}
+            {isSelected ? (
+              <div className="bg-apple-blue rounded-full p-0.5">
+                <CheckCircle2 size={24} className="text-white" fill="currentColor" stroke="none" />
+              </div>
+            ) : (
+              <Circle size={24} className="text-gray-200" />
+            )}
           </button>
         )}
         <button onClick={onPlay} className={`flex-1 flex items-center ${settings.miniMode ? 'gap-3' : 'gap-4'} text-left min-w-0`}>
