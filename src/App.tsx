@@ -32,7 +32,7 @@ function AppContent() {
   const renderView = () => {
     switch (activeTab) {
       case 'library': return <LibraryView />;
-      case 'player': return <PlayerView />;
+      case 'player': return <PlayerView onBack={() => setActiveTab('library')} />;
       case 'settings': return <SettingsView />;
       default: return <PlayerView />;
     }
