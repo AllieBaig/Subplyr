@@ -3,7 +3,8 @@ import { useAudio } from '../AudioContext';
 import { 
   Upload, Plus, Trash2, Share, SortAsc, 
   LayoutGrid, List, Calendar, CheckCircle2, 
-  Circle, X, FolderPlus, ListPlus, Zap
+  Circle, X, FolderPlus, ListPlus, Zap,
+  AlertCircle, Link
 } from 'lucide-react';
 import { Track, SortOption, GroupOption } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,7 +25,8 @@ export default function LibraryView() {
     createPlaylist,
     deletePlaylist,
     addTrackToPlaylist,
-    addTracksToPlaylist
+    addTracksToPlaylist,
+    relinkTrack
   } = useAudio();
 
   const [view, setView] = useState<'tracks' | 'playlists'>('tracks');
@@ -388,15 +390,22 @@ const EmptyState = ({ onFileUpload }: any) => (
 
 const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, onAddToPlaylist, isSelectMode, isSelected, onSelect }: any) => {
   const [showActions, setShowActions] = useState(false);
-  const { settings, updateSubliminalSettings, showToast } = useAudio();
+  const { settings, updateSubliminalSettings, showToast, relinkTrack } = useAudio();
+
+  const handleRelink = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      await relinkTrack(track.id, e.target.files[0], false);
+    }
+  };
 
   return (
-    <div className={`group flex flex-col transition-all duration-300 ${settings.miniMode ? 'rounded-xl' : 'rounded-3xl'} ${isActive ? 'bg-apple-blue/5 border border-apple-blue/10' : 'hover:bg-apple-card/60 border border-transparent'}`}>
+    <div className={`group flex flex-col transition-all duration-300 ${settings.miniMode ? 'rounded-xl' : 'rounded-3xl'} ${isActive ? 'bg-apple-blue/5 border border-apple-blue/10' : 'hover:bg-apple-card/60 border border-transparent'} ${track.isMissing ? 'opacity-80' : ''}`}>
       <div className={`flex items-center gap-4 ${settings.miniMode ? 'p-2' : 'p-4'}`}>
         {isSelectMode && (
           <button 
             onClick={onSelect}
-            className={`flex-shrink-0 transition-all duration-300 transform ${isSelected ? 'scale-110' : 'scale-100'} ${isSelected ? 'text-apple-blue' : 'text-gray-300'}`}
+            disabled={track.isMissing}
+            className={`flex-shrink-0 transition-all duration-300 transform ${isSelected ? 'scale-110' : 'scale-100'} ${isSelected ? 'text-apple-blue' : 'text-gray-300'} ${track.isMissing ? 'grayscale opacity-50' : ''}`}
           >
             {isSelected ? (
               <div className="bg-apple-blue rounded-full p-0.5">
@@ -407,25 +416,45 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
             )}
           </button>
         )}
-        <button onClick={onPlay} className={`flex-1 flex items-center ${settings.miniMode ? 'gap-3' : 'gap-4'} text-left min-w-0`}>
-          <div className={`flex-shrink-0 ${settings.miniMode ? 'w-10 h-10 rounded-xl' : 'w-12 h-12 rounded-2xl'} bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-sm`}>
+        <button 
+          onClick={() => !track.isMissing && onPlay()} 
+          className={`flex-1 flex items-center ${settings.miniMode ? 'gap-3' : 'gap-4'} text-left min-w-0 ${track.isMissing ? 'cursor-default' : ''}`}
+        >
+          <div className={`flex-shrink-0 ${settings.miniMode ? 'w-10 h-10 rounded-xl' : 'w-12 h-12 rounded-2xl'} bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-sm relative`}>
              {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-400" size={settings.miniMode ? 16 : 20} />}
+             {track.isMissing && (
+               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                 <AlertCircle size={settings.miniMode ? 14 : 18} className="text-white" />
+               </div>
+             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className={`font-semibold truncate text-sm ${isActive ? 'text-apple-blue' : 'text-apple-text-primary'}`}>
-              {track.name}
-            </h4>
+            <div className="flex items-center gap-2">
+              <h4 className={`font-semibold truncate text-sm ${isActive ? 'text-apple-blue' : 'text-apple-text-primary'}`}>
+                {track.name}
+              </h4>
+              {track.isMissing && (
+                <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase tracking-tighter">Missing</span>
+              )}
+            </div>
             <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider">{track.artist}</p>
           </div>
         </button>
         <div className="flex gap-1 flex-shrink-0">
-          {!isSelectMode && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
-              className={`p-2 rounded-full transition-colors ${showActions ? 'bg-apple-blue/10 text-apple-blue' : 'text-apple-text-secondary hover:bg-gray-100'}`}
-            >
-              <Plus size={16} />
-            </button>
+          {track.isMissing ? (
+            <label className="p-2 text-apple-blue hover:bg-apple-blue/5 rounded-full transition-colors cursor-pointer" title="Relink File">
+              <Link size={16} />
+              <input type="file" accept="audio/*" className="hidden" onChange={handleRelink} />
+            </label>
+          ) : (
+            !isSelectMode && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
+                className={`p-2 rounded-full transition-colors ${showActions ? 'bg-apple-blue/10 text-apple-blue' : 'text-apple-text-secondary hover:bg-gray-100'}`}
+              >
+                <Plus size={16} />
+              </button>
+            )
           )}
           {!settings.miniMode && !isSelectMode && (
             <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="p-2 text-apple-text-secondary hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">

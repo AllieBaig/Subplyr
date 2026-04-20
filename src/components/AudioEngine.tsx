@@ -300,12 +300,21 @@ export default function AudioEngine() {
       if (settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId) {
         const playlist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
         if (playlist && playlist.trackIds.length > 0) {
-          subPlaylistIndexRef.current = (subPlaylistIndexRef.current + 1) % playlist.trackIds.length;
-          const nextTrackId = playlist.trackIds[subPlaylistIndexRef.current];
-          const nextTrack = tracks.find(t => t.id === nextTrackId);
-          if (nextTrack && isPlaying) {
-            audio.src = nextTrack.url;
-            audio.play().catch(console.error);
+          // Skip missing tracks in playlist
+          let found = false;
+          let attempts = 0;
+          while (!found && attempts < playlist.trackIds.length) {
+            subPlaylistIndexRef.current = (subPlaylistIndexRef.current + 1) % playlist.trackIds.length;
+            const nextTrackId = playlist.trackIds[subPlaylistIndexRef.current];
+            const nextTrack = tracks.find(t => t.id === nextTrackId);
+            if (nextTrack && !nextTrack.isMissing) {
+              if (isPlaying) {
+                audio.src = nextTrack.url;
+                audio.play().catch(console.error);
+              }
+              found = true;
+            }
+            attempts++;
           }
         }
       }
@@ -322,11 +331,20 @@ export default function AudioEngine() {
   // Handle Main Track Source Change
   useEffect(() => {
     if (mainAudioRef.current && currentTrack) {
+      if (currentTrack.isMissing) {
+        mainAudioRef.current.pause();
+        mainAudioRef.current.src = "";
+        setIsPlaying(false);
+        return;
+      }
       const wasPlaying = isPlaying;
       mainAudioRef.current.src = currentTrack.url;
       if (wasPlaying) {
         mainAudioRef.current.play().catch(console.error);
       }
+    } else if (mainAudioRef.current && !currentTrack) {
+      mainAudioRef.current.pause();
+      mainAudioRef.current.src = "";
     }
   }, [currentTrack]);
 
@@ -335,6 +353,10 @@ export default function AudioEngine() {
     if (!mainAudioRef.current) return;
 
     if (isPlaying) {
+      if (currentTrack?.isMissing) {
+        setIsPlaying(false);
+        return;
+      }
       mainAudioRef.current.play().catch(e => {
         console.error("Playback error:", e);
         setIsPlaying(false);
@@ -345,7 +367,7 @@ export default function AudioEngine() {
       }
       
       // Start subliminal with delay
-      if (settings.subliminal.isEnabled && subTrack && subAudioRef.current) {
+      if (settings.subliminal.isEnabled && subTrack && subAudioRef.current && !subTrack.isMissing) {
         if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
         
         delayTimeoutRef.current = window.setTimeout(() => {

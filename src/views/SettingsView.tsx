@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SettingsView() {
@@ -15,6 +15,8 @@ export default function SettingsView() {
     updateNoiseSettings,
     updateSettings,
     exportAppData,
+    importAppData,
+    relinkTrack,
     resetUISettings,
     clearAppCache,
     swStatus,
@@ -119,23 +121,46 @@ export default function SettingsView() {
             <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Selected Track</label>
             <div className="flex flex-col gap-2">
               {subliminalTracks.map(track => (
-                <button 
+                <div 
                   key={track.id}
-                  onClick={() => updateSubliminalSettings({ selectedTrackId: track.id })}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                  className={`flex flex-col rounded-xl border transition-all ${
                     settings.subliminal.selectedTrackId === track.id 
                     ? 'border-apple-blue bg-apple-blue/5' 
                     : 'border-black/5 bg-white'
                   }`}
                 >
-                  <span className={`text-xs font-medium truncate ${settings.subliminal.selectedTrackId === track.id ? 'text-apple-blue' : ''}`}>
-                    {track.name}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {settings.subliminal.selectedTrackId === track.id && <Check size={14} className="text-apple-blue" />}
-                    <button onClick={(e) => { e.stopPropagation(); removeSubliminalTrack(track.id); }} className="text-apple-text-secondary opacity-30 hover:opacity-100"><Trash2 size={12} /></button>
-                  </div>
-                </button>
+                  <button 
+                    onClick={() => !track.isMissing && updateSubliminalSettings({ selectedTrackId: track.id })}
+                    className={`flex items-center justify-between p-3 w-full text-left ${track.isMissing ? 'cursor-default opacity-60' : ''}`}
+                  >
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium truncate ${settings.subliminal.selectedTrackId === track.id ? 'text-apple-blue' : ''}`}>
+                          {track.name}
+                        </span>
+                        {track.isMissing && (
+                          <span className="text-[8px] font-bold bg-amber-100 text-amber-700 px-1 rounded uppercase">Missing</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!track.isMissing && settings.subliminal.selectedTrackId === track.id && <Check size={14} className="text-apple-blue" />}
+                      <button onClick={(e) => { e.stopPropagation(); removeSubliminalTrack(track.id); }} className="text-apple-text-secondary opacity-30 hover:opacity-100"><Trash2 size={12} /></button>
+                    </div>
+                  </button>
+                  {track.isMissing && (
+                    <label className="mx-3 mb-3 p-2 bg-apple-blue/10 rounded-lg flex items-center justify-center gap-2 text-[10px] font-bold text-apple-blue hover:bg-apple-blue/20 cursor-pointer transition-colors">
+                      <Link size={12} />
+                      <span>RELINK FILE</span>
+                      <input 
+                        type="file" 
+                        accept="audio/*" 
+                        className="hidden" 
+                        onChange={(e) => e.target.files && relinkTrack(track.id, e.target.files[0], true)} 
+                      />
+                    </label>
+                  )}
+                </div>
               ))}
               <label className="flex items-center justify-center p-3 rounded-xl border border-dashed border-black/10 hover:bg-white cursor-pointer text-xs font-semibold text-apple-text-secondary gap-2">
                 <Plus size={14} /> <span>Upload Audio (M4A Supported)</span>
@@ -318,13 +343,26 @@ export default function SettingsView() {
 
           <button 
             onClick={exportAppData}
-            className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-apple-blue"
+            className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-apple-blue border-b border-black/5"
           >
             <div className="w-8 h-8 bg-apple-blue/10 rounded-xl flex items-center justify-center">
               <Download size={16} />
             </div>
             <span className="text-sm font-semibold">Export All Data (JSON)</span>
           </button>
+
+          <label className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-apple-blue cursor-pointer">
+            <div className="w-8 h-8 bg-apple-blue/10 rounded-xl flex items-center justify-center">
+              <Upload size={16} />
+            </div>
+            <span className="text-sm font-semibold">Import All Data (JSON)</span>
+            <input 
+              type="file" 
+              accept=".json" 
+              className="hidden" 
+              onChange={(e) => e.target.files && importAppData(e.target.files[0])} 
+            />
+          </label>
         </div>
       </div>
 

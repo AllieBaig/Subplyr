@@ -25,6 +25,8 @@ interface AudioContextType {
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   exportAppData: () => Promise<void>;
+  importAppData: (file: File) => Promise<void>;
+  relinkTrack: (trackId: string, file: File, isSubliminal: boolean) => Promise<void>;
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
@@ -285,21 +287,23 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
         const savedTracks = await db.getTracks(false);
         if (isMounted) {
-          const validTracks = (savedTracks || []).filter(t => t && t.id && t.blob);
-          const tracksWithUrls = validTracks.map(t => ({
-            ...t,
-            url: URL.createObjectURL(t.blob)
-          }));
+          const tracksWithUrls = (savedTracks || []).map(t => {
+            if (t.blob) {
+              return { ...t, url: URL.createObjectURL(t.blob), isMissing: false };
+            }
+            return { ...t, url: '', isMissing: true };
+          });
           setTracks(tracksWithUrls);
         }
 
         const savedSubTracks = await db.getTracks(true);
         if (isMounted) {
-          const validSubTracks = (savedSubTracks || []).filter(t => t && t.id && t.blob);
-          const subTracksWithUrls = validSubTracks.map(t => ({
-            ...t,
-            url: URL.createObjectURL(t.blob)
-          }));
+          const subTracksWithUrls = (savedSubTracks || []).map(t => {
+            if (t.blob) {
+              return { ...t, url: URL.createObjectURL(t.blob), isMissing: false };
+            }
+            return { ...t, url: '', isMissing: true };
+          });
           setSubliminalTracks(subTracksWithUrls);
         }
 
@@ -501,30 +505,16 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const musicTracks = await db.getTracks(false);
     const subTracks = await db.getTracks(true);
     
-    // Helper to convert Blob to base64 for JSON export
-    const blobToBase64 = (blob: Blob): Promise<string> => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    };
-
-    const tracksData = await Promise.all(musicTracks.map(async t => ({
-      ...t,
-      blob: await blobToBase64(t.blob)
-    })));
-
-    const subTracksData = await Promise.all(subTracks.map(async t => ({
-      ...t,
-      blob: await blobToBase64(t.blob)
-    })));
+    // No base64 - only metadata
+    const tracksData = musicTracks.map(({ blob, ...t }) => t);
+    const subTracksData = subTracks.map(({ blob, ...t }) => t);
 
     const exportObject = {
-      version: "1.0.0",
+      version: "2.0.0", // Bump version for reference-based
       exportedAt: new Date().toISOString(),
       tracks: tracksData,
       subliminalTracks: subTracksData,
+      playlists: playlists,
       settings: settings
     };
 
@@ -533,9 +523,94 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const a = document.createElement('a');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     a.href = url;
-    a.download = `appdata_${timestamp}.json`;
+    a.download = `mindful_backup_${timestamp}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast("Export complete - Metadata only");
+  };
+
+  const importAppData = async (file: File) => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      if (!data.tracks || !data.settings) {
+        throw new Error("Invalid backup file format");
+      }
+
+      // 1. Save Settings
+      await db.saveSettings(data.settings);
+      setSettings(data.settings);
+
+      // 2. Save Tracks Metadata (but check for existing blobs)
+      const existingTracks = await db.getTracks(false);
+      const existingSubTracks = await db.getTracks(true);
+
+      const importedTracks = await Promise.all(data.tracks.map(async (t: any) => {
+        const existing = existingTracks.find(et => et.id === t.id);
+        const trackToSave = { ...t, blob: existing?.blob || null };
+        await db.saveTrack(trackToSave as any, false);
+        return { 
+          ...t, 
+          url: existing?.blob ? URL.createObjectURL(existing.blob) : '', 
+          isMissing: !existing?.blob 
+        };
+      }));
+
+      const importedSubTracks = await Promise.all((data.subliminalTracks || []).map(async (t: any) => {
+        const existing = existingSubTracks.find(et => et.id === t.id);
+        const trackToSave = { ...t, blob: existing?.blob || null };
+        await db.saveTrack(trackToSave as any, true);
+        return { 
+          ...t, 
+          url: existing?.blob ? URL.createObjectURL(existing.blob) : '', 
+          isMissing: !existing?.blob 
+        };
+      }));
+
+      // 3. Save Playlists
+      if (data.playlists) {
+        for (const p of data.playlists) {
+          await db.savePlaylist(p);
+        }
+        setPlaylists(data.playlists);
+      }
+
+      setTracks(importedTracks);
+      setSubliminalTracks(importedSubTracks);
+      showToast("Import successful. Some files may need relinking.");
+    } catch (err) {
+      console.error("Import failed:", err);
+      showToast("Failed to import backup");
+    }
+  };
+
+  const relinkTrack = async (trackId: string, file: File, isSubliminal: boolean) => {
+    try {
+      const isValid = await validateAudioFile(file);
+      if (!isValid) {
+        showToast("Invalid audio file");
+        return;
+      }
+
+      const list = isSubliminal ? subliminalTracks : tracks;
+      const track = list.find(t => t.id === trackId);
+      if (!track) return;
+
+      const updatedTrack = { ...track, blob: file, isMissing: false, url: URL.createObjectURL(file) };
+      await db.saveTrack(updatedTrack as any, isSubliminal);
+      
+      if (isSubliminal) {
+        setSubliminalTracks(prev => prev.map(t => t.id === trackId ? updatedTrack : t));
+      } else {
+        setTracks(prev => prev.map(t => t.id === trackId ? updatedTrack : t));
+      }
+      
+      showToast(`Linked "${file.name}" to "${track.name}"`);
+    } catch (err) {
+      console.error("Relink failed:", err);
+      showToast("Failed to relink file");
+    }
   };
 
   const seekTo = (time: number) => {
@@ -573,16 +648,36 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const playNext = () => {
     if (tracks.length === 0) return;
-    const nextIndex = currentTrackIndex === null || currentTrackIndex >= tracks.length - 1 ? 0 : currentTrackIndex + 1;
-    setCurrentTrackIndex(nextIndex);
-    setIsPlaying(true);
+    let nextIndex = currentTrackIndex === null || currentTrackIndex >= tracks.length - 1 ? 0 : currentTrackIndex + 1;
+    let attempts = 0;
+    while (tracks[nextIndex].isMissing && attempts < tracks.length) {
+      nextIndex = nextIndex >= tracks.length - 1 ? 0 : nextIndex + 1;
+      attempts++;
+    }
+    if (!tracks[nextIndex].isMissing) {
+      setCurrentTrackIndex(nextIndex);
+      setIsPlaying(true);
+    } else {
+      showToast("No playable tracks found");
+      setIsPlaying(false);
+    }
   };
 
   const playPrevious = () => {
     if (tracks.length === 0) return;
-    const prevIndex = currentTrackIndex === null || currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
-    setCurrentTrackIndex(prevIndex);
-    setIsPlaying(true);
+    let prevIndex = currentTrackIndex === null || currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
+    let attempts = 0;
+    while (tracks[prevIndex].isMissing && attempts < tracks.length) {
+      prevIndex = prevIndex === 0 ? tracks.length - 1 : prevIndex - 1;
+      attempts++;
+    }
+    if (!tracks[prevIndex].isMissing) {
+      setCurrentTrackIndex(prevIndex);
+      setIsPlaying(true);
+    } else {
+      showToast("No playable tracks found");
+      setIsPlaying(false);
+    }
   };
 
   return (
@@ -607,6 +702,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateNoiseSettings,
       updateLibrarySettings,
       exportAppData,
+      importAppData,
+      relinkTrack,
       currentTrackIndex,
       setCurrentTrackIndex,
       playNext,
