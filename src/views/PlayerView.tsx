@@ -27,10 +27,12 @@ export default function PlayerView() {
     updateNatureSettings,
     updateNoiseSettings,
     updateSettings,
+    updateAudioTools,
     addTrack
   } = useAudio();
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isAudioToolsOpen, setIsAudioToolsOpen] = useState(false);
 
   const currentTrack = currentTrackIndex !== null ? tracks[currentTrackIndex] : null;
 
@@ -385,6 +387,110 @@ export default function PlayerView() {
                     color="text-orange-500"
                     subtitle={`${settings.noise.type} noise`}
                   />
+                </div>
+
+                {/* Audio Tools Section */}
+                <div className="pt-2">
+                  <button 
+                    onClick={() => setIsAudioToolsOpen(!isAudioToolsOpen)}
+                    className="w-full flex items-center justify-between p-6 bg-gray-50 rounded-[2rem] border border-black/[0.03] active:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-white shadow-sm rounded-2xl flex items-center justify-center text-apple-text-primary">
+                        <Sliders size={20} />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="text-sm font-bold tracking-tight">Audio Tools</h4>
+                        {settings.audioTools.gainDb !== 0 || settings.audioTools.normalizeTargetDb !== null ? (
+                          <p className="text-[9px] text-apple-blue font-bold uppercase tracking-widest">Active Filters</p>
+                        ) : (
+                          <p className="text-[9px] text-apple-text-secondary font-bold uppercase tracking-widest">Digital Processing</p>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronDown size={20} className={`text-apple-text-secondary transition-transform duration-300 ${isAudioToolsOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isAudioToolsOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-1 pt-4 space-y-4">
+                           <div className="bg-apple-card p-5 rounded-[2rem] border border-black/[0.03] space-y-6">
+                              <div>
+                                <div className="flex justify-between items-center mb-4 px-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Pre-Gain</span>
+                                    <span className="text-[10px] font-bold text-apple-blue">{settings.audioTools.gainDb} dB</span>
+                                  </div>
+                                  <button onClick={() => updateAudioTools({ gainDb: 0 })} className="text-[9px] font-bold text-apple-blue uppercase tracking-widest">Reset</button>
+                                </div>
+                                <input 
+                                  type="range" 
+                                  min="-60" 
+                                  max="0" 
+                                  step="1"
+                                  value={settings.audioTools.gainDb}
+                                  onChange={(e) => updateAudioTools({ gainDb: parseInt(e.target.value) })}
+                                  className="w-full h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary"
+                                />
+                                <div className="flex justify-between mt-2 px-1">
+                                  <span className="text-[8px] font-bold text-apple-text-secondary">-60 dB</span>
+                                  <span className="text-[8px] font-bold text-apple-text-secondary">0 dB</span>
+                                </div>
+                              </div>
+
+                              <div className="h-px bg-black/[0.03] w-full" />
+
+                              <div>
+                                <div className="flex justify-between items-center mb-4 px-1">
+                                  <div className="flex items-center gap-3">
+                                    <h5 className="text-xs font-bold tracking-tight">Normalization</h5>
+                                    {settings.audioTools.normalizeTargetDb !== null && (
+                                       <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                     <span className="text-[10px] font-bold text-apple-text-secondary tracking-tight">
+                                       {settings.audioTools.normalizeTargetDb !== null ? `${settings.audioTools.normalizeTargetDb} dB` : 'Off'}
+                                     </span>
+                                     <button 
+                                        onClick={() => updateAudioTools({ normalizeTargetDb: settings.audioTools.normalizeTargetDb === null ? -10 : null })}
+                                        className={`w-10 h-6 rounded-full relative transition-colors ${settings.audioTools.normalizeTargetDb !== null ? 'bg-apple-blue' : 'bg-gray-200'}`}
+                                      >
+                                        <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: settings.audioTools.normalizeTargetDb !== null ? 16 : 0 }} />
+                                      </button>
+                                  </div>
+                                </div>
+                                
+                                {settings.audioTools.normalizeTargetDb !== null && (
+                                  <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <input 
+                                      type="range" 
+                                      min="-40" 
+                                      max="-1" 
+                                      step="1"
+                                      value={settings.audioTools.normalizeTargetDb}
+                                      onChange={(e) => updateAudioTools({ normalizeTargetDb: parseInt(e.target.value) })}
+                                      className="w-full h-1 bg-black/5 rounded-full appearance-none accent-apple-blue"
+                                    />
+                                    <div className="flex justify-between mt-2 px-1 text-[8px] font-bold text-apple-text-secondary uppercase">
+                                      <span>Strict (-40dB)</span>
+                                      <span>Peak (-1dB)</span>
+                                    </div>
+                                    <p className="mt-4 text-[9px] text-apple-text-secondary italic leading-relaxed">Limit tracks to a target peak level to prevent loudness jumps within playlists.</p>
+                                  </div>
+                                )}
+                              </div>
+                           </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </motion.div>
