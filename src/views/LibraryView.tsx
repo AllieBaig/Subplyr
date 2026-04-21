@@ -797,7 +797,7 @@ const PlaylistDetailView = ({
 
   return (
     <div className="flex flex-col min-h-full animate-in fade-in slide-in-from-right duration-300">
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl flex flex-col gap-4 pt-4 pb-2">
+      <header className="bg-white flex flex-col gap-4 pt-4 pb-2">
         <div className="flex items-center justify-between px-2">
           <button onClick={onBack} className="p-2 text-apple-blue font-bold flex items-center gap-1 active:opacity-50">
             <ArrowLeft size={20} />

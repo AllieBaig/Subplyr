@@ -88,8 +88,8 @@ function AppContent() {
         
         <main className="flex-1 relative overflow-hidden flex flex-col">
           {settings.menuPosition === 'top' && !isLoading && !initError && (
-            <div className="w-full flex items-center justify-center h-20 px-4 pt-4 z-50 transition-all duration-300">
-              <div className="w-full max-w-md">
+            <div className="fixed top-0 left-0 right-0 flex items-center justify-center h-20 px-4 pt-4 z-[150] transition-all duration-300 pointer-events-none">
+              <div className="w-full max-w-md pointer-events-auto">
                 <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
               </div>
             </div>
@@ -121,7 +121,7 @@ function AppContent() {
           ) : (
             <div className="flex-1 relative overflow-hidden">
               {/* Base Layer: Library */}
-              <div className={`h-full overflow-y-auto no-scrollbar px-4 md:px-8 lg:px-12 pt-6 transition-all duration-500 ${settings.menuPosition === 'bottom' ? 'pb-64' : 'pb-24'}`}>
+              <div className={`h-full overflow-y-auto no-scrollbar px-4 md:px-8 lg:px-12 pt-6 transition-all duration-500 ${settings.menuPosition === 'bottom' ? 'pb-80' : 'pb-32'}`}>
                 <LibraryView />
               </div>
 
@@ -141,7 +141,7 @@ function AppContent() {
                     key="player"
                     {...animationProps}
                     transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className="fixed inset-0 z-[100] bg-white overflow-hidden shadow-2xl"
+                    className={`fixed left-0 right-0 top-0 z-[100] bg-white overflow-hidden shadow-2xl ${settings.menuPosition === 'bottom' ? 'bottom-24' : 'bottom-0 mt-20'}`}
                   >
                     <PlayerView onBack={() => setActiveTab('library')} />
                   </motion.div>
@@ -155,7 +155,7 @@ function AppContent() {
                     key="settings"
                     {...animationProps}
                     transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className="fixed inset-0 z-[110] bg-white overflow-y-auto no-scrollbar"
+                    className={`fixed left-0 right-0 top-0 z-[110] bg-white overflow-y-auto no-scrollbar ${settings.menuPosition === 'bottom' ? 'bottom-24' : 'bottom-0 mt-20'}`}
                   >
                     <div className="w-full px-4 md:px-8 lg:px-12 py-6 min-h-full pb-32">
                        <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-8">
@@ -177,7 +177,7 @@ function AppContent() {
         </main>
         
         {settings.menuPosition === 'bottom' && !isLoading && !initError && (
-          <div className="w-full flex items-center justify-center h-24 pointer-events-none px-4 pb-4 z-50 transition-all duration-300">
+          <div className="fixed bottom-0 left-0 right-0 flex items-center justify-center h-24 pointer-events-none px-4 pb-4 z-[150] transition-all duration-300">
             <div className="w-full max-w-md pointer-events-auto">
               <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
