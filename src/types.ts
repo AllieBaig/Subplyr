@@ -17,6 +17,7 @@ export interface Playlist {
 
 export type SortOption = 'date' | 'alphabetical' | 'recent';
 export type GroupOption = 'none' | 'day' | 'week' | 'month' | 'alphabetical';
+export type AnimationStyle = 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'random' | 'off';
 
 export interface SubliminalSettings {
   isEnabled: boolean;
@@ -77,4 +78,8 @@ export interface AppSettings {
   loop: 'none' | 'one' | 'all';
   shuffle: boolean;
   playlistMemory: Record<string, PlaylistMemory>;
+  menuPosition: 'top' | 'bottom';
+  bigTouchMode: boolean;
+  animationStyle: AnimationStyle;
+  subliminalExpanded: boolean;
 }

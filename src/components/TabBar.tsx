@@ -24,8 +24,9 @@ export default function TabBar({ activeTab, setActiveTab }: TabBarProps) {
 
   return (
     <div className={cn(
-      "fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-3xl border-t border-black/[0.02] flex justify-center items-center z-50 transition-all",
-      settings.miniMode ? "px-4 pb-2 pt-2 h-14 gap-16" : "px-6 pb-6 pt-3 h-20 gap-20"
+      "w-full bg-white/95 backdrop-blur-3xl border border-black/[0.03] rounded-[2rem] flex justify-center items-center z-50 transition-all shadow-xl shadow-black/5",
+      settings.miniMode ? "px-4 py-2 h-14 gap-16" : "px-6 py-3 h-20 gap-20",
+      settings.bigTouchMode && !settings.miniMode && "h-24 scale-105"
     )}>
       {tabs.map((tab) => {
         const Icon = tab.icon;

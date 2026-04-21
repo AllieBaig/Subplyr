@@ -33,13 +33,22 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     showToast
   } = useAudio();
 
-  const [expandedSection, setExpandedSection] = useState<string | null>('subliminal');
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   if (!settings) return null;
 
   const toggleSection = (id: string) => {
-    setExpandedSection(expandedSection === id ? null : id);
+    if (id === 'subliminal') {
+      updateSettings({ subliminalExpanded: !settings.subliminalExpanded });
+    } else {
+      setExpandedSection(expandedSection === id ? null : id);
+    }
+  };
+
+  const isSectionExpanded = (id: string) => {
+    if (id === 'subliminal') return settings.subliminalExpanded;
+    return expandedSection === id;
   };
 
   const handleSubliminalUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,61 +137,64 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     );
   };
 
-  const Section = ({ id, title, subtitle, icon: Icon, color, children, isEnabled, onToggle }: any) => (
-    <div className="bg-apple-card rounded-[2rem] border border-black/5 shadow-sm overflow-hidden mb-4 transition-all duration-300">
-      <div className="flex items-center min-h-[72px]">
-        <button 
-          onClick={() => toggleSection(id)}
-          className="flex-1 p-5 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors h-full"
-        >
-          <div className={`w-10 h-10 ${color} rounded-2xl flex-shrink-0 flex items-center justify-center`}>
-            <Icon size={20} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm truncate">{title}</h3>
-            <p className="text-[10px] text-apple-text-secondary font-medium uppercase tracking-wider truncate">{subtitle}</p>
-          </div>
-          <motion.div
-            animate={{ rotate: expandedSection === id ? 90 : 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="flex-shrink-0"
+  const Section = ({ id, title, subtitle, icon: Icon, color, children, isEnabled, onToggle }: any) => {
+    const isExpanded = isSectionExpanded(id);
+    return (
+      <div className={`bg-apple-card rounded-[2rem] border border-black/5 shadow-sm overflow-hidden mb-4 transition-all duration-300 ${settings.bigTouchMode ? 'rounded-[2.5rem]' : ''}`}>
+        <div className={`flex items-center ${settings.bigTouchMode ? 'min-h-[88px]' : 'min-h-[72px]'}`}>
+          <button 
+            onClick={() => toggleSection(id)}
+            className={`flex-1 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors h-full ${settings.bigTouchMode ? 'p-6' : 'p-5'}`}
           >
-            <ChevronRight size={18} className="text-apple-text-secondary" />
-          </motion.div>
-        </button>
-        {onToggle && (
-          <div className="pr-5 flex-shrink-0 h-full flex items-center">
-            <button 
-              onClick={() => onToggle(!isEnabled)}
-              className={`w-10 h-6 rounded-full relative transition-colors duration-200 ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
-            >
-              <motion.div 
-                className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full"
-                animate={{ x: isEnabled ? 16 : 0 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              />
-            </button>
-          </div>
-        )}
-      </div>
-      
-      <AnimatePresence initial={false}>
-        {expandedSection === id && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 35, mass: 0.8 }}
-            className="border-t border-black/5 bg-gray-50/30 overflow-hidden"
-          >
-            <div className="p-6">
-              {children}
+            <div className={`${settings.bigTouchMode ? 'w-12 h-12 rounded-[1.25rem]' : 'w-10 h-10 rounded-2xl'} ${color} flex-shrink-0 flex items-center justify-center`}>
+              <Icon size={settings.bigTouchMode ? 24 : 20} />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+            <div className="flex-1 min-w-0">
+              <h3 className={`font-semibold truncate ${settings.bigTouchMode ? 'text-base' : 'text-sm'}`}>{title}</h3>
+              <p className={`text-apple-text-secondary font-medium uppercase tracking-wider truncate ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{subtitle}</p>
+            </div>
+            <motion.div
+              animate={{ rotate: isExpanded ? 90 : 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="flex-shrink-0"
+            >
+              <ChevronRight size={settings.bigTouchMode ? 22 : 18} className="text-apple-text-secondary" />
+            </motion.div>
+          </button>
+          {onToggle && (
+            <div className={`${settings.bigTouchMode ? 'pr-6' : 'pr-5'} flex-shrink-0 h-full flex items-center`}>
+              <button 
+                onClick={() => onToggle(!isEnabled)}
+                className={`${settings.bigTouchMode ? 'w-12 h-7' : 'w-10 h-6'} rounded-full relative transition-colors duration-200 ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
+              >
+                <motion.div 
+                  className={`absolute top-1 left-1 bg-white rounded-full ${settings.bigTouchMode ? 'w-5 h-5' : 'w-4 h-4'}`}
+                  animate={{ x: isEnabled ? (settings.bigTouchMode ? 20 : 16) : 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 35, mass: 0.8 }}
+              className="border-t border-black/5 bg-gray-50/30 overflow-hidden"
+            >
+              <div className={settings.bigTouchMode ? 'p-8' : 'p-6'}>
+                {children}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto">
@@ -456,8 +468,67 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
         </div>
 
         {/* Column 3: Advanced Tools & Management */}
-        <div className="flex flex-col gap-6">
-          {/* 5. Audio Tools */}
+        <div className="flex-1 flex flex-col gap-6">
+          {/* 5. Personalization */}
+          <Section 
+            id="personalization"
+            title="Personalization"
+            subtitle="UI & Animations"
+            icon={Sliders}
+            color="bg-apple-blue/10 text-apple-blue"
+          >
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Menu Position</label>
+                <div className="bg-gray-100 p-1 rounded-2xl flex items-center h-10">
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'top' })}
+                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.menuPosition === 'top' ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'bottom' })}
+                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.menuPosition === 'bottom' ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold">Big Touch Mode</p>
+                    <p className="text-[9px] text-apple-text-secondary font-bold uppercase tracking-widest mt-0.5">Larger hit areas</p>
+                  </div>
+                  <button 
+                    onClick={() => updateSettings({ bigTouchMode: !settings.bigTouchMode })}
+                    className={`w-8 h-5 rounded-full relative transition-colors ${settings.bigTouchMode ? 'bg-apple-blue' : 'bg-gray-200'}`}
+                  >
+                    <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.bigTouchMode ? 12 : 0 }} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Animation Style</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['slide-up', 'slide-down', 'slide-left', 'slide-right', 'random', 'off'] as const).map(style => (
+                    <button 
+                      key={style}
+                      onClick={() => updateSettings({ animationStyle: style })}
+                      className={`px-3 py-2.5 rounded-xl border capitalize text-[10px] font-bold transition-all ${settings.animationStyle === style ? 'bg-apple-blue text-white border-apple-blue shadow-sm' : 'bg-white border-black/5 text-apple-text-secondary hover:bg-gray-50'}`}
+                    >
+                      {style.replace('-', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* 6. Audio Tools */}
           <Section
             id="audio-tools"
             title="Audio Tools"

@@ -255,7 +255,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     hiddenLayersPosition: 'bottom',
     loop: 'none',
     shuffle: false,
-    playlistMemory: {}
+    playlistMemory: {},
+    menuPosition: 'bottom',
+    bigTouchMode: false,
+    animationStyle: 'slide-up',
+    subliminalExpanded: false
   };
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
