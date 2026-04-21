@@ -48,13 +48,39 @@ export default function LibraryView() {
   const [playlistSort, setPlaylistSort] = useState<'none' | 'recent' | 'alphabetical' | 'date'>('none');
   const [showPlaylistSettings, setShowPlaylistSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showImportTargetMenu, setShowImportTargetMenu] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      for (const file of filesArray) {
-        await addTrack(file);
+      if (playlists.length > 0) {
+        setPendingFiles(filesArray);
+        setShowImportTargetMenu(true);
+      } else {
+        for (const file of filesArray) {
+          await addTrack(file);
+        }
       }
+    }
+  };
+
+  const processImport = async (targetPlaylistId?: string) => {
+    let pid = targetPlaylistId;
+    if (targetPlaylistId === 'new') {
+      const name = prompt("New playlist name:");
+      if (!name) return;
+      pid = await createPlaylist(name, []);
+    }
+
+    for (const file of pendingFiles) {
+      await addTrack(file, pid);
+    }
+    setPendingFiles([]);
+    setShowImportTargetMenu(false);
+    if (pid && pid !== 'new') {
+      setActivePlaylistId(pid);
+      setView('playlist_detail');
     }
   };
 
@@ -107,11 +133,12 @@ export default function LibraryView() {
     const dayMs = 24 * 60 * 60 * 1000;
 
     sortedTracks.forEach(track => {
-      let label = 'Older';
+      let label = 'Other';
 
       if (group === 'alphabetical') {
         const firstChar = track.name[0]?.toUpperCase() || '#';
         if (/[A-Z]/.test(firstChar)) label = firstChar;
+        else if (/[0-9]/.test(firstChar)) label = '0-9';
         else label = '#';
       } else {
         const diff = now - (track.createdAt || 0);
@@ -131,12 +158,14 @@ export default function LibraryView() {
       groups[label].push(track);
     });
 
-    // If grouping by alphabetical, sort labels A-Z, then #
+    // If grouping by alphabetical, sort labels A-Z, then 0-9, then #
     const entries = Object.entries(groups);
     if (group === 'alphabetical') {
       entries.sort(([a], [b]) => {
         if (a === '#') return 1;
         if (b === '#') return -1;
+        if (a === '0-9') return 1;
+        if (b === '0-9') return -1;
         return a.localeCompare(b);
       });
     }
@@ -439,6 +468,90 @@ export default function LibraryView() {
           searchQuery={searchQuery}
         />
       )}
+
+      {/* Import Target Menu Overlay */}
+      <AnimatePresence>
+        {showImportTargetMenu && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => setShowImportTargetMenu(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="w-full max-w-xl bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl flex flex-col gap-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                   <h2 className="text-xl font-black tracking-tight">Import {pendingFiles.length} Tracks</h2>
+                   <p className="text-[12px] text-gray-400 font-bold uppercase tracking-widest mt-1">Select Destination</p>
+                </div>
+                <button 
+                  onClick={() => setShowImportTargetMenu(false)}
+                  className="p-2 bg-gray-50 rounded-full text-gray-400"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto no-scrollbar py-2">
+                <button
+                  onClick={() => processImport()}
+                  className="w-full flex items-center justify-between p-5 bg-gray-50 hover:bg-black hover:text-white rounded-2xl transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-apple-blue/10 flex items-center justify-center text-apple-blue group-hover:bg-white/20 group-hover:text-white transition-colors">
+                      <Music size={20} />
+                    </div>
+                    <span className="font-bold text-[15px]">Library Only</span>
+                  </div>
+                  <ChevronRight size={18} className="opacity-30" />
+                </button>
+
+                <div className="h-[0.5px] bg-black/[0.03] my-2" />
+
+                <button
+                  onClick={() => processImport('new')}
+                  className="w-full flex items-center justify-between p-5 bg-apple-blue/5 hover:bg-apple-blue transition-all group text-apple-blue hover:text-white rounded-2xl"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-apple-blue/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                      <Plus size={20} />
+                    </div>
+                    <span className="font-bold text-[15px]">Import into New Playlist</span>
+                  </div>
+                  <ChevronRight size={18} className="opacity-30" />
+                </button>
+
+                {playlists.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => processImport(p.id)}
+                    className="w-full flex items-center justify-between p-5 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400">
+                        <ListPlus size={20} />
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className="font-bold text-[15px]">{p.name}</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{p.trackIds.length} tracks</span>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="opacity-30" />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bulk Action Bar - Minimal & Fluid */}
       <AnimatePresence>

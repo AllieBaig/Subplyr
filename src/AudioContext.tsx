@@ -6,12 +6,12 @@ interface AudioContextType {
   tracks: Track[];
   subliminalTracks: Track[];
   playlists: Playlist[];
-  addTrack: (file: File) => void;
+  addTrack: (file: File, targetPlaylistId?: string) => Promise<string | null>;
   addSubliminalTrack: (file: File) => void;
   removeTrack: (id: string) => void;
   removeSubliminalTrack: (id: string) => void;
   
-  createPlaylist: (name: string, initialTrackIds?: string[]) => Promise<void>;
+  createPlaylist: (name: string, initialTrackIds?: string[]) => Promise<string>;
   deletePlaylist: (id: string) => Promise<void>;
   addTrackToPlaylist: (trackId: string, playlistId: string) => Promise<void>;
   addTracksToPlaylist: (trackIds: string[], playlistId: string) => Promise<void>;
@@ -451,11 +451,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [playingPlaylistId, currentTrackIndex, Math.floor(currentTime / 5), isPlaying, isLoading]);
 
-  const addTrack = async (file: File) => {
+  const addTrack = async (file: File, targetPlaylistId?: string) => {
     const isValid = await validateAudioFile(file);
     if (!isValid) {
       showToast(`Unable to use "${file.name}". Format may be unsupported or corrupted.`);
-      return;
+      return null;
     }
 
     const id = Math.random().toString(36).substr(2, 9);
@@ -470,7 +470,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     
     await db.saveTrack(newTrack, false);
     setTracks(prev => [...prev, newTrack]);
+    
+    if (targetPlaylistId) {
+      await addTrackToPlaylist(id, targetPlaylistId);
+    }
+    
     if (currentTrackIndex === null) setCurrentTrackIndex(0);
+    return id;
   };
 
   const addSubliminalTrack = async (file: File) => {
@@ -553,8 +559,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const createPlaylist = async (name: string, initialTrackIds: string[] = []) => {
+    const playlistId = Math.random().toString(36).substr(2, 9);
     const playlist: Playlist = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: playlistId,
       name,
       trackIds: initialTrackIds,
       createdAt: Date.now()
@@ -562,6 +569,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     await db.savePlaylist(playlist);
     setPlaylists(prev => [...prev, playlist]);
     showToast(`Created playlist "${name}"`);
+    return playlistId;
   };
 
   const deletePlaylist = async (id: string) => {
