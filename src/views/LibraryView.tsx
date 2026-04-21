@@ -215,11 +215,20 @@ export default function LibraryView() {
     }
   };
 
-  const filteredPlaylists = useMemo(() => {
-    if (!searchQuery) return playlists;
-    const q = searchQuery.toLowerCase();
-    return playlists.filter(p => p.name.toLowerCase().includes(q));
-  }, [playlists, searchQuery]);
+  const sortedPlaylists = useMemo(() => {
+    let list = [...playlists];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q));
+    }
+    
+    if (playlistSort === 'alphabetical') {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (playlistSort === 'date' || playlistSort === 'recent') {
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+    return list;
+  }, [playlists, searchQuery, playlistSort]);
 
   return (
     <div className={`flex flex-col relative w-full max-w-7xl mx-auto px-4 pt-10`}>
@@ -227,16 +236,26 @@ export default function LibraryView() {
         <div className="flex justify-between items-center px-1">
           <h1 className="text-3xl font-[900] tracking-tight text-black">Library</h1>
           <div className="flex gap-2 items-center">
-            {view === 'tracks' && tracks.length > 0 && (
-              <button 
-                onClick={() => {
-                  setIsSelectMode(!isSelectMode);
-                  if (isSelectMode) setSelectedTrackIds(new Set());
-                }}
-                className={`text-[13px] font-bold px-4 py-1.5 rounded-full transition-all ${isSelectMode ? 'bg-apple-blue text-white' : 'text-apple-blue'}`}
-              >
-                {isSelectMode ? 'Cancel' : 'Select'}
-              </button>
+            {(view === 'tracks' || view === 'playlists') && (view === 'tracks' ? tracks.length > 0 : playlists.length > 0) && (
+              <>
+                <button 
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  className={`p-2 rounded-full transition-all ${showSortMenu ? 'bg-apple-blue/10 text-apple-blue' : 'text-gray-300'}`}
+                >
+                  <SortAsc size={20} />
+                </button>
+                {view === 'tracks' && (
+                  <button 
+                    onClick={() => {
+                      setIsSelectMode(!isSelectMode);
+                      if (isSelectMode) setSelectedTrackIds(new Set());
+                    }}
+                    className={`text-[13px] font-bold px-4 py-1.5 rounded-full transition-all ${isSelectMode ? 'bg-apple-blue text-white' : 'text-apple-blue'}`}
+                  >
+                    {isSelectMode ? 'Cancel' : 'Select'}
+                  </button>
+                )}
+              </>
             )}
             {!isSelectMode && (
               <label className="w-10 h-10 flex items-center justify-center cursor-pointer active:scale-95 transition-transform rounded-full">
@@ -277,36 +296,38 @@ export default function LibraryView() {
         </div>
       </header>
 
-      {showSortMenu && view === 'tracks' && !isSelectMode && (
-        <div className={`bg-apple-card border border-black/5 flex flex-col shadow-sm animate-in fade-in slide-in-from-top-2 mx-6 ${settings.miniMode ? 'rounded-2xl p-3 gap-3' : 'rounded-3xl p-4 gap-4'}`}>
+      {showSortMenu && (view === 'tracks' || view === 'playlists') && !isSelectMode && (
+        <div className={`bg-apple-card border border-black/5 flex flex-col shadow-sm animate-in fade-in slide-in-from-top-2 mx-2 mb-6 ${settings.miniMode ? 'rounded-2xl p-3 gap-3' : 'rounded-3xl p-4 gap-4'}`}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Sort By</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Sort {view === 'tracks' ? 'Tracks' : 'Playlists'}</span>
             <div className="flex bg-gray-100 rounded-xl p-1">
-              {(['recent', 'alphabetical'] as SortOption[]).map(s => (
+              {(['recent', 'alphabetical', 'date'] as SortOption[]).map(s => (
                 <button
                   key={s}
-                  onClick={() => updateLibrarySettings({ sort: s })}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${settings.library.sort === s ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                  onClick={() => view === 'tracks' ? updateLibrarySettings({ sort: s }) : setPlaylistSort(s)}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${(view === 'tracks' ? settings.library.sort : playlistSort) === s ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
                 >
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {s === 'recent' ? 'Recent' : s === 'alphabetical' ? 'A-Z' : 'Date'}
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Group By</span>
-            <div className="flex bg-gray-100 rounded-xl p-1">
-              {(['none', 'alphabetical', 'day', 'week', 'month'] as GroupOption[]).map(g => (
-                <button
-                  key={g}
-                  onClick={() => updateLibrarySettings({ group: g })}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${settings.library.group === g ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
-                >
-                  {g.charAt(0).toUpperCase() + g.slice(1)}
-                </button>
-              ))}
+          {view === 'tracks' && (
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Group Tracks</span>
+              <div className="flex bg-gray-100 rounded-xl p-1">
+                {(['none', 'alphabetical', 'day', 'week', 'month'] as GroupOption[]).map(g => (
+                  <button
+                    key={g}
+                    onClick={() => updateLibrarySettings({ group: g })}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${settings.library.group === g ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                  >
+                    {g.charAt(0).toUpperCase() + g.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -425,12 +446,13 @@ export default function LibraryView() {
         )
       ) : (
         <PlaylistView 
-          playlists={filteredPlaylists} 
+          playlists={sortedPlaylists} 
           onCreate={() => {
             const name = prompt("Playlist name:");
             if (name) createPlaylist(name);
           }}
           onDelete={deletePlaylist}
+          onRename={renamePlaylist}
           tracks={tracks}
           onTrackPlay={(id) => {
             const idx = tracks.findIndex(t => t.id === id);
@@ -800,8 +822,10 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
 });
 
 
-const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSelectMode, editingPlaylistId, selectedTrackIds, onToggleSelection, onEnterSelect, onOpen, searchQuery }: any) => {
-  const { settings } = useAudio();
+const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrackPlay, isSelectMode, editingPlaylistId, selectedTrackIds, onToggleSelection, onEnterSelect, onOpen, searchQuery }: any) => {
+  const { settings, showToast } = useAudio();
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
   return (
     <div className={`flex flex-col gap-4 w-full max-w-7xl mx-auto pb-12`}>
       <button 
@@ -817,13 +841,14 @@ const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSe
       <div className="flex flex-col">
         {playlists.map((playlist: any) => {
           const isEditingThis = isSelectMode && editingPlaylistId === playlist.id;
+          const isMenuOpen = activeMenuId === playlist.id;
           
           return (
-            <div key={playlist.id} className="group">
+            <div key={playlist.id} className="group relative">
               <div className={`flex items-center gap-4 py-4 px-1 transition-opacity ${isSelectMode && !isEditingThis ? 'opacity-40' : 'opacity-100'}`}>
                 <button 
                   onClick={() => !isSelectMode && onOpen(playlist.id)}
-                  className="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border border-black/[0.03]"
+                  className="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border border-black/[0.03] active:scale-95 transition-transform"
                 >
                    {playlist.trackIds.length > 0 && tracks.find((t: any) => t.id === playlist.trackIds[0])?.artwork ? (
                      <img src={tracks.find((t: any) => t.id === playlist.trackIds[0])?.artwork} className="w-full h-full object-cover" />
@@ -836,7 +861,7 @@ const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSe
 
                 <button 
                   onClick={() => !isSelectMode && onOpen(playlist.id)}
-                  className="flex-1 min-w-0 text-left"
+                  className="flex-1 min-w-0 text-left cursor-default"
                 >
                   <h3 className="font-bold text-[15px] truncate">
                     <HighlightText text={playlist.name} highlight={searchQuery} />
@@ -845,22 +870,70 @@ const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSe
                 </button>
 
                 <div className="flex items-center gap-2">
-                  {!isSelectMode && (
-                    <button onClick={() => onDelete(playlist.id)} className="p-2 text-gray-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                      <Trash2 size={16} />
-                    </button>
-                  )}
                   {playlist.trackIds.length > 0 && (
                     <button 
                       onClick={() => onEnterSelect(playlist.id)}
-                      className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full transition-all ${isEditingThis ? 'bg-apple-blue text-white' : 'text-apple-blue bg-apple-blue/5'}`}
+                      className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full transition-all ${isEditingThis ? 'bg-apple-blue text-white' : 'text-apple-blue bg-apple-blue/5 hover:bg-apple-blue/10'}`}
                     >
                       {isEditingThis ? 'Editing' : 'Select'}
                     </button>
                   )}
-                  <button onClick={() => onOpen(playlist.id)} className="p-2 text-gray-300">
-                    <ChevronRight size={20} />
-                  </button>
+                  
+                  {!isSelectMode && (
+                    <div className="relative">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : playlist.id); }}
+                        className={`p-2 rounded-full transition-colors ${isMenuOpen ? 'bg-gray-100 text-black' : 'text-gray-300 hover:text-black'}`}
+                      >
+                        <MoreVertical size={20} />
+                      </button>
+
+                      <AnimatePresence>
+                        {isMenuOpen && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                              className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-black/5 z-50 py-2 overflow-hidden"
+                            >
+                              <button 
+                                onClick={() => { 
+                                  const name = prompt("Rename playlist:", playlist.name);
+                                  if (name && name !== playlist.name) onRename(playlist.id, name);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-[13px] font-bold text-left"
+                              >
+                                <Edit2 size={16} className="text-gray-400" />
+                                Rename
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to delete "${playlist.name}"? This action cannot be undone.`)) {
+                                    onDelete(playlist.id);
+                                    showToast(`Deleted "${playlist.name}"`);
+                                  }
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-[13px] font-bold text-red-500 text-left"
+                              >
+                                <Trash2 size={16} className="text-red-400" />
+                                Delete
+                              </button>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {!isSelectMode && (
+                    <button onClick={() => onOpen(playlist.id)} className="p-2 text-gray-200">
+                      <ChevronRight size={20} />
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="h-[0.5px] bg-black/[0.04] ml-16" />

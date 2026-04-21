@@ -595,6 +595,21 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               </button>
 
               <button 
+                onClick={() => updateSettings({ showArtwork: !settings.showArtwork })}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-black/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-apple-card rounded-xl border border-black/5 flex items-center justify-center text-apple-text-primary">
+                    <Music size={14} />
+                  </div>
+                  <span className="text-sm font-medium">Show Artwork</span>
+                </div>
+                <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.showArtwork ? 'bg-apple-blue' : 'bg-gray-200'}`}>
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.showArtwork ? 12 : 0 }} />
+                </div>
+              </button>
+
+              <button 
                 onClick={exportAppData}
                 className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-apple-blue border-b border-black/5"
               >

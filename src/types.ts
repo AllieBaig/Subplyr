@@ -82,4 +82,5 @@ export interface AppSettings {
   bigTouchMode: boolean;
   animationStyle: AnimationStyle;
   subliminalExpanded: boolean;
+  showArtwork: boolean;
 }

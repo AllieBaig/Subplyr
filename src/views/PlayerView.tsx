@@ -129,28 +129,55 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       </header>
 
       {/* Main Art & Info */}
-      <div className={`flex-1 flex flex-col items-center justify-center w-full px-8 ${settings.bigTouchMode ? 'gap-12' : 'gap-10'}`}>
+      <div className={`flex-1 flex flex-col items-center justify-center w-full px-8 ${settings.bigTouchMode ? 'gap-12' : 'gap-10'} ${!settings.showArtwork ? 'py-4' : ''}`}>
         {/* Album Art */}
-        <motion.div 
-          className={`w-full ${settings.bigTouchMode ? 'max-w-[360px]' : 'max-w-[320px]'} aspect-square bg-white rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.06)] border border-black/[0.02] overflow-hidden relative`}
-          animate={{ scale: isPlaying ? 1 : 0.94 }}
-          transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-        >
-          {currentTrack.artwork ? (
-            <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        <AnimatePresence mode="wait">
+          {settings.showArtwork ? (
+            <motion.div 
+              key="artwork"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: isPlaying ? 1 : 0.92 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+              className={`w-full ${settings.bigTouchMode ? 'max-w-[400px]' : 'max-w-[340px]'} aspect-square bg-white rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.06)] border border-black/[0.02] overflow-hidden relative`}
+            >
+              {currentTrack.artwork ? (
+                <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                  <MusicIcon size={settings.bigTouchMode ? 140 : 120} className="text-gray-100" />
+                </div>
+              )}
+            </motion.div>
           ) : (
-            <div className="w-full h-full bg-gray-50 flex items-center justify-center">
-              <MusicIcon size={settings.bigTouchMode ? 140 : 120} className="text-gray-100" />
-            </div>
+            <motion.div 
+              key="waveform"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="w-full max-w-[280px] h-32 flex items-center justify-center gap-1.5"
+            >
+              {[...Array(24)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  animate={{ 
+                    height: isPlaying ? [12, 48, 24, 64, 16][(i + Math.floor(currentTime)) % 5] : 8,
+                    opacity: isPlaying ? [0.2, 0.5, 0.3, 0.6, 0.4][(i + Math.floor(currentTime)) % 5] : 0.1
+                  }}
+                  transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="w-1 bg-apple-blue rounded-full"
+                />
+              ))}
+            </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
         
         {/* Track Title & Artist */}
-        <div className="text-center w-full max-w-sm">
-          <h2 className={`font-extrabold tracking-tight text-black line-clamp-1 mb-1 ${settings.bigTouchMode ? 'text-4xl' : 'text-3xl'}`}>
+        <div className={`text-center w-full transition-all duration-500 ${settings.showArtwork ? 'max-w-sm' : 'max-w-xl'}`}>
+          <h2 className={`font-extrabold tracking-tight text-black line-clamp-1 mb-2 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-6xl mb-4' : 'text-5xl mb-3') : (settings.bigTouchMode ? 'text-4xl' : 'text-3xl')}`}>
             {currentTrack.name}
           </h2>
-          <p className={`text-gray-400 font-bold mb-8 ${settings.bigTouchMode ? 'text-xl' : 'text-lg'}`}>
+          <p className={`text-gray-400 font-bold mb-8 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-2xl' : 'text-xl') : (settings.bigTouchMode ? 'text-xl' : 'text-lg')}`}>
             {currentTrack.artist}
           </p>
 

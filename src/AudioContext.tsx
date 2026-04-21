@@ -259,7 +259,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     menuPosition: 'bottom',
     bigTouchMode: false,
     animationStyle: 'slide-up',
-    subliminalExpanded: false
+    subliminalExpanded: false,
+    showArtwork: true
   };
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
