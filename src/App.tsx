@@ -111,8 +111,8 @@ function AppContent() {
                     initial={{ y: '100%' }}
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
-                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                    className="fixed inset-0 z-[100] bg-white overflow-hidden"
+                    transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                    className="fixed inset-0 z-[100] bg-white overflow-hidden shadow-2xl"
                   >
                     <PlayerView onBack={() => setActiveTab('library')} />
                   </motion.div>
@@ -124,21 +124,21 @@ function AppContent() {
                 {activeTab === 'settings' && (
                   <motion.div
                     key="settings"
-                    initial={{ x: '100%' }}
-                    animate={{ x: 0 }}
-                    exit={{ x: '100%' }}
-                    transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                    className="fixed inset-0 z-[110] bg-apple-bg overflow-y-auto no-scrollbar"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="fixed inset-0 z-[110] bg-white overflow-y-auto no-scrollbar"
                   >
                     <div className="w-full px-4 md:px-8 lg:px-12 py-6 min-h-full pb-32">
                        <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-8">
                          <button 
                            onClick={() => setActiveTab('library')}
-                           className="px-4 py-2 bg-white rounded-full text-sm font-bold shadow-sm border border-black/5 active:scale-95 transition-transform"
+                           className="px-6 py-2 bg-gray-50 border border-black/[0.03] rounded-full text-xs font-bold active:scale-95 transition-transform"
                          >
-                           Close Settings
+                           Done
                          </button>
-                         <h2 className="text-sm font-bold uppercase tracking-widest text-apple-text-secondary">App Configuration</h2>
+                         <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary">System Settings</h2>
                        </div>
                        <SettingsView onBack={() => setActiveTab('library')} />
                     </div>

@@ -192,21 +192,21 @@ export default function LibraryView() {
   }, [playlists, searchQuery]);
 
   return (
-    <div className={`flex flex-col relative w-full max-w-7xl mx-auto`}>
-      <header className={`flex flex-col sticky top-0 bg-white/80 backdrop-blur-md z-20 py-4 gap-4 mb-2`}>
-        <div className="flex justify-between items-end px-2">
+    <div className={`flex flex-col relative w-full max-w-7xl mx-auto px-4`}>
+      <header className={`flex flex-col sticky top-0 bg-white/90 backdrop-blur-md z-20 py-6 gap-6`}>
+        <div className="flex justify-between items-end px-1">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">Library</h1>
-            <div className={`flex gap-4 mt-2`}>
+            <h1 className="text-3xl font-extrabold tracking-tight text-black">Library</h1>
+            <div className={`flex gap-6 mt-3`}>
               <button 
                 onClick={() => { setView('tracks'); setIsSelectMode(false); setSelectedTrackIds(new Set()); setEditingPlaylistId(null); setActivePlaylistId(null); }}
-                className={`text-sm font-bold transition-colors ${view === 'tracks' ? 'text-apple-blue' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
+                className={`text-sm font-bold transition-colors ${view === 'tracks' ? 'text-apple-blue' : 'text-gray-400 hover:text-black'}`}
               >
                 Tracks
               </button>
               <button 
                 onClick={() => { setView('playlists'); setIsSelectMode(false); setSelectedTrackIds(new Set()); setEditingPlaylistId(null); setActivePlaylistId(null); }}
-                className={`text-sm font-bold transition-colors ${view === 'playlists' || view === 'playlist_detail' ? 'text-apple-blue' : 'text-apple-text-secondary hover:text-apple-text-primary'}`}
+                className={`text-sm font-bold transition-colors ${view === 'playlists' || view === 'playlist_detail' ? 'text-apple-blue' : 'text-gray-400 hover:text-black'}`}
               >
                 Playlists
               </button>
@@ -219,13 +219,13 @@ export default function LibraryView() {
                   setIsSelectMode(!isSelectMode);
                   if (isSelectMode) setSelectedTrackIds(new Set());
                 }}
-                className={`text-sm font-bold tracking-tight px-5 py-2 rounded-full transition-all border ${isSelectMode ? 'bg-apple-blue text-white border-apple-blue shadow-lg' : 'text-apple-blue border-transparent hover:bg-apple-blue/10'}`}
+                className={`text-xs font-bold tracking-tight px-4 py-2 rounded-full transition-all ${isSelectMode ? 'bg-apple-blue text-white' : 'text-apple-blue bg-apple-blue/5 hover:bg-apple-blue/10'}`}
               >
                 {isSelectMode ? 'Cancel' : 'Select'}
               </button>
             )}
             {!isSelectMode && (
-              <label className={`bg-white border border-black/5 p-3 flex-shrink-0 cursor-pointer hover:bg-gray-50 transition-colors rounded-2xl shadow-sm active:scale-95`}>
+              <label className={`w-10 h-10 flex items-center justify-center bg-gray-50 border border-black/[0.02] cursor-pointer hover:bg-gray-100 transition-colors rounded-full active:scale-95`}>
                 <Plus size={20} />
                 <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
               </label>
@@ -233,9 +233,9 @@ export default function LibraryView() {
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative group px-2">
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-apple-text-secondary group-focus-within:text-apple-blue transition-colors">
+        {/* Search Bar - Minimal */}
+        <div className="relative group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <Search size={16} />
           </div>
           <input 
@@ -243,14 +243,14 @@ export default function LibraryView() {
             placeholder={`Search ${view === 'tracks' ? 'tracks' : 'playlists'}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 bg-gray-100/50 border border-transparent pl-11 pr-4 py-3 rounded-2xl text-sm font-medium outline-none focus:bg-white focus:border-black/5 transition-all placeholder:text-apple-text-secondary/50"
+            className="w-full h-11 bg-gray-50/50 border border-transparent pl-11 pr-4 py-2.5 rounded-2xl text-[13px] font-medium outline-none focus:bg-gray-50 focus:ring-1 focus:ring-black/5 transition-all placeholder:text-gray-300"
           />
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center text-apple-text-secondary hover:bg-gray-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-gray-200/50 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
             >
-              <X size={12} />
+              <X size={10} />
             </button>
           )}
         </div>
@@ -386,6 +386,7 @@ export default function LibraryView() {
                         if (isSelectMode) {
                           toggleTrackSelection(track.id);
                         } else {
+                          setPlayingPlaylistId(null);
                           setCurrentTrackIndex(trueIndex);
                           setIsPlaying(true);
                         }
@@ -413,6 +414,7 @@ export default function LibraryView() {
           onTrackPlay={(id) => {
             const idx = tracks.findIndex(t => t.id === id);
             if (idx !== -1) {
+              setPlayingPlaylistId(null);
               setCurrentTrackIndex(idx);
               setIsPlaying(true);
             }
@@ -446,138 +448,124 @@ export default function LibraryView() {
         />
       )}
 
-      {/* Bulk Action Bar */}
+      {/* Bulk Action Bar - Minimal & Fluid */}
       <AnimatePresence>
         {isSelectMode && (
           <motion.div
-            initial={{ y: 100, opacity: 0 }}
+            initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-28 left-4 right-4 z-[100] flex flex-col gap-3 px-6 py-5 bg-black/95 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/10 text-white"
+            exit={{ y: 20, opacity: 0 }}
+            className="fixed bottom-28 left-4 right-4 z-[100] flex flex-col gap-4 px-6 py-6 bg-black/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white"
           >
             <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">{selectedTrackIds.size} Selected</span>
-              </div>
-              <div className="flex gap-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">{selectedTrackIds.size} Selected</span>
+              <div className="flex gap-5">
                 <button 
                   onClick={() => {
                     let allIds: string[] = [];
-                    if (editingPlaylistId) {
-                      allIds = playlists.find(p => p.id === editingPlaylistId)?.trackIds || [];
-                    } else if (activePlaylistId) {
-                      allIds = playlists.find(p => p.id === activePlaylistId)?.trackIds || [];
-                    } else {
-                      allIds = tracks.map(t => t.id);
-                    }
-                    const allSelected = allIds.length > 0 && allIds.every(id => selectedTrackIds.has(id));
+                    const list = editingPlaylistId ? (playlists.find(p => p.id === editingPlaylistId)?.trackIds || []) : (activePlaylistId ? (playlists.find(p => p.id === activePlaylistId)?.trackIds || []) : tracks.map(t => t.id));
+                    const allSelected = list.length > 0 && list.every(id => selectedTrackIds.has(id));
                     if (allSelected) {
                       const next = new Set(selectedTrackIds);
-                      allIds.forEach(id => next.delete(id));
+                      list.forEach(id => next.delete(id));
                       setSelectedTrackIds(next);
                     } else {
-                      setSelectedTrackIds(new Set([...Array.from(selectedTrackIds), ...allIds]));
+                      setSelectedTrackIds(new Set([...Array.from(selectedTrackIds), ...list]));
                     }
                   }}
-                  className="text-[10px] font-bold text-apple-blue uppercase tracking-widest active:opacity-50"
+                  className="text-[10px] font-bold text-apple-blue uppercase tracking-[0.1em]"
                 >
-                  {(editingPlaylistId ? (playlists.find(p => p.id === editingPlaylistId)?.trackIds.every(id => selectedTrackIds.has(id))) : (activePlaylistId ? (playlists.find(p => p.id === activePlaylistId)?.trackIds.every(id => selectedTrackIds.has(id))) : (tracks.every(t => selectedTrackIds.has(t.id))))) ? 'Deselect All' : 'Select All'}
+                  {((editingPlaylistId ? (playlists.find(p => p.id === editingPlaylistId)?.trackIds) : (activePlaylistId ? (playlists.find(p => p.id === activePlaylistId)?.trackIds) : tracks.map(t => t.id)))?.every(id => selectedTrackIds.has(id))) ? 'Deselect All' : 'Select All'}
                 </button>
                 <button 
-                  onClick={() => {
-                    setIsSelectMode(false);
-                    setSelectedTrackIds(new Set());
-                  }}
-                  className="text-[10px] font-bold text-white/60 uppercase tracking-widest active:opacity-50"
+                  onClick={() => { setIsSelectMode(false); setSelectedTrackIds(new Set()); }}
+                  className="text-[10px] font-bold text-white/60 uppercase tracking-[0.1em]"
                 >
                   Cancel
                 </button>
               </div>
             </div>
             
-            <div className="h-px bg-white/10 w-full" />
-
-            <div className="flex gap-3 mt-1">
+            <div className="grid grid-cols-4 gap-2">
               <button 
-                onClick={() => {
-                  if (selectedTrackIds.size > 0) {
-                    setBulkActionType('add');
-                    setShowBulkAddMenu(!showBulkAddMenu);
-                  } else showToast("Select tracks first");
-                }}
+                onClick={() => { if (selectedTrackIds.size > 0) { setBulkActionType('add'); setShowBulkAddMenu(!showBulkAddMenu); } }}
                 disabled={selectedTrackIds.size === 0}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold transition-all active:scale-95 shadow-lg ${selectedTrackIds.size > 0 ? 'bg-apple-blue text-white shadow-apple-blue/20' : 'bg-white/5 text-white/20'}`}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-20"
               >
-                <ListPlus size={16} />
-                <span>{(editingPlaylistId || activePlaylistId) ? 'Copy' : 'Add'}</span>
+                <ListPlus size={20} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">{(editingPlaylistId || activePlaylistId) ? 'Copy' : 'Add'}</span>
               </button>
               
               {(editingPlaylistId || activePlaylistId) && (
                 <button 
-                  onClick={() => {
-                    if (selectedTrackIds.size > 0) {
-                      setBulkActionType('move');
-                      setShowBulkAddMenu(!showBulkAddMenu);
-                    }
-                  }}
+                  onClick={() => { if (selectedTrackIds.size > 0) { setBulkActionType('move'); setShowBulkAddMenu(!showBulkAddMenu); } }}
                   disabled={selectedTrackIds.size === 0}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold bg-purple-600 text-white transition-all active:scale-95 shadow-lg shadow-purple-600/20`}
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors"
                 >
-                  <Share size={16} />
-                  <span>Move</span>
+                  <Share size={20} />
+                  <span className="text-[9px] font-bold uppercase tracking-tight">Move</span>
                 </button>
               )}
 
-              {(editingPlaylistId || activePlaylistId) && (
+              {(editingPlaylistId || activePlaylistId) ? (
                 <button 
                   onClick={handleBulkRemoveFromPlaylist}
                   disabled={selectedTrackIds.size === 0}
-                  className="flex items-center gap-2 p-3 rounded-2xl bg-red-500 text-white transition-all active:scale-95 shadow-lg shadow-red-500/20"
-                  title="Remove from Playlist"
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-colors"
                 >
                   <Trash2 size={20} />
+                  <span className="text-[9px] font-bold uppercase tracking-tight">Remove</span>
                 </button>
-              )}
-
-              {!(editingPlaylistId || activePlaylistId) && (
+              ) : (
                 <button 
                   onClick={handleBulkCreatePlaylist}
                   disabled={selectedTrackIds.size === 0}
-                  className={`flex items-center gap-2 p-3 rounded-2xl transition-all active:scale-95 ${selectedTrackIds.size > 0 ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white/5 text-white/20'}`}
-                  title="Create New Playlist"
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-20"
                 >
                   <FolderPlus size={20} />
+                  <span className="text-[9px] font-bold uppercase tracking-tight">New List</span>
                 </button>
               )}
+
+              <button 
+                onClick={async () => {
+                   if (confirm(`Delete ${selectedTrackIds.size} tracks from device?`)) {
+                      for (const id of Array.from(selectedTrackIds)) await removeTrack(id);
+                      setIsSelectMode(false);
+                      setSelectedTrackIds(new Set());
+                   }
+                }}
+                disabled={selectedTrackIds.size === 0}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors text-red-400 disabled:opacity-20"
+              >
+                <Trash2 size={20} />
+                <span className="text-[9px] font-bold uppercase tracking-tight">Delete</span>
+              </button>
             </div>
 
             <AnimatePresence>
               {showBulkAddMenu && (
                 <motion.div
-                  initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                  initial={{ scale: 0.95, opacity: 0, y: 10 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ scale: 0.9, opacity: 0, y: 10 }}
-                  className="absolute bottom-full mb-4 left-0 right-0 bg-white shadow-2xl rounded-[2.5rem] p-6 text-apple-text-primary z-50 border border-black/5"
+                  exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                  className="absolute bottom-full mb-6 left-0 right-0 bg-white rounded-[2.5rem] p-6 text-black z-50 border border-black/5 shadow-2xl"
                 >
-                  <div className="flex items-center justify-between mb-6 px-2">
-                    <h3 className="font-bold text-lg">Add to Playlist</h3>
-                    <button onClick={() => setShowBulkAddMenu(false)} className="text-apple-text-secondary"><X size={20} /></button>
+                  <div className="flex items-center justify-between mb-6 px-1">
+                    <h3 className="font-bold text-lg tracking-tight">Select Playlist</h3>
+                    <button onClick={() => setShowBulkAddMenu(false)} className="text-gray-400 p-2"><X size={20} /></button>
                   </div>
                   <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto no-scrollbar">
-                    {playlists.length === 0 ? (
-                       <p className="text-center py-8 text-apple-text-secondary text-sm italic">No playlists created yet</p>
-                    ) : (
-                      playlists.map((p: any) => (
-                        <button
-                          key={p.id}
-                          onClick={() => handleBulkAddToPlaylist(p.id)}
-                          className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-[1.5rem] flex items-center justify-between font-bold text-sm transition-all active:scale-[0.98]"
-                        >
-                          <span>{p.name}</span>
-                          <span className="text-[10px] text-apple-text-secondary lowercase">{p.trackIds.length} tracks</span>
-                        </button>
-                      ))
-                    )}
+                    {playlists.map((p: any) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleBulkAddToPlaylist(p.id)}
+                        className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl flex items-center justify-between font-bold text-sm transition-all active:scale-[0.98]"
+                      >
+                        <span>{p.name}</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">{p.trackIds.length} tracks</span>
+                      </button>
+                    ))}
                   </div>
                 </motion.div>
               )}
@@ -590,17 +578,17 @@ export default function LibraryView() {
 }
 
 const EmptyState = ({ onFileUpload }: any) => (
-  <div className="bg-apple-card rounded-[2.5rem] p-12 border border-black/5 flex flex-col items-center justify-center text-center gap-4">
-    <div className="w-16 h-16 bg-apple-bg rounded-full flex items-center justify-center text-apple-text-secondary">
-       <Upload size={32} />
+  <div className="py-24 px-12 flex flex-col items-center justify-center text-center gap-6">
+    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+       <Upload size={40} />
     </div>
-    <div>
-      <h3 className="font-semibold text-lg">No music yet</h3>
-      <p className="text-sm text-apple-text-secondary px-6">Upload your favorite tracks to listen offline.</p>
+    <div className="max-w-xs">
+      <h3 className="font-bold text-xl text-black">Your Library is Empty</h3>
+      <p className="text-sm text-gray-500 mt-2">Upload your favorite tracks to begin your mindful audio session.</p>
     </div>
-    <label className="mt-2 text-apple-blue font-medium cursor-pointer">
-      Select files
-      <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={onFileUpload} />
+    <label className="mt-4 px-8 py-3 bg-black text-white rounded-full text-xs font-bold tracking-tight active:scale-95 transition-transform cursor-pointer">
+      Add High-Quality Audio
+      <input type="file" multiple accept="audio/*" className="hidden" onChange={onFileUpload} />
     </label>
   </div>
 );
@@ -633,8 +621,8 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
   };
 
   return (
-    <div className={`group flex flex-col transition-all duration-300 ${settings.miniMode ? 'rounded-xl' : 'rounded-3xl'} ${isActive ? 'bg-apple-blue/5 border border-apple-blue/10' : 'hover:bg-apple-card/60 border border-transparent'} ${track.isMissing ? 'opacity-80' : ''}`}>
-      <div className={`flex items-center gap-4 ${settings.miniMode ? 'p-2' : 'p-4'}`}>
+    <div className={`group flex flex-col transition-all duration-300 border-b border-black/[0.02] ${track.isMissing ? 'opacity-60' : ''}`}>
+      <div className={`flex items-center gap-4 py-3 px-1`}>
         {isSelectMode && (
           <button 
             onClick={onSelect}
@@ -642,7 +630,7 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
             className={`flex-shrink-0 transition-all duration-300 transform ${isSelected ? 'scale-110' : 'scale-100'} ${isSelected ? 'text-apple-blue' : 'text-gray-300'} ${track.isMissing ? 'grayscale opacity-50' : ''}`}
           >
             {isSelected ? (
-              <div className="bg-apple-blue rounded-full p-0.5">
+              <div className="bg-apple-blue rounded-full p-0.5 shadow-sm shadow-apple-blue/30">
                 <CheckCircle2 size={24} className="text-white" fill="currentColor" stroke="none" />
               </div>
             ) : (
@@ -652,33 +640,28 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
         )}
         <button 
           onClick={() => !track.isMissing && onPlay()} 
-          className={`flex-1 flex items-center ${settings.miniMode ? 'gap-3' : 'gap-4'} text-left min-w-0 ${track.isMissing ? 'cursor-default' : ''}`}
+          className={`flex-1 flex items-center gap-4 text-left min-w-0 ${track.isMissing ? 'cursor-default' : ''}`}
         >
-          <div className={`flex-shrink-0 ${settings.miniMode ? 'w-10 h-10 rounded-xl' : 'w-12 h-12 rounded-2xl'} bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-sm relative`}>
-             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-400" size={settings.miniMode ? 16 : 20} />}
+          <div className="flex-shrink-0 w-11 h-11 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden relative border border-black/[0.01]">
+             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-200" size={18} />}
              {track.isMissing && (
-               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                 <AlertCircle size={settings.miniMode ? 14 : 18} className="text-white" />
+               <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                 <AlertCircle size={14} className="text-white" />
                </div>
              )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className={`font-semibold truncate text-sm ${isActive ? 'text-apple-blue' : 'text-apple-text-primary'}`}>
-                <HighlightText text={track.name} highlight={searchQuery} />
-              </h4>
-              {track.isMissing && (
-                <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase tracking-tighter">Missing</span>
-              )}
-            </div>
-            <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-wider">
-              <HighlightText text={track.artist || ''} highlight={searchQuery} />
+            <h4 className={`font-semibold truncate text-[13px] tracking-tight ${isActive ? 'text-apple-blue font-bold' : 'text-black'}`}>
+              <HighlightText text={track.name} highlight={searchQuery} />
+            </h4>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.1em] mt-0.5">
+              <HighlightText text={track.artist || 'Unknown Artist'} highlight={searchQuery} />
             </p>
           </div>
         </button>
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           {track.isMissing ? (
-            <label className="p-2 text-apple-blue hover:bg-apple-blue/5 rounded-full transition-colors cursor-pointer" title="Relink File">
+            <label className="p-2 text-gray-400 hover:text-apple-blue transition-colors cursor-pointer" title="Relink File">
               <Link size={16} />
               <input type="file" accept="audio/*" className="hidden" onChange={handleRelink} />
             </label>
@@ -686,63 +669,73 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
             !isSelectMode && (
               <button 
                 onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
-                className={`p-2 rounded-full transition-colors ${showActions ? 'bg-apple-blue/10 text-apple-blue' : 'text-apple-text-secondary hover:bg-gray-100'}`}
+                className={`p-2 rounded-full transition-colors ${showActions ? 'bg-apple-blue/10 text-apple-blue' : 'text-gray-300 hover:text-black hover:bg-gray-50'}`}
               >
                 <Plus size={16} />
               </button>
             )
           )}
-          {!settings.miniMode && !isSelectMode && (
-            <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="p-2 text-apple-text-secondary hover:text-red-500 rounded-full hover:bg-red-50 transition-colors">
-              <Trash2 size={16} />
-            </button>
-          )}
         </div>
       </div>
 
-      {showActions && !isSelectMode && (
-        <div className="px-4 pb-4 animate-in slide-in-from-top-1 duration-200">
-          <div className="bg-white/50 backdrop-blur rounded-2xl p-4 border border-black/5 flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary px-1">Quick Actions</p>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateSubliminalSettings({ selectedTrackId: track.id, isEnabled: true });
-                  showToast(`"${track.name}" set as subliminal layer`);
-                  setShowActions(false);
-                }}
-                className="flex items-center gap-3 w-full p-2 bg-apple-blue/10 text-apple-blue rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
-              >
-                <Zap size={14} fill="currentColor" />
-                <span>Play as Subliminal Layer</span>
-              </button>
-            </div>
+      <AnimatePresence>
+        {showActions && !isSelectMode && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-1 pb-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateSubliminalSettings({ selectedTrackId: track.id, isEnabled: true });
+                    showToast(`Layered: ${track.name}`);
+                    setShowActions(false);
+                  }}
+                  className="flex items-center gap-3 w-full p-2.5 bg-apple-blue/5 text-apple-blue rounded-xl text-[11px] font-bold tracking-tight transition-all active:scale-[0.98]"
+                >
+                  <Zap size={14} fill="currentColor" />
+                  <span>Use as Subliminal Layer</span>
+                </button>
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-apple-text-secondary px-1">Add to Playlist</p>
-              {playlists.length === 0 ? (
-                <p className="text-[10px] text-apple-text-secondary px-2 py-2 italic text-center">No playlists yet</p>
-              ) : (
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                  {playlists.map((p: any) => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        onAddToPlaylist(p.id);
-                        setShowActions(false);
-                      }}
-                      className="whitespace-nowrap px-3 py-1.5 bg-apple-card border border-black/5 text-apple-text-primary rounded-xl text-[10px] font-bold"
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex flex-col gap-2">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 px-1">Add to Playlist</p>
+                {playlists.length === 0 ? (
+                  <p className="text-[10px] text-gray-300 italic px-1">Create a playlist to organize tracks</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {playlists.map((p: any) => (
+                      <button 
+                        key={p.id}
+                        onClick={() => {
+                          onAddToPlaylist(p.id);
+                          setShowActions(false);
+                        }}
+                        className="px-3 py-1.5 bg-gray-50 text-gray-500 hover:text-black rounded-lg text-[10px] font-bold transition-colors"
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                  className="text-[10px] font-bold text-red-500 uppercase tracking-widest px-2 py-1 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  Remove Track
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
@@ -759,23 +752,23 @@ const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSe
       <span className="font-bold text-base tracking-tight">Create New Playlist</span>
     </button>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {playlists.map((playlist: any) => {
         const isEditingThis = isSelectMode && editingPlaylistId === playlist.id;
         
         return (
-          <div key={playlist.id} className={`bg-apple-card rounded-[2.5rem] p-6 border transition-all duration-500 ${isEditingThis ? 'border-apple-blue shadow-xl shadow-apple-blue/5 scale-[1.02]' : 'border-black/5 shadow-sm opacity-100'}`}>
-            <div className="flex justify-between items-start mb-4">
+          <div key={playlist.id} className={`flex flex-col gap-4 border-b border-black/[0.03] pb-8 transition-opacity ${isSelectMode && !isEditingThis ? 'opacity-40' : 'opacity-100'}`}>
+            <div className="flex justify-between items-start">
               <button 
                 onClick={() => !isSelectMode && onOpen(playlist.id)}
-                className="flex-1 min-w-0 text-left cursor-pointer group"
+                className="flex-1 min-w-0 text-left group"
               >
-                <h3 className="text-xl font-bold tracking-tight truncate group-hover:text-apple-blue transition-colors">
+                <h3 className="text-xl font-extrabold tracking-tight truncate group-hover:text-apple-blue transition-colors">
                   <HighlightText text={playlist.name} highlight={searchQuery} />
                 </h3>
-                <p className="text-[10px] text-apple-text-secondary uppercase font-bold tracking-widest">{playlist.trackIds.length} tracks</p>
+                <p className="text-[10px] text-gray-400 uppercase font-bold tracking-[0.15em] mt-1">{playlist.trackIds.length} tracks</p>
               </button>
-              <div className="flex gap-2">
+              <div className="flex gap-4">
                 {playlist.trackIds.length > 0 && (
                   <button 
                     onClick={() => onEnterSelect(playlist.id)}
@@ -785,14 +778,14 @@ const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSe
                   </button>
                 )}
                 {!isSelectMode && (
-                  <button onClick={() => onDelete(playlist.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
-                    <Trash2 size={18} />
+                  <button onClick={() => onDelete(playlist.id)} className="p-2 text-gray-200 hover:text-red-500 transition-colors">
+                    <Trash2 size={16} />
                   </button>
                 )}
               </div>
             </div>
             
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               {playlist.trackIds.slice(0, 3).map((tid: string) => {
                 const track = tracks.find((t: any) => t.id === tid);
                 if (!track) return null;
@@ -805,7 +798,7 @@ const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSe
                       if (isSelectMode) onToggleSelection(tid, playlist.id);
                       else onTrackPlay(tid);
                     }}
-                    className={`flex items-center gap-3 p-2 rounded-2xl text-left transition-all group relative ${isSelected ? 'bg-apple-blue/5' : 'hover:bg-apple-bg'}`}
+                    className={`flex items-center gap-4 p-2 rounded-xl text-left transition-all group relative ${isSelected ? 'bg-apple-blue/5' : 'hover:bg-gray-50'}`}
                   >
                     {isSelectMode && editingPlaylistId === playlist.id && (
                       <div className={`flex-shrink-0 transition-transform ${isSelected ? 'scale-110' : 'scale-100'}`}>
@@ -816,13 +809,10 @@ const PlaylistView = ({ playlists, onCreate, onDelete, tracks, onTrackPlay, isSe
                         )}
                       </div>
                     )}
-                    <div className="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                      {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-300" size={12} />}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-gray-50">
+                      {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-200" size={12} />}
                     </div>
-                    <span className={`text-xs font-semibold truncate flex-1 ${isSelected ? 'text-apple-blue font-bold' : 'text-apple-text-primary'}`}>{track.name}</span>
-                    {!isSelectMode && (
-                      <span className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-apple-blue uppercase tracking-widest transition-opacity">Play</span>
-                    )}
+                    <span className={`text-[13px] font-semibold truncate flex-1 ${isSelected ? 'text-apple-blue font-bold' : 'text-black'}`}>{track.name}</span>
                   </button>
                 );
               })}

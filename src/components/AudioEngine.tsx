@@ -295,7 +295,14 @@ export default function AudioEngine() {
 
     const onEnded = () => {
       console.log("AudioEngine: Track ended, advancing...");
-      playNext(true);
+      if (settings.loop === 'one') {
+        if (mainAudioRef.current) {
+          mainAudioRef.current.currentTime = 0;
+          mainAudioRef.current.play().catch(console.error);
+        }
+      } else {
+        playNext(true);
+      }
     };
 
     let errorCount = 0;

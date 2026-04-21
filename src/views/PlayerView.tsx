@@ -104,51 +104,49 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
   return (
     <div className="h-full flex flex-col items-center justify-between pb-12 select-none relative w-full max-w-2xl mx-auto bg-white overflow-hidden">
       {/* Top Bar */}
-      <header className="w-full flex items-center justify-between px-6 h-16 flex-shrink-0">
+      <header className="w-full flex items-center justify-between px-6 h-20 flex-shrink-0">
         <button 
           onClick={onBack}
-          className="w-10 h-10 -ml-2 flex items-center justify-center text-apple-text-primary hover:bg-gray-50 rounded-full transition-colors"
+          className="w-10 h-10 -ml-2 flex items-center justify-center text-black hover:bg-gray-50 rounded-full transition-colors"
         >
           <ChevronDown size={28} />
         </button>
-        <div className="text-center flex-1 overflow-hidden">
-          <h1 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary truncate px-4">Now Playing</h1>
-        </div>
-        <button className="w-10 h-10 -mr-2 flex items-center justify-center text-apple-text-primary hover:bg-gray-50 rounded-full transition-colors">
+        <h1 className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-400">Now Playing</h1>
+        <button className="w-10 h-10 -mr-2 flex items-center justify-center text-black hover:bg-gray-50 rounded-full transition-colors">
           <MoreHorizontal size={24} />
         </button>
       </header>
 
       {/* Main Art & Info */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full px-6 gap-8">
+      <div className="flex-1 flex flex-col items-center justify-center w-full px-8 gap-10">
         {/* Album Art */}
         <motion.div 
-          className="w-full max-w-[320px] aspect-square bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] border border-black/[0.03] overflow-hidden relative"
-          animate={{ scale: isPlaying ? 1 : 0.95 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+          className="w-full max-w-[320px] aspect-square bg-white rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.06)] border border-black/[0.02] overflow-hidden relative"
+          animate={{ scale: isPlaying ? 1 : 0.94 }}
+          transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
         >
           {currentTrack.artwork ? (
             <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           ) : (
             <div className="w-full h-full bg-gray-50 flex items-center justify-center">
-              <MusicIcon size={120} className="text-gray-200" />
+              <MusicIcon size={120} className="text-gray-100" />
             </div>
           )}
         </motion.div>
         
         {/* Track Title & Artist */}
-        <div className="text-center w-full max-w-[280px]">
-          <h2 className="text-2xl font-bold tracking-tight text-apple-text-primary line-clamp-1 mb-1">
+        <div className="text-center w-full max-w-sm">
+          <h2 className="text-3xl font-extrabold tracking-tight text-black line-clamp-1 mb-1">
             {currentTrack.name}
           </h2>
-          <p className="text-apple-text-secondary font-medium text-base mb-6">
+          <p className="text-gray-400 font-bold text-lg mb-8">
             {currentTrack.artist}
           </p>
 
-          {/* Layer Indicator Pill */}
+          {/* Layer Indicator Pill - Cleaner */}
           <button 
             onClick={() => setIsPanelOpen(true)}
-            className="inline-flex items-center gap-2 bg-gray-50 hover:bg-gray-100 border border-black/[0.03] px-5 py-2.5 rounded-full transition-colors active:scale-95 shadow-sm"
+            className="inline-flex items-center gap-3 bg-gray-50 hover:bg-gray-100 px-6 py-3 rounded-full transition-colors active:scale-95 border border-black/[0.01]"
           >
             <div className="flex gap-1.5">
               {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
@@ -156,26 +154,26 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
               {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">{activeLayersLabel}</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500">{activeLayersLabel}</span>
           </button>
         </div>
       </div>
 
       {/* Playback Controls & Progress */}
-      <div className="w-full max-w-sm flex flex-col px-6 gap-6 mb-4">
+      <div className="w-full max-w-sm flex flex-col px-8 gap-8 mb-4">
         {/* Progress Bar */}
         <div className="flex flex-col gap-2">
-          <div className="relative h-6 flex items-center">
+          <div className="relative h-4 flex items-center">
             <input 
               type="range"
               min={0}
               max={duration || 100}
               value={currentTime}
               onChange={(e) => seekTo(parseFloat(e.target.value))}
-              className="w-full h-1 bg-gray-100 rounded-full appearance-none cursor-pointer accent-apple-text-primary"
+              className="w-full h-1 bg-gray-100 rounded-full appearance-none cursor-pointer accent-black"
             />
           </div>
-          <div className="flex justify-between text-[11px] font-bold text-apple-text-secondary tabular-nums opacity-60">
+          <div className="flex justify-between text-[10px] font-bold text-gray-400 tabular-nums">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
@@ -183,19 +181,19 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 
         {/* Buttons */}
         <div className="flex items-center justify-between px-2 pb-2">
-          <button onClick={() => playPrevious()} className="p-4 text-apple-text-primary hover:bg-gray-50 rounded-full active:scale-90 transition-all">
-            <SkipBack size={36} fill="currentColor" stroke="none" />
+          <button onClick={() => playPrevious()} className="p-4 text-black hover:bg-gray-50 rounded-full active:scale-90 transition-all">
+            <SkipBack size={40} fill="currentColor" stroke="none" />
           </button>
           
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-20 h-20 bg-apple-text-primary text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all"
+            className="w-20 h-20 bg-black text-white rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all"
           >
             {isPlaying ? <Pause size={36} fill="currentColor" stroke="none" /> : <Play size={36} fill="currentColor" stroke="none" className="ml-1" />}
           </button>
 
-          <button onClick={() => playNext()} className="p-4 text-apple-text-primary hover:bg-gray-50 rounded-full active:scale-90 transition-all">
-            <SkipForward size={36} fill="currentColor" stroke="none" />
+          <button onClick={() => playNext()} className="p-4 text-black hover:bg-gray-50 rounded-full active:scale-90 transition-all">
+            <SkipForward size={40} fill="currentColor" stroke="none" />
           </button>
         </div>
       </div>

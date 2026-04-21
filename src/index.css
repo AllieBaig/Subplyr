@@ -3,11 +3,11 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-apple-bg: #F5F5F7;
+  --color-apple-bg: #FFFFFF;
   --color-apple-card: #FFFFFF;
-  --color-apple-text-primary: #1D1D1F;
+  --color-apple-text-primary: #000000;
   --color-apple-text-secondary: #86868B;
-  --color-apple-blue: #0071E3;
+  --color-apple-blue: #007AFF;
 }
 
 @layer base {
