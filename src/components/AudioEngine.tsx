@@ -257,38 +257,87 @@ export default function AudioEngine() {
     subPlaylistIndexRef.current = 0;
   }, [settings.subliminal.sourcePlaylistId, settings.subliminal.isPlaylistMode]);
 
-  // Initialize main audio
+  // Initialize main audio element
   useEffect(() => {
     const audio = new Audio();
     (audio as any).playsInline = true;
     (audio as any).webkitPlaysInline = true;
     mainAudioRef.current = audio;
-    
+
+    return () => {
+      audio.pause();
+      audio.src = '';
+      mainAudioRef.current = null;
+    };
+  }, []);
+
+  // Sync state and duration from main audio
+  useEffect(() => {
+    const audio = mainAudioRef.current;
+    if (!audio) return;
+
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
     const onLoadedMetadata = () => setDuration(audio.duration);
-    const onEnded = () => playNext(true);
-    const onError = (e: any) => {
-      console.warn("Main Engine: Audio resource stall detected. Retrying state.", e);
-      if (isPlaying) {
-        setTimeout(() => audio.play().catch(() => {}), 1000);
-      }
-    };
-
+    
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('error', onError);
-    audio.addEventListener('stalled', onError);
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+    };
+  }, [setCurrentTime, setDuration]);
+
+  // Handle track ending and errors
+  useEffect(() => {
+    const audio = mainAudioRef.current;
+    if (!audio) return;
+
+    const onEnded = () => {
+      console.log("AudioEngine: Track ended, advancing...");
+      playNext(true);
+    };
+
+    let errorCount = 0;
+    const onError = (e: any) => {
+      console.warn("Main Engine: Audio resource stall or error detected.", e);
+      if (isPlaying) {
+        errorCount++;
+        if (errorCount > 2) {
+          console.error("Main Engine: Multiple playback errors. Skipping to next.");
+          errorCount = 0;
+          playNext(true);
+          return;
+        }
+        setTimeout(() => {
+          if (isPlaying && mainAudioRef.current) {
+            mainAudioRef.current.play().catch(() => {});
+          }
+        }, 1000);
+      }
+    };
+
+    const handleStalled = () => {
+      console.warn("Main Engine: Playback stalled.");
+      if (isPlaying) {
+        setTimeout(() => {
+          if (isPlaying && mainAudioRef.current && mainAudioRef.current.paused) {
+             mainAudioRef.current.play().catch(() => {});
+          }
+        }, 1500);
+      }
+    };
+
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+    audio.addEventListener('stalled', handleStalled);
+
+    return () => {
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('error', onError);
-      audio.removeEventListener('stalled', onError);
-      audio.pause();
+      audio.removeEventListener('stalled', handleStalled);
     };
-  }, []);
+  }, [playNext, isPlaying]);
 
   // Initialize subliminal audio
   useEffect(() => {

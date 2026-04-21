@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, ReactNode, useEffect, useMemo } from 'react';
+import { useState, createContext, useContext, ReactNode, useEffect, useMemo, useCallback } from 'react';
 import { Track, AppSettings, Playlist, SortOption, GroupOption } from './types';
 import * as db from './db';
 
@@ -764,7 +764,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     showToast(`Loop: ${next.toUpperCase()}`);
   };
 
-  const playNext = (isAutoEnded = false) => {
+  const playNext = useCallback((isAutoEnded = false) => {
     const list = currentPlaybackList;
     if (list.length === 0) return;
     
@@ -781,31 +781,33 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     if (settings.shuffle) {
       nextIndex = Math.floor(Math.random() * list.length);
     } else {
-      nextIndex = currentTrackIndex === null || currentTrackIndex >= list.length - 1 ? 0 : currentTrackIndex + 1;
+      const isLastTrack = currentTrackIndex === null || currentTrackIndex >= list.length - 1;
       
       // If we reached the end and loop is none, stop
-      if (isAutoEnded && settings.loop === 'none' && (currentTrackIndex === null || currentTrackIndex >= list.length - 1)) {
+      if (isAutoEnded && settings.loop === 'none' && isLastTrack) {
         setIsPlaying(false);
         return;
       }
+
+      nextIndex = isLastTrack ? 0 : currentTrackIndex + 1;
     }
 
     let attempts = 0;
-    while (list[nextIndex].isMissing && attempts < list.length) {
-      nextIndex = nextIndex >= list.length - 1 ? 0 : nextIndex + 1;
+    while (list[nextIndex]?.isMissing && attempts < list.length) {
+      nextIndex = (nextIndex + 1) % list.length;
       attempts++;
     }
 
-    if (!list[nextIndex].isMissing) {
+    if (list[nextIndex] && !list[nextIndex].isMissing) {
       setCurrentTrackIndex(nextIndex);
       setIsPlaying(true);
     } else {
       showToast("No playable tracks found");
       setIsPlaying(false);
     }
-  };
+  }, [currentPlaybackList, settings.loop, settings.shuffle, currentTrackIndex]);
 
-  const playPrevious = () => {
+  const playPrevious = useCallback(() => {
     const list = currentPlaybackList;
     if (list.length === 0) return;
     
@@ -817,19 +819,19 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
 
     let attempts = 0;
-    while (list[prevIndex].isMissing && attempts < list.length) {
+    while (list[prevIndex]?.isMissing && attempts < list.length) {
       prevIndex = prevIndex === 0 ? list.length - 1 : prevIndex - 1;
       attempts++;
     }
 
-    if (!list[prevIndex].isMissing) {
+    if (list[prevIndex] && !list[prevIndex].isMissing) {
       setCurrentTrackIndex(prevIndex);
       setIsPlaying(true);
     } else {
       showToast("No playable tracks found");
       setIsPlaying(false);
     }
-  };
+  }, [currentPlaybackList, settings.shuffle, currentTrackIndex]);
 
   return (
     <AudioContext.Provider value={{
