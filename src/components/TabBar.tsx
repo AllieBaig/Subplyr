@@ -24,9 +24,9 @@ export default function TabBar({ activeTab, setActiveTab }: TabBarProps) {
 
   return (
     <div className={cn(
-      "w-full bg-white/95 backdrop-blur-3xl border border-black/[0.03] rounded-[2rem] flex justify-center items-center z-50 transition-all shadow-xl shadow-black/5",
-      settings.miniMode ? "px-4 py-2 h-14 gap-16" : "px-6 py-3 h-20 gap-20",
-      settings.bigTouchMode && !settings.miniMode && "h-24 scale-105"
+      "w-full bg-white/80 backdrop-blur-3xl border-none rounded-xl flex justify-center items-center z-50 transition-all shadow-sm",
+      settings.miniMode ? "px-4 py-2 h-12 gap-16" : "px-6 py-3 h-16 gap-20",
+      settings.bigTouchMode && !settings.miniMode && "h-20"
     )}>
       {tabs.map((tab) => {
         const Icon = tab.icon;
@@ -37,28 +37,14 @@ export default function TabBar({ activeTab, setActiveTab }: TabBarProps) {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "relative flex flex-col items-center gap-1 group transition-all duration-300",
-              isActive ? "text-black scale-105" : "text-gray-400"
+              "relative flex flex-col items-center gap-0.5 transition-all duration-300",
+              isActive ? "text-apple-blue" : "text-gray-300"
             )}
           >
-            <div className="p-2 transition-all">
-              <Icon size={settings.miniMode ? 18 : 22} strokeWidth={isActive ? 2.5 : 2} />
+            <div className="p-1 px-4 rounded-full transition-all">
+              <Icon size={isActive ? 24 : 22} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span className={cn(
-              "font-bold tracking-[0.05em] uppercase",
-              settings.miniMode ? "text-[8px]" : "text-[9px]"
-            )}>{tab.label}</span>
-            {isActive && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-black shadow-sm"
-                transition={{ 
-                  type: 'spring', 
-                  stiffness: 500, 
-                  damping: 30 
-                }}
-              />
-            )}
+            <span className="font-bold text-[10px] tracking-tight">{tab.label}</span>
           </button>
         );
       })}
