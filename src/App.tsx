@@ -16,11 +16,17 @@ export type TabType = 'library' | 'player' | 'settings';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('library');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const { isLoading, initError, toast, settings } = useAudio();
+  const { isLoading, initError, toast, settings, swStatus, showToast } = useAudio();
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      showToast("Online: System Synced");
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      showToast("Offline: All features active");
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -29,7 +35,14 @@ function AppContent() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [showToast]);
+
+  // Handle SW updates
+  useEffect(() => {
+    if (swStatus === 'waiting') {
+      showToast("Update Ready: Reload to apply");
+    }
+  }, [swStatus, showToast]);
 
   const getAnimationProps = (style: AnimationStyle) => {
     if (style === 'off' || !style) return { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } };
@@ -62,12 +75,12 @@ function AppContent() {
         <AnimatePresence>
           {!isOnline && (
             <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="absolute top-0 left-0 right-0 z-[100] bg-apple-text-primary text-apple-card py-2 px-4 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest shadow-sm"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 12, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              className="absolute top-0 left-1/2 -translate-x-1/2 z-[200] bg-black/80 backdrop-blur-md text-white py-1.5 px-4 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.15em] shadow-lg border border-white/10"
             >
-              <WifiOff size={12} />
+              <WifiOff size={10} />
               <span>Offline Mode</span>
             </motion.div>
           )}
