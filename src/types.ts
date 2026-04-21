@@ -16,7 +16,7 @@ export interface Playlist {
 }
 
 export type SortOption = 'date' | 'alphabetical' | 'recent';
-export type GroupOption = 'none' | 'day' | 'week' | 'month' | 'alphabetical';
+export type GroupOption = 'none' | 'day' | 'week' | 'month' | 'alphabetical' | 'minutes' | 'numbers';
 export type AnimationStyle = 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'random' | 'off';
 
 export interface SubliminalSettings {
@@ -72,6 +72,7 @@ export interface AppSettings {
   library: {
     sort: SortOption;
     group: GroupOption;
+    groupByMinutes: boolean;
   };
   miniMode: boolean;
   hiddenLayersPosition: 'top' | 'bottom';

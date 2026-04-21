@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, ReactNode, useEffect, useMemo, useCallback } from 'react';
+import { useState, createContext, useContext, ReactNode, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Track, AppSettings, Playlist, SortOption, GroupOption } from './types';
 import * as db from './db';
 
@@ -74,6 +74,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [subliminalTracks, setSubliminalTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const playlistsRef = useRef<Playlist[]>([]);
+  useEffect(() => { playlistsRef.current = playlists; }, [playlists]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -249,7 +251,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     syncPlayback: true,
     library: {
       sort: 'recent',
-      group: 'alphabetical'
+      group: 'alphabetical',
+      groupByMinutes: false,
     },
     miniMode: false,
     hiddenLayersPosition: 'bottom',
@@ -579,20 +582,23 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addTracksToPlaylist = async (trackIds: string[], playlistId: string) => {
-    const playlist = playlists.find(p => p.id === playlistId);
-    if (!playlist) return;
+    let finalUpdated: Playlist | null = null;
     
-    // Filter out duplicates
-    const newIds = trackIds.filter(id => !playlist.trackIds.includes(id));
-    if (newIds.length === 0) {
-      showToast("Tracks already in playlist");
-      return;
-    }
+    setPlaylists(prev => {
+      const playlist = prev.find(p => p.id === playlistId);
+      if (!playlist) return prev;
+      
+      const newIds = trackIds.filter(id => !playlist.trackIds.includes(id));
+      if (newIds.length === 0) return prev;
+      
+      finalUpdated = { ...playlist, trackIds: [...playlist.trackIds, ...newIds] };
+      return prev.map(p => p.id === playlistId ? finalUpdated! : p);
+    });
 
-    const updated = { ...playlist, trackIds: [...playlist.trackIds, ...newIds] };
-    await db.savePlaylist(updated);
-    setPlaylists(prev => prev.map(p => p.id === playlistId ? updated : p));
-    showToast(`Added ${newIds.length} track${newIds.length > 1 ? 's' : ''} to playlist`);
+    if (finalUpdated) {
+      await db.savePlaylist(finalUpdated);
+      showToast(`Added ${trackIds.length} track${trackIds.length > 1 ? 's' : ''} to playlist`);
+    }
   };
 
   const addTrackToPlaylist = async (trackId: string, playlistId: string) => {
@@ -604,11 +610,18 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const removeTracksFromPlaylist = async (trackIds: string[], playlistId: string) => {
-    const playlist = playlists.find(p => p.id === playlistId);
-    if (!playlist) return;
-    const updated = { ...playlist, trackIds: playlist.trackIds.filter(id => !trackIds.includes(id)) };
-    await db.savePlaylist(updated);
-    setPlaylists(prev => prev.map(p => p.id === playlistId ? updated : p));
+    let finalUpdated: Playlist | null = null;
+    
+    setPlaylists(prev => {
+      const playlist = prev.find(p => p.id === playlistId);
+      if (!playlist) return prev;
+      finalUpdated = { ...playlist, trackIds: playlist.trackIds.filter(id => !trackIds.includes(id)) };
+      return prev.map(p => p.id === playlistId ? finalUpdated! : p);
+    });
+
+    if (finalUpdated) {
+      await db.savePlaylist(finalUpdated);
+    }
   };
 
   const renamePlaylist = async (id: string, name: string) => {

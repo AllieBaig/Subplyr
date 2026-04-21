@@ -125,24 +125,46 @@ export default function LibraryView() {
   }, [tracks, settings.library.sort, searchQuery]);
 
   const groupedTracks = useMemo(() => {
-    const { group } = settings.library;
-    if (group === 'none') return [{ label: '', items: sortedTracks }];
-
+    const { group, groupByMinutes } = settings.library;
+    
     const groups: { [key: string]: Track[] } = {};
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
+    const minMs = 60 * 1000;
 
     sortedTracks.forEach(track => {
       let label = 'Other';
+      const diff = now - (track.createdAt || 0);
+      const diffMins = Math.floor(diff / minMs);
 
-      if (group === 'alphabetical') {
-        const firstChar = track.name[0]?.toUpperCase() || '#';
-        if (/[A-Z]/.test(firstChar)) label = firstChar;
-        else if (/[0-9]/.test(firstChar)) label = '0-9';
-        else label = '#';
+      // Priority: Group by Minutes if enabled and within 20 mins OR if group is specifically set to minutes
+      if ((groupByMinutes && diffMins < 20) || group === 'minutes') {
+        if (diffMins < 5) label = 'Last 5 mins';
+        else if (diffMins < 10) label = 'Last 10 mins';
+        else if (diffMins < 15) label = 'Last 15 mins';
+        else if (diffMins < 20) label = 'Last 20 mins';
+        else if (group === 'minutes') label = 'Earlier';
+        else {
+          // If groupByMinutes is ON but it's > 20 mins, use the normal grouping logic below
+          applyNormalGrouping();
+        }
       } else {
-        const diff = now - (track.createdAt || 0);
-        if (group === 'day') {
+        applyNormalGrouping();
+      }
+
+      function applyNormalGrouping() {
+        if (group === 'none') {
+          label = '';
+        } else if (group === 'alphabetical') {
+          const firstChar = track.name[0]?.toUpperCase() || '#';
+          if (/[A-Z]/.test(firstChar)) label = firstChar;
+          else if (/[0-9]/.test(firstChar)) label = '0-9';
+          else label = '#';
+        } else if (group === 'numbers') {
+          const firstChar = track.name[0];
+          if (/[0-9]/.test(firstChar)) label = '0-9';
+          else label = 'Other';
+        } else if (group === 'day') {
           if (diff < dayMs) label = 'Today';
           else if (diff < 2 * dayMs) label = 'Yesterday';
           else label = new Date(track.createdAt).toLocaleDateString(undefined, { weekday: 'long' });
@@ -158,20 +180,34 @@ export default function LibraryView() {
       groups[label].push(track);
     });
 
-    // If grouping by alphabetical, sort labels A-Z, then 0-9, then #
     const entries = Object.entries(groups);
-    if (group === 'alphabetical') {
-      entries.sort(([a], [b]) => {
+    const timeLabels = ['Last 5 mins', 'Last 10 mins', 'Last 15 mins', 'Last 20 mins'];
+    
+    entries.sort(([a], [b]) => {
+      // Time labels always first
+      const aIdx = timeLabels.indexOf(a);
+      const bIdx = timeLabels.indexOf(b);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+
+      if (group === 'alphabetical') {
         if (a === '#') return 1;
         if (b === '#') return -1;
         if (a === '0-9') return 1;
         if (b === '0-9') return -1;
         return a.localeCompare(b);
-      });
-    }
+      }
+      
+      if (group === 'minutes' && (a === 'Earlier' || b === 'Earlier')) {
+        return a === 'Earlier' ? 1 : -1;
+      }
+
+      return 0; // Maintain sortedTracks order
+    });
 
     return entries.map(([label, items]) => ({ label, items }));
-  }, [sortedTracks, settings.library.group]);
+  }, [sortedTracks, settings.library.group, settings.library.groupByMinutes]);
 
   const handleBulkAddToPlaylist = async (pid: string) => {
     const ids = Array.from(selectedTrackIds);
@@ -234,7 +270,14 @@ export default function LibraryView() {
     <div className={`flex flex-col relative w-full max-w-7xl mx-auto px-4 pt-10`}>
       <header className="flex flex-col bg-white pb-6 gap-8">
         <div className="flex justify-between items-center px-1">
-          <h1 className="text-3xl font-[900] tracking-tight text-black">Library</h1>
+          <h1 className="text-3xl font-[900] tracking-tight text-black flex items-center gap-3">
+            Library
+            {isSelectMode && selectedTrackIds.size > 0 && (
+              <span className="text-sm font-bold text-apple-blue bg-apple-blue/5 px-3 py-1 rounded-full animate-in fade-in zoom-in duration-300">
+                {selectedTrackIds.size} Selected
+              </span>
+            )}
+          </h1>
           <div className="flex gap-2 items-center">
             {(view === 'tracks' || view === 'playlists') && (view === 'tracks' ? tracks.length > 0 : playlists.length > 0) && (
               <>
@@ -313,19 +356,31 @@ export default function LibraryView() {
             </div>
           </div>
           {view === 'tracks' && (
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Group Tracks</span>
-              <div className="flex bg-gray-100 rounded-xl p-1">
-                {(['none', 'alphabetical', 'day', 'week', 'month'] as GroupOption[]).map(g => (
-                  <button
-                    key={g}
-                    onClick={() => updateLibrarySettings({ group: g })}
-                    className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${settings.library.group === g ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
-                  >
-                    {g.charAt(0).toUpperCase() + g.slice(1)}
-                  </button>
-                ))}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Group Tracks</span>
+                <div className="flex bg-gray-100 rounded-xl p-1 overflow-x-auto no-scrollbar max-w-[70%]">
+                  {(['none', 'alphabetical', 'numbers', 'minutes', 'day', 'week', 'month'] as GroupOption[]).map(g => (
+                    <button
+                      key={g}
+                      onClick={() => updateLibrarySettings({ group: g })}
+                      className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap ${settings.library.group === g ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                    >
+                      {g === 'minutes' ? 'Minutes' : g === 'numbers' ? '0-9' : g.charAt(0).toUpperCase() + g.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
+              
+              <button 
+                onClick={() => updateLibrarySettings({ groupByMinutes: !settings.library.groupByMinutes })}
+                className="flex items-center justify-between px-2"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary">Auto Group Recent Imports</span>
+                <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.library.groupByMinutes ? 'bg-apple-blue' : 'bg-gray-200'}`}>
+                  <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.library.groupByMinutes ? 16 : 0 }} />
+                </div>
+              </button>
             </div>
           )}
         </div>
