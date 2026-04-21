@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Track, SortOption, GroupOption } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
 
 export default function LibraryView() {
   const { 
@@ -225,10 +226,15 @@ export default function LibraryView() {
               </button>
             )}
             {!isSelectMode && (
-              <label className={`w-10 h-10 flex items-center justify-center bg-gray-50 border border-black/[0.02] cursor-pointer hover:bg-gray-100 transition-colors rounded-full active:scale-95`}>
-                <Plus size={20} />
-                <input type="file" multiple accept="audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a" className="hidden" onChange={handleFileUpload} />
-              </label>
+              <div className="flex flex-col items-end">
+                <label className={`w-10 h-10 flex items-center justify-center bg-gray-50 border border-black/[0.02] cursor-pointer hover:bg-gray-100 transition-colors rounded-full active:scale-95`}>
+                  <Plus size={20} />
+                  <input type="file" multiple accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleFileUpload} />
+                </label>
+                <div className="hidden md:block mt-1 mr-1">
+                   <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">{SUPPORTED_AUDIO_FORMATS.join(' • ')}</p>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -585,11 +591,17 @@ const EmptyState = ({ onFileUpload }: any) => (
     <div className="max-w-xs">
       <h3 className="font-bold text-xl text-black">Your Library is Empty</h3>
       <p className="text-sm text-gray-500 mt-2">Upload your favorite tracks to begin your mindful audio session.</p>
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        {SUPPORTED_AUDIO_FORMATS.map(f => (
+          <span key={f} className="text-[9px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md uppercase tracking-wider">{f}</span>
+        ))}
+      </div>
     </div>
-    <label className="mt-4 px-8 py-3 bg-black text-white rounded-full text-xs font-bold tracking-tight active:scale-95 transition-transform cursor-pointer">
+    <label className="mt-4 px-8 py-3 bg-black text-white rounded-full text-xs font-bold tracking-tight active:scale-95 transition-transform cursor-pointer group shadow-lg shadow-black/10">
       Add High-Quality Audio
-      <input type="file" multiple accept="audio/*" className="hidden" onChange={onFileUpload} />
+      <input type="file" multiple accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={onFileUpload} />
     </label>
+    <p className="mt-4 text-[10px] text-gray-400 font-medium">Compatible with iPhone Files & Dropbox</p>
   </div>
 );
 
@@ -663,7 +675,7 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
           {track.isMissing ? (
             <label className="p-2 text-gray-400 hover:text-apple-blue transition-colors cursor-pointer" title="Relink File">
               <Link size={16} />
-              <input type="file" accept="audio/*" className="hidden" onChange={handleRelink} />
+              <input type="file" accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleRelink} />
             </label>
           ) : (
             !isSelectMode && (

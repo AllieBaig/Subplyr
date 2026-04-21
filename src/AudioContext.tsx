@@ -262,35 +262,61 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const validateAudioFile = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
+      // Basic extension check for iOS where MIME might be missing or incorrect
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      const iOSCompatibleExts = ['mp3', 'm4a', 'aac', 'wav', 'mp4', 'm4p', 'm4b', 'aiff'];
+      
       const audio = new Audio();
       const url = URL.createObjectURL(file);
+      let timeoutId: any;
+      let resolved = false;
       
       const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
         audio.removeEventListener('canplaythrough', onCanPlay);
         audio.removeEventListener('error', onError);
         URL.revokeObjectURL(url);
+        audio.src = '';
       };
 
       const onCanPlay = () => {
+        if (resolved) return;
+        resolved = true;
         cleanup();
         resolve(true);
       };
 
       const onError = () => {
+        if (resolved) return;
+        resolved = true;
         cleanup();
-        resolve(false);
+        // If Audio() fails but it's a known extension, we might still want to allow it
+        // as a fallback for some complex container formats or iOS quirks
+        if (ext && iOSCompatibleExts.includes(ext)) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
       };
 
       audio.addEventListener('canplaythrough', onCanPlay);
       audio.addEventListener('error', onError);
+      
+      // Set a timeout of 3 seconds for validation
+      timeoutId = setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        // Fallback to extension if validation hangs
+        if (ext && iOSCompatibleExts.includes(ext)) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      }, 3000);
+
       audio.src = url;
       audio.load();
-      
-      // Safety timeout for validation
-      setTimeout(() => {
-        cleanup();
-        resolve(false);
-      }, 5000);
     });
   };
 

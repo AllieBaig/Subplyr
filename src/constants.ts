@@ -36,3 +36,6 @@ export const NATURE_SOUNDS = [
     icon: 'Droplets'
   }
 ];
+
+export const AUDIO_ACCEPT_STRING = "audio/*, .mp3, .m4a, .aac, .wav, audio/mp4, audio/x-m4a, audio/mpeg, audio/wave, audio/wav, audio/x-wav, audio/aiff, audio/x-aiff";
+export const SUPPORTED_AUDIO_FORMATS = ["MP3", "M4A", "AAC", "WAV"];

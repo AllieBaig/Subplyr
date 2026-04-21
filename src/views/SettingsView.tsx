@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
-import { NATURE_SOUNDS } from '../constants';
+import { NATURE_SOUNDS, AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
 import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -279,7 +279,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                               <span>RELINK FILE</span>
                               <input 
                                 type="file" 
-                                accept="audio/*" 
+                                accept={AUDIO_ACCEPT_STRING} 
                                 className="hidden" 
                                 onChange={(e) => e.target.files && relinkTrack(track.id, e.target.files[0], true)} 
                               />
@@ -287,9 +287,12 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                           )}
                         </div>
                       ))}
-                      <label className="flex items-center justify-center p-3 rounded-xl border border-dashed border-black/10 hover:bg-white cursor-pointer text-xs font-semibold text-apple-text-secondary gap-2">
-                        <Plus size={14} /> <span>Upload Audio</span>
-                        <input type="file" accept="audio/*" className="hidden" onChange={handleSubliminalUpload} />
+                      <label className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-black/10 hover:bg-white cursor-pointer group transition-all">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-apple-text-secondary group-hover:text-apple-blue">
+                          <Plus size={14} /> <span>Upload Audio</span>
+                        </div>
+                        <p className="text-[8px] text-gray-400 font-bold uppercase tracking-[0.2em] mt-1.5">{SUPPORTED_AUDIO_FORMATS.join(' • ')}</p>
+                        <input type="file" accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleSubliminalUpload} />
                       </label>
                     </>
                   )}
