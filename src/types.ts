@@ -59,6 +59,16 @@ export interface PlaylistMemory {
   timestamp: number;
 }
 
+export interface VersionEntry {
+  version: string;
+  date: string;
+  changes: {
+    added?: string[];
+    improved?: string[];
+    fixed?: string[];
+  };
+}
+
 export interface AppSettings {
   subliminal: SubliminalSettings;
   binaural: BinauralSettings;
@@ -84,4 +94,5 @@ export interface AppSettings {
   animationStyle: AnimationStyle;
   subliminalExpanded: boolean;
   showArtwork: boolean;
+  versionHistory: VersionEntry[];
 }

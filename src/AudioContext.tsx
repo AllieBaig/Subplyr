@@ -1,6 +1,7 @@
 import { useState, createContext, useContext, ReactNode, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Track, AppSettings, Playlist, SortOption, GroupOption } from './types';
+import { Track, AppSettings, Playlist, SortOption, GroupOption, VersionEntry } from './types';
 import * as db from './db';
+import { APP_HISTORY, CURRENT_VERSION } from './constants/history';
 
 interface AudioContextType {
   tracks: Track[];
@@ -263,7 +264,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     bigTouchMode: false,
     animationStyle: 'slide-up',
     subliminalExpanded: false,
-    showArtwork: true
+    showArtwork: true,
+    versionHistory: APP_HISTORY
   };
   
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -345,7 +347,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         const savedSettings = await db.getSettings();
         if (isMounted) {
           if (savedSettings) {
-            setSettings(savedSettings);
+            // Always sync history from source on load to ensure AI updates are visible
+            setSettings({ 
+              ...savedSettings, 
+              versionHistory: APP_HISTORY 
+            });
           } else {
             console.log("No settings found, using defaults");
           }
