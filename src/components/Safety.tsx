@@ -30,13 +30,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (this.state.hasError) {
       return (
-        <div className="fixed inset-0 flex items-center justify-center bg-white p-8 text-center z-[10000]">
-          <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 border border-black/5 shadow-2xl">
-            <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
+        <div className="fixed inset-0 flex items-center justify-center bg-system-background p-8 text-center z-[10000]">
+          <div className="max-w-md w-full bg-apple-card rounded-[2.5rem] p-10 border border-apple-border shadow-2xl">
+            <div className="w-20 h-20 bg-amber-100/10 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-8">
               <AlertTriangle size={40} />
             </div>
-            <h2 className="text-2xl font-bold mb-3">Interface Stability Recovery</h2>
-            <p className="text-apple-text-secondary text-sm mb-10 leading-relaxed font-medium">
+            <h2 className="text-2xl font-bold mb-3 text-system-label">Interface Stability Recovery</h2>
+            <p className="text-system-secondary-label text-sm mb-10 leading-relaxed font-medium">
               We detected an unstable interface state. The system is protecting your data and will resume safely after a reset.
             </p>
             <div className="space-y-3">
@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                   localStorage.removeItem('app_render_crash_count');
                   window.location.reload();
                 }}
-                className="w-full bg-apple-text-primary text-white py-4.5 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                className="w-full bg-system-label text-system-background py-4.5 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
               >
                 <RotateCcw size={20} />
                 <span>Resume App</span>
@@ -55,7 +55,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                   localStorage.clear();
                   window.location.reload();
                 }}
-                className="w-full bg-red-50 text-red-600 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest"
+                className="w-full bg-red-500/10 text-red-600 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-500/20 active:scale-95 transition-all"
               >
                 Clear Cache & Safe Boot
               </button>
@@ -109,13 +109,13 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
 
   if (error) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-apple-bg p-8 text-center z-[9999]">
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 border border-black/5 shadow-2xl transition-all">
-          <div className="w-20 h-20 bg-apple-text-primary text-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+      <div className="fixed inset-0 flex items-center justify-center bg-system-background p-8 text-center z-[9999]">
+        <div className="max-w-md w-full bg-apple-card rounded-[2.5rem] p-10 border border-apple-border shadow-2xl transition-all">
+          <div className="w-20 h-20 bg-system-label text-system-background rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
             <ShieldCheck size={40} />
           </div>
-          <h2 className="text-2xl font-bold mb-3">System Safe Mode</h2>
-          <p className="text-apple-text-secondary text-sm mb-10 leading-relaxed font-medium">
+          <h2 className="text-2xl font-bold mb-3 text-system-label">System Safe Mode</h2>
+          <p className="text-system-secondary-label text-sm mb-10 leading-relaxed font-medium">
             Your session has been isolated to prevent data corruption. A standard restart will restore full functionality.
           </p>
           <button 
@@ -123,7 +123,7 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
               localStorage.setItem('app_boot_crash_count', '0');
               window.location.reload();
             }}
-            className="w-full bg-apple-text-primary text-white py-4.5 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+            className="w-full bg-system-label text-system-background py-4.5 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
           >
             <RotateCcw size={20} />
             <span>Restore Environment</span>
@@ -137,13 +137,13 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
 };
 
 export const LoadingPlaceholder = () => (
-  <div className="h-full flex flex-col items-center justify-center bg-apple-bg">
+  <div className="h-full flex flex-col items-center justify-center bg-system-background">
     <div className="w-28 h-28 bg-apple-card rounded-[32px] shadow-xl flex items-center justify-center animate-pulse">
-      <div className="w-12 h-12 bg-gray-200/50 rounded-xl" />
+      <div className="w-12 h-12 bg-system-tertiary-label/20 rounded-xl" />
     </div>
     <div className="mt-12 flex flex-col items-center gap-4">
-      <div className="h-6 w-48 bg-gray-100 rounded-full animate-pulse" />
-      <div className="h-4 w-32 bg-gray-50 rounded-full animate-pulse opacity-60" />
+      <div className="h-6 w-48 bg-secondary-system-background rounded-full animate-pulse" />
+      <div className="h-4 w-32 bg-secondary-system-background rounded-full animate-pulse opacity-60" />
     </div>
   </div>
 );

@@ -101,8 +101,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [swStatus, setSwStatus] = useState<'active' | 'waiting' | 'installing' | 'none'>('none');
   const swSupported = 'serviceWorker' in navigator;
 
-  const CURRENT_VERSION = '1.0.4';
-
   // Monitor Service Worker Status
   useEffect(() => {
     if (!swSupported) return;

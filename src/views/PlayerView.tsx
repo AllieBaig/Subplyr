@@ -113,17 +113,17 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
   }
 
   return (
-    <div className={`h-full flex flex-col items-center justify-between select-none relative w-full max-w-2xl mx-auto bg-white overflow-hidden ${settings.bigTouchMode ? 'pb-16' : 'pb-12'}`}>
+    <div className={`h-full flex flex-col items-center justify-between select-none relative w-full max-w-2xl mx-auto bg-system-background overflow-hidden ${settings.bigTouchMode ? 'pb-16' : 'pb-12'}`}>
       {/* Top Bar */}
       <header className={`w-full flex items-center justify-between ${settings.bigTouchMode ? 'px-8 h-24' : 'px-6 h-20'} flex-shrink-0`}>
         <button 
           onClick={onBack}
-          className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -ml-2 flex items-center justify-center text-black hover:bg-gray-50 rounded-full transition-colors`}
+          className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -ml-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}
         >
           <ChevronDown size={settings.bigTouchMode ? 32 : 28} />
         </button>
-        <h1 className={`font-bold uppercase tracking-[0.25em] text-gray-400 ${settings.bigTouchMode ? 'text-xs' : 'text-[10px]'}`}>Now Playing</h1>
-        <button className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-black hover:bg-gray-50 rounded-full transition-colors`}>
+        <h1 className={`font-bold uppercase tracking-[0.25em] text-system-secondary-label ${settings.bigTouchMode ? 'text-xs' : 'text-[10px]'}`}>Now Playing</h1>
+        <button className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}>
           <MoreHorizontal size={settings.bigTouchMode ? 28 : 24} />
         </button>
       </header>
@@ -139,13 +139,13 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               animate={{ opacity: 1, scale: isPlaying ? 1 : 0.92 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-              className={`w-full ${settings.bigTouchMode ? 'max-w-[400px]' : 'max-w-[340px]'} aspect-square bg-white rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.06)] border border-black/[0.02] overflow-hidden relative`}
+              className={`w-full ${settings.bigTouchMode ? 'max-w-[400px]' : 'max-w-[340px]'} aspect-square bg-system-background rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.06)] border border-apple-border overflow-hidden relative`}
             >
               {currentTrack.artwork ? (
                 <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
-                <div className="w-full h-full bg-gray-50 flex items-center justify-center">
-                  <MusicIcon size={settings.bigTouchMode ? 140 : 120} className="text-gray-100" />
+                <div className="w-full h-full bg-secondary-system-background flex items-center justify-center">
+                  <MusicIcon size={settings.bigTouchMode ? 140 : 120} className="text-secondary-system-background" />
                 </div>
               )}
             </motion.div>
@@ -174,17 +174,17 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         
         {/* Track Title & Artist */}
         <div className={`text-center w-full transition-all duration-500 ${settings.showArtwork ? 'max-w-sm' : 'max-w-xl'}`}>
-          <h2 className={`font-extrabold tracking-tight text-black line-clamp-1 mb-2 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-6xl mb-4' : 'text-5xl mb-3') : (settings.bigTouchMode ? 'text-4xl' : 'text-3xl')}`}>
+          <h2 className={`font-extrabold tracking-tight text-system-label line-clamp-1 mb-2 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-6xl mb-4' : 'text-5xl mb-3') : (settings.bigTouchMode ? 'text-4xl' : 'text-3xl')}`}>
             {currentTrack.name}
           </h2>
-          <p className={`text-gray-400 font-bold mb-8 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-2xl' : 'text-xl') : (settings.bigTouchMode ? 'text-xl' : 'text-lg')}`}>
+          <p className={`text-system-secondary-label font-bold mb-8 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-2xl' : 'text-xl') : (settings.bigTouchMode ? 'text-xl' : 'text-lg')}`}>
             {currentTrack.artist}
           </p>
 
           {/* Layer Indicator Pill - Cleaner */}
           <button 
             onClick={() => setIsPanelOpen(true)}
-            className={`inline-flex items-center gap-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors active:scale-95 border border-black/[0.01] ${settings.bigTouchMode ? 'px-8 py-4' : 'px-6 py-3'}`}
+            className={`inline-flex items-center gap-3 bg-secondary-system-background hover:bg-secondary-system-background/80 rounded-full transition-colors active:scale-95 border border-apple-border ${settings.bigTouchMode ? 'px-8 py-4' : 'px-6 py-3'}`}
           >
             <div className="flex gap-1.5">
               {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
@@ -192,7 +192,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
               {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
             </div>
-            <span className={`font-bold uppercase tracking-[0.1em] text-gray-500 ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{activeLayersLabel}</span>
+            <span className={`font-bold uppercase tracking-[0.1em] text-system-secondary-label ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{activeLayersLabel}</span>
           </button>
         </div>
       </div>
@@ -208,10 +208,10 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               max={duration || 100}
               value={currentTime}
               onChange={(e) => seekTo(parseFloat(e.target.value))}
-              className={`w-full ${settings.bigTouchMode ? 'h-2' : 'h-1'} bg-gray-100 rounded-full appearance-none cursor-pointer accent-black`}
+              className={`w-full ${settings.bigTouchMode ? 'h-2' : 'h-1'} bg-secondary-system-background rounded-full appearance-none cursor-pointer accent-system-label`}
             />
           </div>
-          <div className={`flex justify-between font-bold text-gray-400 tabular-nums ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>
+          <div className={`flex justify-between font-bold text-system-secondary-label tabular-nums ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
@@ -219,13 +219,13 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 
         {/* Buttons */}
         <div className="flex items-center justify-between px-2 pb-2">
-          <button onClick={() => playPrevious()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-black hover:bg-gray-50 rounded-full active:scale-90 transition-all`}>
+          <button onClick={() => playPrevious()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
             <SkipBack size={settings.bigTouchMode ? 48 : 40} fill="currentColor" stroke="none" />
           </button>
           
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            className={`${settings.bigTouchMode ? 'w-24 h-24' : 'w-20 h-20'} bg-black text-white rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all`}
+            className={`${settings.bigTouchMode ? 'w-24 h-24' : 'w-20 h-20'} bg-system-label text-system-background rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all`}
           >
             {isPlaying ? (
               <Pause size={settings.bigTouchMode ? 44 : 36} fill="currentColor" stroke="none" />
@@ -234,7 +234,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
             )}
           </button>
 
-          <button onClick={() => playNext()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-black hover:bg-gray-50 rounded-full active:scale-90 transition-all`}>
+          <button onClick={() => playNext()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
             <SkipForward size={settings.bigTouchMode ? 48 : 40} fill="currentColor" stroke="none" />
           </button>
         </div>
@@ -258,15 +258,15 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               key="layer-panel"
               {...animationProps}
               transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-              className="absolute bottom-0 left-0 right-0 max-w-2xl mx-auto bg-white rounded-t-[3rem] shadow-[0_-8px_40px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col max-h-[85vh] z-[210]"
+              className="absolute bottom-0 left-0 right-0 max-w-2xl mx-auto bg-system-background rounded-t-[3rem] shadow-[0_-8px_40px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col max-h-[85vh] z-[210]"
             >
-              <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1" />
+              <div className="w-12 h-1 bg-secondary-system-background rounded-full mx-auto mt-3 mb-1" />
               
-              <div className={`px-8 border-b border-black/[0.03] flex items-center justify-between ${settings.bigTouchMode ? 'py-6' : 'py-4'}`}>
-                <h3 className={`font-bold tracking-tight ${settings.bigTouchMode ? 'text-2xl' : 'text-xl'}`}>Audio Layers</h3>
+              <div className={`px-8 border-b border-apple-border flex items-center justify-between ${settings.bigTouchMode ? 'py-6' : 'py-4'}`}>
+                <h3 className={`font-bold tracking-tight text-system-label ${settings.bigTouchMode ? 'text-2xl' : 'text-xl'}`}>Audio Layers</h3>
                 <button 
                   onClick={() => setIsPanelOpen(false)}
-                  className={`${settings.bigTouchMode ? 'w-12 h-12' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-apple-text-secondary hover:bg-gray-50 rounded-full`}
+                  className={`${settings.bigTouchMode ? 'w-12 h-12' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-system-secondary-label hover:bg-secondary-system-background rounded-full`}
                 >
                   <X size={24} />
                 </button>
@@ -275,7 +275,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               <div className={`flex-1 overflow-y-auto no-scrollbar pb-32 space-y-10 ${settings.bigTouchMode ? 'p-10' : 'p-8'}`}>
                 {/* 1. Quick Modes */}
                 <div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary mb-4 px-1">Quick Modes</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label mb-4 px-1">Quick Modes</h4>
                   <div className="grid grid-cols-3 gap-3">
                     <PresetButton icon={Moon} label="Sleep" color="bg-apple-blue" onClick={() => applyPreset('sleep')} />
                     <PresetButton icon={Zap} label="Focus" color="bg-orange-500" onClick={() => applyPreset('focus')} />
@@ -285,7 +285,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 
                 {/* 2. Subliminal Section */}
                 <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary px-1">Configuration</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label px-1">Configuration</h4>
                   
                   <LayerOption 
                     icon={Volume2} 
@@ -298,21 +298,21 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                     maxVol={0.3}
                   >
                     <div className="flex flex-col gap-4 mt-2">
-                      <div className="bg-gray-100 p-1 rounded-xl flex items-center h-8">
+                      <div className="bg-secondary-system-background p-1 rounded-xl flex items-center h-8">
                         <button 
                           onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
-                          className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                          className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                         >
                           Track
                         </button>
                         <button 
                           onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
-                          className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                          className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                         >
                           Playlist
                         </button>
                       </div>
-                      <p className="text-[9px] text-apple-text-secondary italic px-1">
+                      <p className="text-[9px] text-system-secondary-label italic px-1">
                         {settings.subliminal.isPlaylistMode ? 'Playing from source playlist...' : 'Playing selected subliminal track...'}
                       </p>
                     </div>
@@ -338,7 +338,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         <button 
                           key={p.label}
                           onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })}
-                          className="py-2 px-1 rounded-xl text-[9px] font-bold uppercase bg-white border border-black/5 text-purple-600 hover:bg-purple-50 transition-colors"
+                          className="py-2 px-1 rounded-xl text-[9px] font-bold uppercase bg-system-background border border-apple-border text-purple-600 hover:bg-secondary-system-background transition-colors active:scale-95"
                         >
                           {p.label}
                         </button>
@@ -361,7 +361,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         <button 
                           key={sound.id}
                           onClick={() => updateNatureSettings({ type: sound.id as any })}
-                          className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500' : 'bg-gray-50 border-black/5 text-apple-text-secondary'}`}
+                          className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500' : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
                         >
                           {sound.name}
                         </button>
@@ -384,7 +384,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           <button 
                             key={type}
                             onClick={() => updateNoiseSettings({ type: type as any })}
-                            className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-gray-50 border-black/5 text-apple-text-secondary'}`}
+                            className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
                           >
                             {type}
                           </button>
@@ -395,13 +395,13 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 
                 {/* 3. Audio Tools */}
                 <div className="space-y-6">
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-text-secondary px-1">Audio Processing</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label px-1">Audio Processing</h4>
                   
                   <div className="space-y-4">
                     {/* Output Gain */}
-                    <div className="bg-gray-50 border border-black/[0.03] p-5 rounded-[2rem] space-y-4">
+                    <div className="bg-secondary-system-background border border-apple-border p-5 rounded-[2rem] space-y-4">
                        <div className="flex justify-between items-center">
-                          <div className="flex flex-col">
+                          <div className="flex flex-col text-system-label">
                              <span className="text-xs font-bold tracking-tight">Output Gain</span>
                              <span className="text-[9px] font-bold text-apple-blue uppercase tracking-widest">{settings.audioTools.gainDb} dB</span>
                           </div>
@@ -410,23 +410,23 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                             min="-60" max="0" step="1"
                             value={settings.audioTools.gainDb}
                             onChange={(e) => updateAudioTools({ gainDb: parseInt(e.target.value) })}
-                            className="w-32 h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary"
+                            className="w-32 h-1 bg-apple-border rounded-full appearance-none accent-system-label"
                           />
                        </div>
 
-                       <div className="h-px bg-black/5" />
+                       <div className="h-px bg-apple-border" />
 
                        {/* Normalization */}
-                       <div className="flex justify-between items-center">
+                       <div className="flex justify-between items-center text-system-label">
                           <div className="flex flex-col">
                              <span className="text-xs font-bold tracking-tight">Normalization</span>
-                             <span className="text-[9px] font-bold text-apple-text-secondary uppercase tracking-widest">
+                             <span className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest">
                                {settings.audioTools.normalizeTargetDb !== null ? `Peak ${settings.audioTools.normalizeTargetDb}dB` : 'Off'}
                              </span>
                           </div>
                           <button 
                             onClick={() => updateAudioTools({ normalizeTargetDb: settings.audioTools.normalizeTargetDb === null ? -10 : null })}
-                            className={`w-10 h-6 rounded-full relative transition-colors ${settings.audioTools.normalizeTargetDb !== null ? 'bg-apple-blue' : 'bg-gray-200'}`}
+                            className={`w-10 h-6 rounded-full relative transition-colors ${settings.audioTools.normalizeTargetDb !== null ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
                           >
                             <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: settings.audioTools.normalizeTargetDb !== null ? 16 : 0 }} />
                           </button>
@@ -434,14 +434,14 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                     </div>
 
                     {/* Speed Selector */}
-                    <div className="bg-gray-50 border border-black/[0.03] p-5 rounded-[2rem]">
-                      <h5 className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary mb-4 px-1">Playback Speed</h5>
+                    <div className="bg-secondary-system-background border border-apple-border p-5 rounded-[2rem]">
+                      <h5 className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label mb-4 px-1">Playback Speed</h5>
                       <div className="flex gap-2">
                         {[1, 1.5, 2, 2.5].map(rate => (
                           <button
                             key={rate}
                             onClick={() => updateSettings({ playbackRate: rate })}
-                            className={`flex-1 py-3 rounded-2xl text-xs font-bold transition-all border ${settings.playbackRate === rate ? 'bg-apple-text-primary text-white border-apple-text-primary shadow-sm' : 'bg-white text-apple-text-secondary border-black/5 hover:bg-gray-100'}`}
+                            className={`flex-1 py-3 rounded-2xl text-xs font-bold transition-all border ${settings.playbackRate === rate ? 'bg-system-label text-system-background border-system-label shadow-sm' : 'bg-system-background text-system-secondary-label border-apple-border hover:bg-secondary-system-background'}`}
                           >
                             {rate}x
                           </button>
@@ -462,31 +462,31 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
   <button 
     onClick={onClick}
-    className="flex flex-col items-center gap-3 p-5 bg-white border border-black/[0.03] rounded-[2.5rem] hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
+    className="flex flex-col items-center gap-3 p-5 bg-system-background border border-apple-border rounded-[2.5rem] hover:bg-secondary-system-background active:scale-95 transition-all shadow-sm"
   >
     <div className={`w-12 h-12 flex-shrink-0 ${color} text-white rounded-2xl flex items-center justify-center shadow-lg shadow-black/5`}>
       <Icon size={22} />
     </div>
-    <span className="text-[10px] font-bold uppercase tracking-widest text-apple-text-secondary truncate w-full text-center">{label}</span>
+    <span className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label truncate w-full text-center">{label}</span>
   </button>
 );
 
 const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle, children }: any) => {
   return (
-    <div className="bg-gray-50 border border-black/[0.03] p-5 rounded-[2rem] flex flex-col gap-4">
+    <div className="bg-secondary-system-background border border-apple-border p-5 rounded-[2rem] flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 min-w-0">
-          <div className={`w-10 h-10 ${isEnabled ? 'bg-white shadow-sm' : 'bg-white/50'} rounded-2xl flex-shrink-0 flex items-center justify-center ${isEnabled ? color : 'text-gray-300'} transition-all`}>
+          <div className={`w-10 h-10 ${isEnabled ? 'bg-system-background shadow-sm' : 'bg-system-background/50'} rounded-2xl flex-shrink-0 flex items-center justify-center ${isEnabled ? color : 'text-system-tertiary-label'} transition-all`}>
             <Icon size={20} />
           </div>
           <div className="min-w-0 flex-1">
-            <h5 className="text-sm font-bold tracking-tight truncate">{label}</h5>
-            {subtitle && <p className="text-[9px] text-apple-text-secondary uppercase font-bold tracking-widest truncate">{subtitle}</p>}
+            <h5 className="text-sm font-bold tracking-tight truncate text-system-label">{label}</h5>
+            {subtitle && <p className="text-[9px] text-system-secondary-label uppercase font-bold tracking-widest truncate">{subtitle}</p>}
           </div>
         </div>
         <button 
           onClick={() => onToggle(!isEnabled)}
-          className={`flex-shrink-0 w-10 h-6 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-gray-200'}`}
+          className={`flex-shrink-0 w-10 h-6 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
         >
           <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: isEnabled ? 16 : 0 }} />
         </button>
@@ -502,9 +502,9 @@ const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, colo
               step={0.01}
               value={vol}
               onChange={(e) => setVol(parseFloat(e.target.value))}
-              className="flex-1 h-1 bg-black/5 rounded-full appearance-none accent-apple-text-primary"
+              className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-system-label"
             />
-            <span className="text-[10px] font-extrabold text-apple-text-primary w-8 text-right tabular-nums">{Math.round(vol * 100)}%</span>
+            <span className="text-[10px] font-extrabold text-system-label w-8 text-right tabular-nums">{Math.round(vol * 100)}%</span>
           </div>
           {children}
         </div>

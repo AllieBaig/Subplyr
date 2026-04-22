@@ -2,6 +2,25 @@ import { VersionEntry } from '../types';
 
 export const APP_HISTORY: VersionEntry[] = [
   {
+    version: '1.3.1',
+    date: '2026-04-22',
+    changes: {
+      added: [
+        'Full Apple Native Semantic Color System implementation',
+        'Adaptive UI backgrounds (SystemBackground & SecondarySystemBackground)',
+        'Refined Soft Dark variants with higher contrast'
+      ],
+      improved: [
+        'Text visibility and accessibility across all themes',
+        'Multi-select import stability for large file batches',
+        'Icon and control visibility in MiniPlayer & TabBar'
+      ],
+      fixed: [
+        'Color inconsistency in playback controls during theme switch'
+      ]
+    }
+  },
+  {
     version: '1.3.0',
     date: '2026-04-22',
     changes: {

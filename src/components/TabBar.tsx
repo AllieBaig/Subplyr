@@ -24,7 +24,7 @@ export default function TabBar({ activeTab, setActiveTab }: TabBarProps) {
 
   return (
     <div className={cn(
-      "w-full bg-white/80 backdrop-blur-3xl border-none rounded-xl flex justify-center items-center z-50 transition-all shadow-sm",
+      "w-full bg-secondary-system-background/80 backdrop-blur-3xl border-none rounded-xl flex justify-center items-center z-50 transition-all shadow-sm",
       settings.miniMode ? "px-4 py-2 h-12 gap-16" : "px-6 py-3 h-16 gap-20",
       settings.bigTouchMode && !settings.miniMode && "h-20"
     )}>
@@ -38,13 +38,13 @@ export default function TabBar({ activeTab, setActiveTab }: TabBarProps) {
             onClick={() => setActiveTab(tab.id)}
             className={cn(
               "relative flex flex-col items-center gap-0.5 transition-all duration-300",
-              isActive ? "text-apple-blue" : "text-gray-300"
+              isActive ? "text-apple-blue" : "text-system-secondary-label/60"
             )}
           >
             <div className="p-1 px-4 rounded-full transition-all">
               <Icon size={isActive ? 24 : 22} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span className="font-bold text-[10px] tracking-tight">{tab.label}</span>
+            <span className={`font-bold text-[10px] tracking-tight ${isActive ? 'text-apple-blue' : 'text-system-secondary-label'}`}>{tab.label}</span>
           </button>
         );
       })}
