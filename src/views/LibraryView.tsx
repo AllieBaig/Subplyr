@@ -50,6 +50,7 @@ export default function LibraryView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportTargetMenu, setShowImportTargetMenu] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [showPlaylistModal, setShowPlaylistModal] = useState<{ show: boolean; mode: 'create' | 'rename'; playlistId?: string; initialName?: string }>({ show: false, mode: 'create' });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -68,9 +69,10 @@ export default function LibraryView() {
   const processImport = async (targetPlaylistId?: string) => {
     let pid = targetPlaylistId;
     if (targetPlaylistId === 'new') {
-      const name = prompt("New playlist name:");
-      if (!name) return;
-      pid = await createPlaylist(name, []);
+      setShowPlaylistModal({ show: true, mode: 'create' });
+      // We'll handle the import after the playlist is created if needed, 
+      // but for now let's just use the modal.
+      return; 
     }
 
     for (const file of pendingFiles) {
@@ -502,12 +504,9 @@ export default function LibraryView() {
       ) : (
         <PlaylistView 
           playlists={sortedPlaylists} 
-          onCreate={() => {
-            const name = prompt("Playlist name:");
-            if (name) createPlaylist(name);
-          }}
+          onCreate={() => setShowPlaylistModal({ show: true, mode: 'create' })}
           onDelete={deletePlaylist}
-          onRename={renamePlaylist}
+          onRename={(id: string, name: string) => setShowPlaylistModal({ show: true, mode: 'rename', playlistId: id, initialName: name })}
           tracks={tracks}
           onTrackPlay={(id) => {
             const idx = tracks.findIndex(t => t.id === id);
@@ -627,6 +626,25 @@ export default function LibraryView() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Playlist Create/Rename Modal */}
+      <AnimatePresence>
+        {showPlaylistModal.show && (
+          <PlaylistModal 
+            mode={showPlaylistModal.mode}
+            initialName={showPlaylistModal.initialName}
+            onClose={() => setShowPlaylistModal({ show: false, mode: 'create' })}
+            onConfirm={(name) => {
+              if (showPlaylistModal.mode === 'create') {
+                createPlaylist(name);
+              } else if (showPlaylistModal.playlistId) {
+                renamePlaylist(showPlaylistModal.playlistId, name);
+              }
+              setShowPlaylistModal({ show: false, mode: 'create' });
+            }}
+          />
         )}
       </AnimatePresence>
 
@@ -955,8 +973,7 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
                             >
                               <button 
                                 onClick={() => { 
-                                  const name = prompt("Rename playlist:", playlist.name);
-                                  if (name && name !== playlist.name) onRename(playlist.id, name);
+                                  onRename(playlist.id, playlist.name);
                                   setActiveMenuId(null);
                                 }}
                                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary-system-background text-[13px] font-bold text-left text-system-label"
@@ -1134,6 +1151,84 @@ const PlaylistDetailView = ({
     </div>
   );
 };
+
+const PlaylistModal = ({ mode, initialName = '', onClose, onConfirm }: { mode: 'create' | 'rename'; initialName?: string; onClose: () => void; onConfirm: (name: string) => void }) => {
+  const [name, setName] = useState(initialName);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Small timeout to ensure keyboard pops up on mobile correctly
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+      if (mode === 'rename') {
+        inputRef.current?.select();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [mode]);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/30 backdrop-blur-md"
+      />
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative w-full max-w-sm bg-apple-card rounded-[2.5rem] shadow-2xl border border-apple-border overflow-hidden"
+      >
+        <div className="p-8 pb-4">
+          <h3 className="text-2xl font-extrabold tracking-tight text-system-label mb-2">
+            {mode === 'create' ? 'New Playlist' : 'Rename Playlist'}
+          </h3>
+          <p className="text-[11px] text-system-secondary-label font-bold uppercase tracking-widest leading-relaxed">
+            {mode === 'create' ? 'Enter a name for your new collection' : 'Enter a new name for this playlist'}
+          </p>
+        </div>
+        
+        <div className="p-8 pt-2">
+          <input 
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && name.trim()) {
+                onConfirm(name);
+              } else if (e.key === 'Escape') {
+                onClose();
+              }
+            }}
+            placeholder="Playlist Name"
+            className="w-full bg-secondary-system-background text-system-label rounded-2xl p-5 text-lg font-bold outline-none focus:ring-2 focus:ring-apple-blue/20 transition-all placeholder:text-system-tertiary-label border border-apple-border shadow-inner-sm"
+          />
+        </div>
+
+        <div className="p-4 bg-secondary-system-background/30 flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 p-4 rounded-2xl hover:bg-secondary-system-background text-system-secondary-label font-bold uppercase text-[11px] tracking-widest transition-all active:scale-[0.98]"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => name.trim() && onConfirm(name)}
+            disabled={!name.trim()}
+            className="flex-2 p-4 rounded-2xl bg-apple-blue text-white font-bold uppercase text-[11px] tracking-widest transition-all active:scale-[0.98] disabled:opacity-30 shadow-lg shadow-apple-blue/20"
+          >
+            {mode === 'create' ? 'Create' : 'Save'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 
 const Music = ({ className, size }: { className?: string, size?: number }) => (
   <svg 

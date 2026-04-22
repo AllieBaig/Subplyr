@@ -8,8 +8,8 @@ import {
   Sliders, ChevronDown, Check, X, 
   Moon, Zap, Focus as FocusIcon, List, Plus,
   Shuffle, Repeat, Repeat1, MoreHorizontal,
-  ChevronLeft, Music as MusicIcon, Flame, Droplets, Waves, Trees,
-  Timer, Monitor
+  ChevronLeft, ChevronRight, Music as MusicIcon, Flame, Droplets, Waves, Trees,
+  Timer, Monitor, Ear
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -46,6 +46,11 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
   } = useAudio();
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroup(prev => prev === groupId ? null : groupId);
+  };
 
   const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
 
@@ -285,198 +290,259 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                   </div>
                 </div>
 
-                {/* 2. Subliminal Section */}
+                {/* 2. Audio Layers Group */}
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label px-1">Configuration</h4>
                   
-                  <LayerOption 
-                    icon={Volume2} 
-                    label="Subliminal" 
-                    isEnabled={settings.subliminal.isEnabled} 
-                    onToggle={(v) => updateSubliminalSettings({ isEnabled: v })}
-                    vol={settings.subliminal.volume}
-                    setVol={(v) => updateSubliminalSettings({ volume: v })}
-                    color="text-apple-blue"
-                    maxVol={0.3}
-                  >
-                    <div className="flex flex-col gap-4 mt-2">
-                      <div className="bg-secondary-system-background p-1 rounded-xl flex items-center h-8">
-                        <button 
-                          onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
-                          className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                        >
-                          Track
-                        </button>
-                        <button 
-                          onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
-                          className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                        >
-                          Playlist
-                        </button>
-                      </div>
-                      <p className="text-[9px] text-system-secondary-label italic px-1">
-                        {settings.subliminal.isPlaylistMode ? 'Playing from source playlist...' : 'Playing selected subliminal track...'}
-                      </p>
-                    </div>
-                  </LayerOption>
-
-                  <LayerOption 
-                    icon={Activity} 
-                    label="Binaural" 
-                    isEnabled={settings.binaural.isEnabled} 
-                    onToggle={(v) => updateBinauralSettings({ isEnabled: v })}
-                    vol={settings.binaural.volume}
-                    setVol={(v) => updateBinauralSettings({ volume: v })}
-                    color="text-purple-500"
-                    maxVol={0.1}
-                    subtitle={`${settings.binaural.leftFreq}Hz • ${settings.binaural.rightFreq}Hz`}
-                  >
-                    <div className="grid grid-cols-3 gap-2 pt-2">
-                      {[
-                        { label: 'Theta', l: 200, r: 204 },
-                        { label: 'Alpha', l: 200, r: 210 },
-                        { label: 'Gamma', l: 200, r: 240 }
-                      ].map(p => (
-                        <button 
-                          key={p.label}
-                          onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })}
-                          className="py-2 px-1 rounded-xl text-[9px] font-bold uppercase bg-system-background border border-apple-border text-purple-600 hover:bg-secondary-system-background transition-colors active:scale-95"
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  </LayerOption>
-
-                  <LayerOption 
-                    icon={CloudRain} 
-                    label="Nature" 
-                    isEnabled={settings.nature.isEnabled} 
-                    onToggle={(v) => updateNatureSettings({ isEnabled: v })}
-                    vol={settings.nature.volume}
-                    setVol={(v) => updateNatureSettings({ volume: v })}
-                    color="text-green-500"
-                    subtitle={settings.nature.type}
-                  >
-                    <div className="grid grid-cols-3 gap-2 pt-2">
-                      {NATURE_SOUNDS.map(sound => (
-                        <button 
-                          key={sound.id}
-                          onClick={() => updateNatureSettings({ type: sound.id as any })}
-                          className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500' : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
-                        >
-                          {sound.name}
-                        </button>
-                      ))}
-                    </div>
-                  </LayerOption>
-
-                  <LayerOption 
-                    icon={Wind} 
-                    label="Noise" 
-                    isEnabled={settings.noise.isEnabled} 
-                    onToggle={(v) => updateNoiseSettings({ isEnabled: v })}
-                    vol={settings.noise.volume}
-                    setVol={(v) => updateNoiseSettings({ volume: v })}
-                    color="text-orange-500"
-                    subtitle={`${settings.noise.type} noise`}
-                  >
-                    <div className="grid grid-cols-3 gap-2 pt-2">
-                        {['white', 'pink', 'brown'].map(type => (
-                          <button 
-                            key={type}
-                            onClick={() => updateNoiseSettings({ type: type as any })}
-                            className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
-                          >
-                            {type}
-                          </button>
-                        ))}
-                      </div>
-                  </LayerOption>
-
-                  {/* New Playback & Time Layer */}
-                  <LayerOption 
-                    icon={Timer} 
-                    label="Playback & Time" 
-                    isEnabled={settings.sleepTimer.isEnabled || settings.displayAlwaysOn || settings.loop !== 'none'} 
-                    onToggle={() => {}} // Virtual toggle for header
-                    color="text-blue-500"
-                    noVolume
-                    subtitle={settings.sleepTimer.isEnabled ? `Timer Active (${Math.ceil((settings.sleepTimer.remainingSeconds || 0) / 60)}m)` : 'Settings'}
-                  >
-                    <div className="flex flex-col gap-5 pt-2">
-                      {/* Loop Options */}
-                      <div className="space-y-3">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-system-secondary-label px-1">Loop Mode</p>
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => updateSettings({ loop: settings.loop === 'all' ? 'none' : 'all' })}
-                            className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all ${settings.loop === 'all' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
-                          >
-                            <Repeat size={16} />
-                            <span className="text-[9px] font-black uppercase">Playlist</span>
-                          </button>
-                          <button 
-                            onClick={() => updateSettings({ loop: settings.loop === 'one' ? 'none' : 'one' })}
-                            className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all ${settings.loop === 'one' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
-                          >
-                            <Repeat1 size={16} />
-                            <span className="text-[9px] font-black uppercase">Single</span>
-                          </button>
+                  {/* Groups Accordion */}
+                  <div className="flex flex-col gap-4">
+                    {/* Audio Layers Group */}
+                    <div className="flex flex-col">
+                      <button 
+                        onClick={() => toggleGroup('layers')}
+                        className="w-full flex items-center justify-between p-4 bg-secondary-system-background border border-apple-border rounded-2xl shadow-sm transition-all active:scale-[0.99] group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-apple-blue/10 text-apple-blue rounded-xl flex items-center justify-center transition-transform group-hover:scale-105">
+                            <Ear size={20} />
+                          </div>
+                          <h3 className="text-sm font-black tracking-tight text-system-label">Audio Layers</h3>
                         </div>
-                      </div>
+                        <ChevronRight size={18} className={`text-system-tertiary-label transition-transform duration-300 ${expandedGroup === 'layers' ? 'rotate-90 text-apple-blue' : ''}`} />
+                      </button>
 
-                      {/* Display & Sleep */}
-                      <div className="grid grid-cols-1 gap-3">
-                         {/* Display Always ON */}
-                         <button 
-                            onClick={() => updateSettings({ displayAlwaysOn: !settings.displayAlwaysOn })}
-                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${settings.displayAlwaysOn ? 'bg-amber-500/10 border-amber-500/20' : 'bg-system-background border-apple-border'}`}
-                         >
-                            <div className="flex items-center gap-3">
-                              <Monitor size={16} className={settings.displayAlwaysOn ? 'text-amber-500' : 'text-system-secondary-label'} />
-                              <span className={`text-[11px] font-black uppercase tracking-tight ${settings.displayAlwaysOn ? 'text-amber-600' : 'text-system-label'}`}>Display Always ON</span>
-                            </div>
-                            <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.displayAlwaysOn ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}>
-                               <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.displayAlwaysOn ? 16 : 0 }} />
-                            </div>
-                         </button>
-
-                         {/* Sleep Timer */}
-                         <div className={`flex flex-col gap-4 p-4 rounded-2xl border transition-all ${settings.sleepTimer.isEnabled ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-system-background border-apple-border'}`}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Moon size={16} className={settings.sleepTimer.isEnabled ? 'text-indigo-500' : 'text-system-secondary-label'} />
-                                <span className={`text-[11px] font-black uppercase tracking-tight ${settings.sleepTimer.isEnabled ? 'text-indigo-600' : 'text-system-label'}`}>Sleep Timer</span>
-                              </div>
-                              <button 
-                                onClick={() => updateSleepTimer({ isEnabled: !settings.sleepTimer.isEnabled, remainingSeconds: !settings.sleepTimer.isEnabled ? settings.sleepTimer.minutes * 60 : null })}
-                                className={`w-8 h-4 rounded-full relative transition-colors ${settings.sleepTimer.isEnabled ? 'bg-indigo-500' : 'bg-system-tertiary-label'}`}
+                      <AnimatePresence>
+                        {expandedGroup === 'layers' && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-4 flex flex-col gap-4">
+                              <LayerOption 
+                                icon={Volume2} 
+                                label="Subliminal" 
+                                isEnabled={settings.subliminal.isEnabled} 
+                                onToggle={(v) => updateSubliminalSettings({ isEnabled: v })}
+                                vol={settings.subliminal.volume}
+                                setVol={(v) => updateSubliminalSettings({ volume: v })}
+                                color="text-apple-blue"
+                                maxVol={0.3}
+                                subtitle={settings.subliminal.isPlaylistMode ? 'Playlist Mode' : 'Track Mode'}
                               >
-                                <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.sleepTimer.isEnabled ? 16 : 0 }} />
-                              </button>
+                                <div className="flex flex-col gap-4 mt-2">
+                                  <div className="bg-secondary-system-background p-1 rounded-xl flex items-center h-8">
+                                    <button 
+                                      onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
+                                      className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                                    >
+                                      Track
+                                    </button>
+                                    <button 
+                                      onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
+                                      className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                                    >
+                                      Playlist
+                                    </button>
+                                  </div>
+                                  <p className="text-[9px] text-system-secondary-label italic px-1">
+                                    {settings.subliminal.isPlaylistMode ? 'Playing from source playlist...' : 'Playing selected subliminal track...'}
+                                  </p>
+                                </div>
+                              </LayerOption>
+
+                              <LayerOption 
+                                icon={Activity} 
+                                label="Binaural" 
+                                isEnabled={settings.binaural.isEnabled} 
+                                onToggle={(v) => updateBinauralSettings({ isEnabled: v })}
+                                vol={settings.binaural.volume}
+                                setVol={(v) => updateBinauralSettings({ volume: v })}
+                                color="text-purple-500"
+                                maxVol={0.1}
+                                subtitle={`${settings.binaural.leftFreq}Hz • ${settings.binaural.rightFreq}Hz`}
+                              >
+                                <div className="grid grid-cols-3 gap-2 pt-2">
+                                  {[
+                                    { label: 'Theta', l: 200, r: 204 },
+                                    { label: 'Alpha', l: 200, r: 210 },
+                                    { label: 'Gamma', l: 200, r: 240 }
+                                  ].map(p => (
+                                    <button 
+                                      key={p.label}
+                                      onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })}
+                                      className="py-2 px-1 rounded-xl text-[9px] font-bold uppercase bg-system-background border border-apple-border text-purple-600 hover:bg-secondary-system-background transition-colors active:scale-95"
+                                    >
+                                      {p.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </LayerOption>
+
+                              <LayerOption 
+                                icon={CloudRain} 
+                                label="Nature" 
+                                isEnabled={settings.nature.isEnabled} 
+                                onToggle={(v) => updateNatureSettings({ isEnabled: v })}
+                                vol={settings.nature.volume}
+                                setVol={(v) => updateNatureSettings({ volume: v })}
+                                color="text-green-500"
+                                subtitle={settings.nature.type}
+                              >
+                                <div className="grid grid-cols-3 gap-2 pt-2">
+                                  {NATURE_SOUNDS.map(sound => (
+                                    <button 
+                                      key={sound.id}
+                                      onClick={() => updateNatureSettings({ type: sound.id as any })}
+                                      className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500' : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                                    >
+                                      {sound.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </LayerOption>
+
+                              <LayerOption 
+                                icon={Wind} 
+                                label="Noise" 
+                                isEnabled={settings.noise.isEnabled} 
+                                onToggle={(v) => updateNoiseSettings({ isEnabled: v })}
+                                vol={settings.noise.volume}
+                                setVol={(v) => updateNoiseSettings({ volume: v })}
+                                color="text-orange-500"
+                                subtitle={`${settings.noise.type} noise`}
+                              >
+                                <div className="grid grid-cols-3 gap-2 pt-2">
+                                    {['white', 'pink', 'brown'].map(type => (
+                                      <button 
+                                        key={type}
+                                        onClick={() => updateNoiseSettings({ type: type as any })}
+                                        className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                                      >
+                                        {type}
+                                      </button>
+                                    ))}
+                                  </div>
+                              </LayerOption>
                             </div>
-                            
-                            <div className="flex items-center gap-3">
-                              <input 
-                                type="number"
-                                min="1"
-                                max="240"
-                                value={settings.sleepTimer.minutes}
-                                onChange={(e) => updateSleepTimer({ minutes: Math.max(1, parseInt(e.target.value) || 1) })}
-                                className="w-16 h-8 bg-secondary-system-background rounded-lg border-none text-[12px] font-black text-center focus:ring-1 focus:ring-indigo-500"
-                              />
-                              <span className="text-[10px] font-bold text-system-secondary-label uppercase">Minutes</span>
-                              {settings.sleepTimer.isEnabled && settings.sleepTimer.remainingSeconds !== null && (
-                                <span className="ml-auto text-[10px] font-black text-indigo-500 tabular-nums">
-                                  {Math.floor(settings.sleepTimer.remainingSeconds / 60)}:{(settings.sleepTimer.remainingSeconds % 60).toString().padStart(2, '0')}
-                                </span>
-                              )}
-                            </div>
-                         </div>
-                      </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                  </LayerOption>
+
+                    {/* Playback & Control Group */}
+                    <div className="flex flex-col">
+                      <button 
+                        onClick={() => toggleGroup('playback')}
+                        className="w-full flex items-center justify-between p-4 bg-secondary-system-background border border-apple-border rounded-2xl shadow-sm transition-all active:scale-[0.99] group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105">
+                            <Repeat size={20} />
+                          </div>
+                          <h3 className="text-sm font-black tracking-tight text-system-label">Playback & Control</h3>
+                        </div>
+                        <ChevronRight size={18} className={`text-system-tertiary-label transition-transform duration-300 ${expandedGroup === 'playback' ? 'rotate-90 text-indigo-500' : ''}`} />
+                      </button>
+
+                      <AnimatePresence>
+                        {expandedGroup === 'playback' && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-4 flex flex-col gap-4">
+                              <div className="bg-secondary-system-background border border-apple-border p-5 rounded-[2rem] flex flex-col gap-5">
+                                {/* Speed Selector */}
+                                <div className="space-y-3">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-system-secondary-label px-1">Playback Speed</p>
+                                  <div className="flex gap-2">
+                                    {[1, 1.5, 2, 2.5].map(rate => (
+                                      <button
+                                        key={rate}
+                                        onClick={() => updateSettings({ playbackRate: rate })}
+                                        className={`flex-1 py-3 rounded-2xl text-[10px] font-black transition-all border ${settings.playbackRate === rate ? 'bg-system-label text-system-background border-system-label shadow-sm' : 'bg-system-background text-system-secondary-label border-apple-border hover:bg-secondary-system-background'}`}
+                                      >
+                                        {rate}x
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Loop Options */}
+                                <div className="space-y-3">
+                                  <p className="text-[9px] font-bold uppercase tracking-widest text-system-secondary-label px-1">Loop Mode</p>
+                                  <div className="flex gap-2">
+                                    <button 
+                                      onClick={() => updateSettings({ loop: settings.loop === 'all' ? 'none' : 'all' })}
+                                      className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all ${settings.loop === 'all' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                                    >
+                                      <Repeat size={16} />
+                                      <span className="text-[9px] font-black uppercase">Playlist</span>
+                                    </button>
+                                    <button 
+                                      onClick={() => updateSettings({ loop: settings.loop === 'one' ? 'none' : 'one' })}
+                                      className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all ${settings.loop === 'one' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                                    >
+                                      <Repeat1 size={16} />
+                                      <span className="text-[9px] font-black uppercase">Single</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Timer & Display */}
+                                <div className="flex flex-col gap-3">
+                                  <button 
+                                    onClick={() => updateSettings({ displayAlwaysOn: !settings.displayAlwaysOn })}
+                                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${settings.displayAlwaysOn ? 'bg-amber-500/10 border-amber-500/20' : 'bg-system-background border-apple-border'}`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Monitor size={16} className={settings.displayAlwaysOn ? 'text-amber-500' : 'text-system-secondary-label'} />
+                                      <span className={`text-[10px] font-black uppercase tracking-tight ${settings.displayAlwaysOn ? 'text-amber-600' : 'text-system-label'}`}>Always ON</span>
+                                    </div>
+                                    <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.displayAlwaysOn ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}>
+                                      <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.displayAlwaysOn ? 16 : 0 }} />
+                                    </div>
+                                  </button>
+
+                                  <div className={`flex flex-col gap-4 p-4 rounded-2xl border transition-all ${settings.sleepTimer.isEnabled ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-system-background border-apple-border'}`}>
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <Moon size={16} className={settings.sleepTimer.isEnabled ? 'text-indigo-500' : 'text-system-secondary-label'} />
+                                        <span className={`text-[10px] font-black uppercase tracking-tight ${settings.sleepTimer.isEnabled ? 'text-indigo-600' : 'text-system-label'}`}>Sleep Timer</span>
+                                      </div>
+                                      <button 
+                                        onClick={() => updateSleepTimer({ isEnabled: !settings.sleepTimer.isEnabled, remainingSeconds: !settings.sleepTimer.isEnabled ? settings.sleepTimer.minutes * 60 : null })}
+                                        className={`w-8 h-4 rounded-full relative transition-colors ${settings.sleepTimer.isEnabled ? 'bg-indigo-500' : 'bg-system-tertiary-label'}`}
+                                      >
+                                        <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.sleepTimer.isEnabled ? 16 : 0 }} />
+                                      </button>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <input 
+                                        type="number" value={settings.sleepTimer.minutes}
+                                        onChange={(e) => updateSleepTimer({ minutes: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="w-16 h-8 bg-secondary-system-background rounded-lg border-none text-[11px] font-black text-center focus:ring-1 focus:ring-indigo-500"
+                                      />
+                                      <span className="text-[9px] font-bold text-system-secondary-label uppercase">Min</span>
+                                      {settings.sleepTimer.isEnabled && settings.sleepTimer.remainingSeconds !== null && (
+                                        <span className="ml-auto text-[10px] font-black text-indigo-500 tabular-nums">
+                                          {Math.floor(settings.sleepTimer.remainingSeconds / 60)}:{(settings.sleepTimer.remainingSeconds % 60).toString().padStart(2, '0')}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
                 </div>
 
                 {/* 3. Audio Tools */}

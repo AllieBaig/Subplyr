@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
 import { NATURE_SOUNDS, AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette, Timer, Repeat, Repeat1, Focus as FocusIcon } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette, Timer, Repeat, Repeat1, Focus as FocusIcon, Wrench, Terminal } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -39,8 +39,23 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   if (!settings) return null;
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        // Accordion behavior: only one group open at a time
+        next.clear();
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
 
   const toggleSection = (id: string) => {
     if (id === 'subliminal') {
@@ -200,6 +215,136 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     );
   };
 
+  const Group = ({ title, icon: Icon, color, children, isExpanded, onToggle }: any) => {
+    return (
+      <div className="flex flex-col mb-4">
+        <button 
+          onClick={onToggle}
+          className="w-full flex items-center justify-between p-4 bg-apple-card border border-apple-border rounded-2xl shadow-sm transition-all active:scale-[0.99] group"
+        >
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center shadow-lg shadow-black/5 group-hover:scale-105 transition-transform`}>
+              <Icon size={20} />
+            </div>
+            <h3 className="text-sm font-black tracking-tight text-system-label">{title}</h3>
+          </div>
+          <ChevronRight size={18} className={`text-system-tertiary-label transition-transform duration-300 ${isExpanded ? 'rotate-90 text-apple-blue' : ''}`} />
+        </button>
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="pt-4 flex flex-col gap-4">
+                {children}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  const AppManagement = () => (
+    <Section 
+      id="app-management"
+      title="App Management"
+      subtitle="Volumes & View Mode"
+      icon={Music}
+      color="bg-gray-100 text-gray-700"
+    >
+      <div className="flex flex-col gap-6">
+        <VolumeSlider 
+          label="Master Music Volume"
+          value={settings.mainVolume}
+          onChange={(v: number) => updateSettings({ mainVolume: v })}
+          color="system-label"
+        />
+
+        <div className="h-px bg-apple-border/50" />
+
+        <div className="grid grid-cols-1 gap-2">
+          <button 
+            onClick={() => updateSettings({ miniMode: !settings.miniMode })}
+            className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors bg-system-background rounded-2xl border border-apple-border"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-system-label">Mini Mode</span>
+            </div>
+            <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.miniMode ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
+              <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.miniMode ? 12 : 0 }} />
+            </div>
+          </button>
+
+          <button 
+            onClick={() => updateSettings({ showArtwork: !settings.showArtwork })}
+            className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors bg-system-background rounded-2xl border border-apple-border"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-system-label">Show Artwork</span>
+            </div>
+            <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.showArtwork ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
+              <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.showArtwork ? 12 : 0 }} />
+            </div>
+          </button>
+        </div>
+
+        <div className="h-px bg-apple-border/50" />
+
+        <div className="grid grid-cols-2 gap-2">
+          <button 
+            onClick={exportAppData}
+            className="flex-1 p-4 flex flex-col items-center gap-2 bg-system-background text-apple-blue border border-apple-border rounded-2xl font-bold text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+          >
+            <Download size={16} />
+            Export Data
+          </button>
+
+          <label className="flex-1 p-4 flex flex-col items-center gap-2 bg-system-background text-apple-blue border border-apple-border rounded-2xl font-bold text-[10px] uppercase tracking-widest active:scale-95 transition-all cursor-pointer">
+            <Upload size={16} />
+            Import Data
+            <input type="file" accept=".json" className="hidden" onChange={(e) => e.target.files && importAppData(e.target.files[0])} />
+          </label>
+        </div>
+      </div>
+    </Section>
+  );
+
+  const AppMaintenance = () => (
+    <Section
+      id="maintenance"
+      title="App Maintenance"
+      subtitle="Cache & Reset"
+      icon={Wrench}
+      color="bg-amber-100 text-amber-600"
+    >
+      <div className="flex flex-col gap-4">
+        <button 
+          onClick={() => clearAppCache()}
+          className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors bg-system-background rounded-2xl border border-apple-border"
+        >
+          <div className="text-left">
+            <p className="text-xs font-semibold text-system-label">Clear Cache</p>
+            <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest">Removes temporary data</p>
+          </div>
+          <ChevronRight size={14} className="text-system-tertiary-label" />
+        </button>
+
+        <button 
+          onClick={() => resetUISettings()}
+          className="w-full p-4 flex items-center justify-between hover:bg-red-50 transition-colors bg-system-background rounded-2xl border border-red-100 text-red-500"
+        >
+          <p className="text-xs font-bold uppercase tracking-widest">Reset UI Settings</p>
+          <ChevronRight size={14} className="opacity-40" />
+        </button>
+      </div>
+    </Section>
+  );
+
   const VersionHistory = () => {
     const isExpanded = expandedSection === 'history';
     return (
@@ -337,6 +482,311 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
       <VersionHistory />
 
       <MinimalSettings />
+
+      <div className="h-px bg-apple-border/50 my-6" />
+
+      {/* Audio Layers Group */}
+      {settings.visibility.audioLayers && (
+        <Group 
+          title="Audio Layers" 
+          icon={Ear} 
+          color="bg-apple-blue/10 text-apple-blue"
+          isExpanded={expandedGroups.has('audio')}
+          onToggle={() => toggleGroup('audio')}
+        >
+          <div className="flex flex-col gap-2">
+            <Section 
+              id="subliminal"
+              title="Subliminal Audio"
+              subtitle="Secondary Layer"
+              icon={Ear}
+              color="bg-apple-blue/10 text-apple-blue"
+              isEnabled={settings.subliminal.isEnabled}
+              onToggle={(val: boolean) => updateSubliminalSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Subliminal Mode</label>
+                  <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10">
+                    <button 
+                      onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
+                      className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                    >
+                      Track
+                    </button>
+                    <button 
+                      onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
+                      className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                    >
+                      Playlist
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">
+                    {settings.subliminal.isPlaylistMode ? 'Source Playlist' : 'Selected Track'}
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {settings.subliminal.isPlaylistMode ? (
+                      <div className="flex flex-col gap-2">
+                        {playlists.length === 0 ? (
+                          <p className="text-[10px] text-system-secondary-label italic px-2 py-4 bg-system-background/50 border border-dashed border-apple-border rounded-xl text-center">No playlists created yet</p>
+                        ) : (
+                          playlists.map(playlist => (
+                            <button
+                              key={playlist.id}
+                              onClick={() => updateSubliminalSettings({ sourcePlaylistId: playlist.id })}
+                              className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${settings.subliminal.sourcePlaylistId === playlist.id ? 'border-apple-blue bg-apple-blue/5' : 'border-apple-border bg-system-background'}`}
+                            >
+                              <div className="min-w-0">
+                                <p className={`text-xs font-bold truncate ${settings.subliminal.sourcePlaylistId === playlist.id ? 'text-apple-blue' : 'text-system-label'}`}>{playlist.name}</p>
+                                <p className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest">{playlist.trackIds.length} tracks</p>
+                              </div>
+                              {settings.subliminal.sourcePlaylistId === playlist.id && <Check size={14} className="text-apple-blue" />}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {subliminalTracks.map(track => (
+                          <div 
+                            key={track.id}
+                            className={`flex flex-col rounded-xl border transition-all ${
+                              settings.subliminal.selectedTrackId === track.id 
+                              ? 'border-apple-blue bg-apple-blue/5' 
+                              : 'border-apple-border bg-system-background'
+                            }`}
+                          >
+                            <button 
+                              onClick={() => !track.isMissing && updateSubliminalSettings({ selectedTrackId: track.id })}
+                              className={`flex items-center justify-between p-3 w-full text-left ${track.isMissing ? 'cursor-default opacity-60' : ''}`}
+                            >
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-medium truncate ${settings.subliminal.selectedTrackId === track.id ? 'text-apple-blue' : 'text-system-label'}`}>
+                                    {track.name}
+                                  </span>
+                                  {track.isMissing && (
+                                    <span className="text-[8px] font-bold bg-amber-100/10 text-amber-600 px-1 rounded uppercase">Missing</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {!track.isMissing && settings.subliminal.selectedTrackId === track.id && <Check size={14} className="text-apple-blue" />}
+                                <button onClick={(e) => { e.stopPropagation(); removeSubliminalTrack(track.id); }} className="text-system-tertiary-label hover:text-system-label active:scale-90 transition-all"><Trash2 size={12} /></button>
+                              </div>
+                            </button>
+                            {track.isMissing && (
+                              <label className="mx-3 mb-3 p-2 bg-apple-blue/10 rounded-lg flex items-center justify-center gap-2 text-[10px] font-bold text-apple-blue hover:bg-apple-blue/20 cursor-pointer transition-colors">
+                                <Link size={12} />
+                                <span>RELINK FILE</span>
+                                <input 
+                                  type="file" 
+                                  accept={AUDIO_ACCEPT_STRING} 
+                                  className="hidden" 
+                                  onChange={(e) => e.target.files && relinkTrack(track.id, e.target.files[0], true)} 
+                                />
+                              </label>
+                            )}
+                          </div>
+                        ))}
+                        <label className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-apple-border hover:bg-secondary-system-background cursor-pointer group transition-all">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-system-secondary-label group-hover:text-apple-blue">
+                            <Plus size={14} /> <span>Upload Audio</span>
+                          </div>
+                          <p className="text-[8px] text-system-tertiary-label font-bold uppercase tracking-[0.2em] mt-1.5">{SUPPORTED_AUDIO_FORMATS.join(' • ')}</p>
+                          <input type="file" accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleSubliminalUpload} />
+                        </label>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-2 pt-2">
+                  <VolumeSlider 
+                    label="Subliminal Intensity"
+                    value={settings.subliminal.volume}
+                    onChange={(v: number) => updateSubliminalSettings({ volume: v })}
+                    max={0.3}
+                    color="apple-blue"
+                  />
+                  <p className="text-[9px] text-system-secondary-label italic">Volume is limited to 30% for safety.</p>
+                </div>
+
+                <div className="flex flex-col gap-4 p-4 bg-system-background/50 rounded-2xl border border-apple-border">
+                   <div className="flex items-center justify-between">
+                      <div>
+                         <p className="text-xs font-semibold text-system-label">Continuous Loop</p>
+                         <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Repeat subliminal layer</p>
+                      </div>
+                      <button 
+                        onClick={() => updateSubliminalSettings({ isLooping: !settings.subliminal.isLooping })}
+                        className={`w-8 h-5 rounded-full relative transition-colors ${settings.subliminal.isLooping ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                      >
+                        <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.subliminal.isLooping ? 12 : 0 }} />
+                      </button>
+                   </div>
+                   <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-end">
+                         <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Start Delay</p>
+                         <span className="text-[10px] font-bold text-apple-blue">{settings.subliminal.delayMs}ms</span>
+                      </div>
+                      <input 
+                        type="range" min={0} max={5000} step={100} 
+                        value={settings.subliminal.delayMs} 
+                        onChange={(e) => updateSubliminalSettings({ delayMs: parseInt(e.target.value) })}
+                        className="w-full h-1 bg-secondary-system-background rounded-full appearance-none accent-apple-blue"
+                      />
+                   </div>
+                </div>
+              </div>
+            </Section>
+
+            <Section
+              id="binaural"
+              title="Binaural Beats"
+              subtitle="Stereo Frequency"
+              icon={Activity}
+              color="bg-purple-500/10 text-purple-600"
+              isEnabled={settings.binaural.isEnabled}
+              onToggle={(val: boolean) => updateBinauralSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-tight">Left (Hz)</label>
+                    <input 
+                      type="number" value={settings.binaural.leftFreq} 
+                      onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) || 0 })}
+                      className="bg-system-background text-system-label px-3 py-2 rounded-xl border border-apple-border font-mono text-sm outline-none focus:border-purple-500 transition-colors"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-tight">Right (Hz)</label>
+                    <input 
+                      type="number" value={settings.binaural.rightFreq} 
+                      onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) || 0 })}
+                      className="bg-system-background text-system-label px-3 py-2 rounded-xl border border-apple-border font-mono text-sm outline-none focus:border-purple-500 transition-colors"
+                    />
+                  </div>
+                </div>
+                
+                <VolumeSlider 
+                  label="Beats Volume"
+                  value={settings.binaural.volume}
+                  onChange={(v: number) => updateBinauralSettings({ volume: v })}
+                  max={0.2}
+                  color="purple-500"
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  {[{ label: 'Sleep', l: 150, r: 152 }, { label: 'Relax', l: 200, r: 208 }, { label: 'Focus', l: 200, r: 214 }].map(p => (
+                    <button key={p.label} onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })} className="bg-system-background text-system-secondary-label border border-apple-border rounded-xl py-2 text-[10px] font-bold hover:bg-purple-500 hover:text-white transition-all active:scale-95">{p.label}</button>
+                  ))}
+                </div>
+              </div>
+            </Section>
+
+            <Section
+              id="nature"
+              title="Nature Ambience"
+              subtitle="Environmental Loop"
+              icon={CloudRain}
+              color="bg-green-500/10 text-green-600"
+              isEnabled={settings.nature.isEnabled}
+              onToggle={(val: boolean) => updateNatureSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-2 gap-2">
+                  {NATURE_SOUNDS.map(sound => {
+                    const Icon = sound.id === 'rain' ? CloudRain : sound.id === 'ocean' ? Waves : sound.id === 'forest' ? Trees : sound.id === 'wind' ? Wind : sound.id === 'fire' ? Flame : Droplets;
+                    return (
+                      <button 
+                        key={sound.id}
+                        onClick={() => updateNatureSettings({ type: sound.id as any })}
+                        className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                      >
+                        <Icon size={14} className={settings.nature.type === sound.id ? 'text-white' : 'text-green-600'} />
+                        <span className="text-[11px] font-bold truncate">{sound.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <VolumeSlider 
+                   label="Ambience Volume"
+                   value={settings.nature.volume}
+                   onChange={(v: number) => updateNatureSettings({ volume: v })}
+                   color="green-500"
+                />
+              </div>
+            </Section>
+
+            <Section
+              id="noise"
+              title="Noise Colors"
+              subtitle="Synthetic Masking"
+              icon={Wind}
+              color="bg-orange-500/10 text-orange-600"
+              isEnabled={settings.noise.isEnabled}
+              onToggle={(val: boolean) => updateNoiseSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-3 gap-2">
+                  {['white', 'pink', 'brown'].map(type => (
+                    <button 
+                      key={type}
+                      onClick={() => updateNoiseSettings({ type: type as any })}
+                      className={`p-3 rounded-xl border capitalize text-[10px] font-bold tracking-wide transition-all ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                <VolumeSlider 
+                   label="Masking Level"
+                   value={settings.noise.volume}
+                   onChange={(v: number) => updateNoiseSettings({ volume: v })}
+                   max={0.5}
+                   color="orange-500"
+                />
+              </div>
+            </Section>
+          </div>
+        </Group>
+      )}
+
+      {/* App Control Group */}
+      {settings.visibility.appControl && (
+        <Group
+          title="App Control"
+          icon={SettingsIcon}
+          color="bg-gray-700/10 text-gray-700"
+          isExpanded={expandedGroups.has('control')}
+          onToggle={() => toggleGroup('control')}
+        >
+          <div className="flex flex-col gap-2">
+            <AppManagement />
+            <AppMaintenance />
+            {swSupported && (
+              <Section
+                id="advanced"
+                title="Advanced Developer"
+                subtitle="System Recovery"
+                icon={Terminal}
+                color="bg-red-500/10 text-red-600"
+              >
+                <div className="flex flex-col gap-3">
+                   <button onClick={resetServiceWorker} className="w-full p-4 border border-apple-border rounded-xl text-xs font-bold uppercase hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
+                   <button onClick={fullAppReset} className="w-full p-4 bg-red-500 text-white font-bold text-xs uppercase rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
+                </div>
+              </Section>
+            )}
+          </div>
+        </Group>
+      )}
+
+      <div className="h-px bg-apple-border/50 my-6" />
 
       <Section
         id="appearance"
@@ -488,507 +938,6 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
         </div>
       </Section>
 
-      {settings.visibility.audioLayers && (
-        <div className="mt-8 mb-4 px-2">
-          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label">Audio Layers</h4>
-        </div>
-      )}
-
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start transition-all duration-300 ${!settings.visibility.audioLayers ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'}`}>
-        {/* Row 1: Core Layers */}
-        <div className="flex flex-col gap-6">
-          {/* 1. Subliminal Layer */}
-          <Section 
-            id="subliminal"
-            title="Subliminal Audio"
-            subtitle="Secondary Layer"
-            icon={Ear}
-            color="bg-apple-blue/10 text-apple-blue"
-            isEnabled={settings.subliminal.isEnabled}
-            onToggle={(val: boolean) => updateSubliminalSettings({ isEnabled: val })}
-          >
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Subliminal Mode</label>
-                <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10">
-                  <button 
-                    onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
-                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                  >
-                    Track
-                  </button>
-                  <button 
-                    onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
-                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                  >
-                    Playlist
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">
-                  {settings.subliminal.isPlaylistMode ? 'Source Playlist' : 'Selected Track'}
-                </label>
-                <div className="flex flex-col gap-2">
-                  {settings.subliminal.isPlaylistMode ? (
-                    <div className="flex flex-col gap-2">
-                      {playlists.length === 0 ? (
-                        <p className="text-[10px] text-system-secondary-label italic px-2 py-4 bg-system-background/50 border border-dashed border-apple-border rounded-xl text-center">No playlists created yet</p>
-                      ) : (
-                        playlists.map(playlist => (
-                          <button
-                            key={playlist.id}
-                            onClick={() => updateSubliminalSettings({ sourcePlaylistId: playlist.id })}
-                            className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${settings.subliminal.sourcePlaylistId === playlist.id ? 'border-apple-blue bg-apple-blue/5' : 'border-apple-border bg-system-background'}`}
-                          >
-                            <div className="min-w-0">
-                               <p className={`text-xs font-bold truncate ${settings.subliminal.sourcePlaylistId === playlist.id ? 'text-apple-blue' : 'text-system-label'}`}>{playlist.name}</p>
-                               <p className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest">{playlist.trackIds.length} tracks</p>
-                            </div>
-                            {settings.subliminal.sourcePlaylistId === playlist.id && <Check size={14} className="text-apple-blue" />}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      {subliminalTracks.map(track => (
-                        <div 
-                          key={track.id}
-                          className={`flex flex-col rounded-xl border transition-all ${
-                            settings.subliminal.selectedTrackId === track.id 
-                            ? 'border-apple-blue bg-apple-blue/5' 
-                            : 'border-apple-border bg-system-background'
-                          }`}
-                        >
-                          <button 
-                            onClick={() => !track.isMissing && updateSubliminalSettings({ selectedTrackId: track.id })}
-                            className={`flex items-center justify-between p-3 w-full text-left ${track.isMissing ? 'cursor-default opacity-60' : ''}`}
-                          >
-                            <div className="flex flex-col min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium truncate ${settings.subliminal.selectedTrackId === track.id ? 'text-apple-blue' : 'text-system-label'}`}>
-                                  {track.name}
-                                </span>
-                                {track.isMissing && (
-                                  <span className="text-[8px] font-bold bg-amber-100/10 text-amber-600 px-1 rounded uppercase">Missing</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {!track.isMissing && settings.subliminal.selectedTrackId === track.id && <Check size={14} className="text-apple-blue" />}
-                              <button onClick={(e) => { e.stopPropagation(); removeSubliminalTrack(track.id); }} className="text-system-tertiary-label hover:text-system-label active:scale-90 transition-all"><Trash2 size={12} /></button>
-                            </div>
-                          </button>
-                          {track.isMissing && (
-                            <label className="mx-3 mb-3 p-2 bg-apple-blue/10 rounded-lg flex items-center justify-center gap-2 text-[10px] font-bold text-apple-blue hover:bg-apple-blue/20 cursor-pointer transition-colors">
-                              <Link size={12} />
-                              <span>RELINK FILE</span>
-                              <input 
-                                type="file" 
-                                accept={AUDIO_ACCEPT_STRING} 
-                                className="hidden" 
-                                onChange={(e) => e.target.files && relinkTrack(track.id, e.target.files[0], true)} 
-                              />
-                            </label>
-                          )}
-                        </div>
-                      ))}
-                      <label className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-apple-border hover:bg-secondary-system-background cursor-pointer group transition-all">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-system-secondary-label group-hover:text-apple-blue">
-                          <Plus size={14} /> <span>Upload Audio</span>
-                        </div>
-                        <p className="text-[8px] text-system-tertiary-label font-bold uppercase tracking-[0.2em] mt-1.5">{SUPPORTED_AUDIO_FORMATS.join(' • ')}</p>
-                        <input type="file" accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleSubliminalUpload} />
-                      </label>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-2 pt-2">
-                <VolumeSlider 
-                  label="Subliminal Intensity"
-                  value={settings.subliminal.volume}
-                  onChange={(v: number) => updateSubliminalSettings({ volume: v })}
-                  max={0.3}
-                  color="apple-blue"
-                />
-                <p className="text-[9px] text-system-secondary-label italic">Volume is limited to 30% for safety.</p>
-              </div>
-
-              <div className="flex flex-col gap-4 p-4 bg-system-background/50 rounded-2xl border border-apple-border">
-                 <div className="flex items-center justify-between">
-                    <div>
-                       <p className="text-xs font-semibold text-system-label">Continuous Loop</p>
-                       <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Repeat subliminal layer</p>
-                    </div>
-                    <button 
-                      onClick={() => updateSubliminalSettings({ isLooping: !settings.subliminal.isLooping })}
-                      className={`w-8 h-5 rounded-full relative transition-colors ${settings.subliminal.isLooping ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-                    >
-                      <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.subliminal.isLooping ? 12 : 0 }} />
-                    </button>
-                 </div>
-                 <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-end">
-                       <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Start Delay</p>
-                       <span className="text-[10px] font-bold text-apple-blue">{settings.subliminal.delayMs}ms</span>
-                    </div>
-                    <input 
-                      type="range" min={0} max={5000} step={100} 
-                      value={settings.subliminal.delayMs} 
-                      onChange={(e) => updateSubliminalSettings({ delayMs: parseInt(e.target.value) })}
-                      className="w-full h-1 bg-secondary-system-background rounded-full appearance-none accent-apple-blue"
-                    />
-                 </div>
-              </div>
-            </div>
-          </Section>
-
-          {/* 2. Binaural Beats */}
-          <Section
-            id="binaural"
-            title="Binaural Beats"
-            subtitle="Stereo Frequency"
-            icon={Activity}
-            color="bg-purple-500/10 text-purple-600"
-            isEnabled={settings.binaural.isEnabled}
-            onToggle={(val: boolean) => updateBinauralSettings({ isEnabled: val })}
-          >
-            <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-tight">Left (Hz)</label>
-                  <input 
-                    type="number" value={settings.binaural.leftFreq} 
-                    onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) || 0 })}
-                    className="bg-system-background text-system-label px-3 py-2 rounded-xl border border-apple-border font-mono text-sm outline-none focus:border-purple-500 transition-colors"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-tight">Right (Hz)</label>
-                  <input 
-                    type="number" value={settings.binaural.rightFreq} 
-                    onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) || 0 })}
-                    className="bg-system-background text-system-label px-3 py-2 rounded-xl border border-apple-border font-mono text-sm outline-none focus:border-purple-500 transition-colors"
-                  />
-                </div>
-              </div>
-              
-              <VolumeSlider 
-                label="Beats Volume"
-                value={settings.binaural.volume}
-                onChange={(v: number) => updateBinauralSettings({ volume: v })}
-                max={0.2}
-                color="purple-500"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                {[{ label: 'Sleep', l: 150, r: 152 }, { label: 'Relax', l: 200, r: 208 }, { label: 'Focus', l: 200, r: 214 }].map(p => (
-                  <button key={p.label} onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })} className="bg-system-background text-system-secondary-label border border-apple-border rounded-xl py-2 text-[10px] font-bold hover:bg-purple-500 hover:text-white transition-all active:scale-95">{p.label}</button>
-                ))}
-              </div>
-            </div>
-          </Section>
-        </div>
-
-        {/* Column 2: Environmental Layers */}
-        <div className="flex flex-col gap-6">
-          {/* 3. Nature Sounds */}
-          <Section
-            id="nature"
-            title="Nature Ambience"
-            subtitle="Environmental Loop"
-            icon={CloudRain}
-            color="bg-green-500/10 text-green-600"
-            isEnabled={settings.nature.isEnabled}
-            onToggle={(val: boolean) => updateNatureSettings({ isEnabled: val })}
-          >
-            <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-2 gap-2">
-                {NATURE_SOUNDS.map(sound => {
-                  const Icon = sound.id === 'rain' ? CloudRain : sound.id === 'ocean' ? Waves : sound.id === 'forest' ? Trees : sound.id === 'wind' ? Wind : sound.id === 'fire' ? Flame : Droplets;
-                  return (
-                    <button 
-                      key={sound.id}
-                      onClick={() => updateNatureSettings({ type: sound.id as any })}
-                      className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
-                    >
-                      <Icon size={14} className={settings.nature.type === sound.id ? 'text-white' : 'text-green-600'} />
-                      <span className="text-[11px] font-bold truncate">{sound.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <VolumeSlider 
-                 label="Ambience Volume"
-                 value={settings.nature.volume}
-                 onChange={(v: number) => updateNatureSettings({ volume: v })}
-                 color="green-500"
-              />
-            </div>
-          </Section>
-
-          {/* 4. White Noise */}
-          <Section
-            id="noise"
-            title="Noise Colors"
-            subtitle="Synthetic Masking"
-            icon={Wind}
-            color="bg-orange-500/10 text-orange-600"
-            isEnabled={settings.noise.isEnabled}
-            onToggle={(val: boolean) => updateNoiseSettings({ isEnabled: val })}
-          >
-            <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-3 gap-2">
-                {['white', 'pink', 'brown'].map(type => (
-                  <button 
-                    key={type}
-                    onClick={() => updateNoiseSettings({ type: type as any })}
-                    className={`p-3 rounded-xl border capitalize text-[10px] font-bold tracking-wide transition-all ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-              <VolumeSlider 
-                 label="Masking Level"
-                 value={settings.noise.volume}
-                 onChange={(v: number) => updateNoiseSettings({ volume: v })}
-                 max={0.5}
-                 color="orange-500"
-              />
-            </div>
-          </Section>
-        </div>
-      </div>
-
-      <div className="h-px bg-apple-border/50 my-10" />
-
-      {/* Row 3: Advanced Tools & Management */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
-        <div className="flex flex-col gap-8">
-           {/* 5. Personalization */}
-          <Section 
-            id="personalization"
-            title="Personalization"
-            subtitle="UI & Animations"
-            icon={Sliders}
-            color="bg-apple-blue/10 text-apple-blue"
-          >
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Menu Position</label>
-                <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10">
-                  <button 
-                    onClick={() => updateSettings({ menuPosition: 'top' })}
-                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.menuPosition === 'top' ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                  >
-                    Top
-                  </button>
-                  <button 
-                    onClick={() => updateSettings({ menuPosition: 'bottom' })}
-                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.menuPosition === 'bottom' ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                  >
-                    Bottom
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-system-label">Big Touch Mode</p>
-                    <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Larger hit areas</p>
-                  </div>
-                  <button 
-                    onClick={() => updateSettings({ bigTouchMode: !settings.bigTouchMode })}
-                    className={`w-8 h-5 rounded-full relative transition-colors ${settings.bigTouchMode ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-                  >
-                    <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.bigTouchMode ? 12 : 0 }} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 pt-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Animation Style</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['slide-up', 'slide-down', 'slide-left', 'slide-right', 'random', 'off'] as const).map(style => (
-                    <button 
-                      key={style}
-                      onClick={() => updateSettings({ animationStyle: style })}
-                      className={`px-3 py-2.5 rounded-xl border capitalize text-[10px] font-bold transition-all ${settings.animationStyle === style ? 'bg-apple-blue text-white border-apple-blue shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
-                    >
-                      {style.replace('-', ' ')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Section>
-
-          {/* 6. Audio Tools */}
-          <Section
-            id="audio-tools"
-            title="Audio Tools"
-            subtitle="Advanced Effects"
-            icon={Sliders}
-            color="bg-gray-700/10 text-gray-700"
-          >
-            <div className="flex flex-col gap-8">
-              <DbSlider 
-                label="Output Gain"
-                value={settings.audioTools.gainDb}
-                onChange={(v: number) => updateAudioTools({ gainDb: v })}
-                min={-60}
-                max={0}
-              />
-              <div className="flex flex-col gap-3">
-                 <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-system-label">Normalization</h4>
-                    <button 
-                      onClick={() => updateAudioTools({ normalizeTargetDb: settings.audioTools.normalizeTargetDb === null ? -20 : null })}
-                      className={`text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-md transition-all ${settings.audioTools.normalizeTargetDb === null ? 'bg-secondary-system-background text-system-tertiary-label' : 'bg-gray-700 text-white'}`}
-                    >
-                       {settings.audioTools.normalizeTargetDb === null ? 'Off' : 'On'}
-                    </button>
-                 </div>
-                 {settings.audioTools.normalizeTargetDb !== null && (
-                   <DbSlider 
-                     label="Target dB"
-                     value={settings.audioTools.normalizeTargetDb}
-                     onChange={(v: number) => updateAudioTools({ normalizeTargetDb: v })}
-                     min={-40}
-                     max={0}
-                   />
-                 )}
-              </div>
-            </div>
-          </Section>
-        </div>
-
-        <div className="md:col-span-2 flex flex-col gap-8">
-          {settings.visibility.appControl ? (
-            <div className="flex flex-col gap-8">
-              <div className="px-2">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label">App Control</h4>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="flex flex-col gap-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label mb-2 ml-2">App Management</h4>
-                  <div className="bg-apple-card rounded-[2rem] border border-apple-border overflow-hidden shadow-sm">
-                    <div className="p-4 border-b border-apple-border bg-secondary-system-background/20">
-                      <VolumeSlider 
-                        label="Master Music Volume"
-                        value={settings.mainVolume}
-                        onChange={(v: number) => updateSettings({ mainVolume: v })}
-                        color="system-label"
-                      />
-                    </div>
-
-                    <button 
-                      onClick={() => updateSettings({ miniMode: !settings.miniMode })}
-                      className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors border-b border-apple-border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-system-background rounded-xl border border-apple-border flex items-center justify-center text-system-label">
-                          <Music size={14} />
-                        </div>
-                        <span className="text-sm font-medium text-system-label">Mini Mode</span>
-                      </div>
-                      <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.miniMode ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
-                        <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.miniMode ? 12 : 0 }} />
-                      </div>
-                    </button>
-
-                    <button 
-                      onClick={() => updateSettings({ showArtwork: !settings.showArtwork })}
-                      className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors border-b border-apple-border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-system-background rounded-xl border border-apple-border flex items-center justify-center text-system-label">
-                          <Music size={14} />
-                        </div>
-                        <span className="text-sm font-medium text-system-label">Show Artwork</span>
-                      </div>
-                      <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.showArtwork ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
-                        <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.showArtwork ? 12 : 0 }} />
-                      </div>
-                    </button>
-
-                    <button 
-                      onClick={exportAppData}
-                      className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-apple-blue border-b border-apple-border font-semibold shadow-inner-sm active:scale-[0.98]"
-                    >
-                      <Download size={16} />
-                      <span className="text-sm ">Export All Data</span>
-                    </button>
-
-                    <label className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-apple-blue cursor-pointer font-semibold active:scale-[0.98]">
-                      <Upload size={16} />
-                      <span className="text-sm ">Import All Data</span>
-                      <input type="file" accept=".json" className="hidden" onChange={(e) => e.target.files && importAppData(e.target.files[0])} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label mb-2 ml-2">App Maintenance</h4>
-                  <div className="bg-apple-card rounded-3xl border border-apple-border overflow-hidden flex flex-col">
-                    <button 
-                      onClick={() => clearAppCache()}
-                      className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors border-b border-apple-border"
-                    >
-                      <ShieldCheck size={16} className="text-amber-600" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-system-label">Clear Cache</p>
-                        <p className="text-[10px] text-system-secondary-label">Removes temporary data</p>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => resetUISettings()}
-                      className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-red-500 font-medium active:scale-[0.98]"
-                    >
-                      <RotateCcw size={16} />
-                      <p className="text-sm">Reset UI Settings</p>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {swSupported && (
-                <div className="mt-4">
-                  <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className="w-full flex items-center justify-between px-2 mb-4 group">
-                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label group-hover:text-system-label transition-colors">Advanced Developer Tools</h4>
-                    <ChevronRight size={14} className={`text-system-secondary-label transition-transform duration-300 ${isAdvancedOpen ? 'rotate-90 text-system-label' : ''}`} />
-                  </button>
-                  <AnimatePresence>
-                    {isAdvancedOpen && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="bg-apple-card rounded-3xl border border-apple-border overflow-hidden flex flex-col mb-4"
-                      >
-                         <button onClick={resetServiceWorker} className="p-4 border-b border-apple-border text-xs font-bold uppercase text-center hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
-                         <button onClick={fullAppReset} className="p-4 bg-red-500 text-white font-bold text-xs uppercase hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-            </div>
-          ) : (
-             <div className="bg-secondary-system-background/20 rounded-[2.5rem] border border-dashed border-apple-border p-12 flex flex-col items-center justify-center text-center">
-                <SettingsIcon size={32} className="text-system-tertiary-label mb-4" />
-                <p className="text-sm font-semibold text-system-secondary-label uppercase tracking-widest">App Controls Hidden</p>
-                <p className="text-[10px] text-system-tertiary-label font-bold uppercase tracking-widest mt-2 max-w-[200px]">Management and maintenance tools are currently minimized.</p>
-             </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
