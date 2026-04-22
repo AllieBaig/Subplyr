@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useAudio } from '../AudioContext';
+import { usePlayback } from '../PlaybackContext';
 import { NATURE_SOUNDS } from '../constants';
 
 export default function AudioEngine() {
@@ -9,15 +10,18 @@ export default function AudioEngine() {
     currentTrackIndex, 
     isPlaying, 
     settings,
+    updateSettings,
     playlists,
-    setCurrentTime,
-    setDuration,
     setIsPlaying,
     playNext,
     playPrevious,
     seekTo,
-    currentPlaybackList
+    currentPlaybackList,
+    playingPlaylistId,
+    isLoading
   } = useAudio();
+
+  const { currentTime, setCurrentTime, setDuration } = usePlayback();
   
   const { seekRequest, clearSeekRequest } = useAudio();
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -65,6 +69,33 @@ export default function AudioEngine() {
       }
     };
   }, [playNext, playPrevious, setIsPlaying, seekTo]);
+
+  // Playlist Memory Tracker - Isolated from global UI updates
+  useEffect(() => {
+    if (!playingPlaylistId || isLoading || currentTrackIndex === null || !isPlaying) return;
+    
+    const playlist = playlists.find(p => p.id === playingPlaylistId);
+    if (!playlist) return;
+
+    const currentTrackId = playlist.trackIds[currentTrackIndex];
+    if (!currentTrackId) return;
+
+    // Use a timeout to throttle updates to once every 5 seconds
+    const timer = setTimeout(() => {
+      updateSettings({
+        playlistMemory: {
+          ...settings.playlistMemory,
+          [playingPlaylistId]: {
+            trackId: currentTrackId,
+            position: currentTime,
+            timestamp: Date.now()
+          }
+        }
+      });
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [playingPlaylistId, currentTrackIndex, Math.floor(currentTime / 5), isPlaying, isLoading, updateSettings, settings.playlistMemory, playlists]);
 
   // Sync Media Session Metadata
   useEffect(() => {

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAudio } from '../AudioContext';
+import { usePlayback } from '../PlaybackContext';
 import { NATURE_SOUNDS } from '../constants';
 import { AnimationStyle } from '../types';
 import { 
@@ -25,8 +26,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     currentTrackIndex, 
     isPlaying, 
     setIsPlaying, 
-    currentTime, 
-    duration, 
     seekTo,
     settings,
     playNext,
@@ -44,6 +43,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     updateSleepTimer,
     addTrack
   } = useAudio();
+
+  const { currentTime, duration, progress } = usePlayback();
 
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -157,25 +158,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               )}
             </motion.div>
           ) : (
-            <motion.div 
-              key="waveform"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="w-full max-w-[280px] h-32 flex items-center justify-center gap-1.5"
-            >
-              {[...Array(24)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  animate={{ 
-                    height: isPlaying ? [12, 48, 24, 64, 16][(i + Math.floor(currentTime)) % 5] : 8,
-                    opacity: isPlaying ? [0.2, 0.5, 0.3, 0.6, 0.4][(i + Math.floor(currentTime)) % 5] : 0.1
-                  }}
-                  transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-1 bg-apple-blue rounded-full"
-                />
-              ))}
-            </motion.div>
+            <WaveformAnimation isPlaying={isPlaying} />
           )}
         </AnimatePresence>
         
@@ -206,23 +189,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 
       {/* Playback Controls & Progress */}
       <div className={`w-full flex flex-col px-8 transition-all duration-500 ${!settings.showArtwork ? 'max-w-xl flex-1 justify-center' : 'max-w-sm mb-4'} ${settings.bigTouchMode ? 'gap-10 mb-8' : 'gap-8'}`}>
-        {/* Progress Bar */}
-        <div className={`flex flex-col gap-2 ${!settings.showArtwork ? 'mb-8' : ''}`}>
-          <div className="relative h-6 flex items-center">
-            <input 
-              type="range"
-              min={0}
-              max={duration || 100}
-              value={currentTime}
-              onChange={(e) => seekTo(parseFloat(e.target.value))}
-              className={`w-full ${settings.bigTouchMode ? (settings.showArtwork ? 'h-2' : 'h-3') : (settings.showArtwork ? 'h-1' : 'h-2')} bg-secondary-system-background rounded-full appearance-none cursor-pointer accent-system-label`}
-            />
-          </div>
-          <div className={`flex justify-between font-bold text-system-secondary-label tabular-nums ${settings.bigTouchMode ? (!settings.showArtwork ? 'text-sm' : 'text-[11px]') : (!settings.showArtwork ? 'text-xs' : 'text-[10px]')}`}>
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-        </div>
+        <PlaybackControls settings={settings} seekTo={seekTo} />
 
         {/* Buttons */}
         <div className={`flex items-center justify-between px-2 pb-2 transition-all duration-500 ${!settings.showArtwork ? 'scale-110 mt-8' : ''}`}>
@@ -607,6 +574,61 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function WaveformAnimation({ isPlaying }: { isPlaying: boolean }) {
+  const { currentTime } = usePlayback();
+  return (
+    <motion.div 
+      key="waveform"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="w-full max-w-[280px] h-32 flex items-center justify-center gap-1.5"
+    >
+      {[...Array(24)].map((_, i) => (
+        <motion.div
+          key={i}
+          animate={{ 
+            height: isPlaying ? [12, 48, 24, 64, 16][(i + Math.floor(currentTime)) % 5] : 8,
+            opacity: isPlaying ? [0.2, 0.5, 0.3, 0.6, 0.4][(i + Math.floor(currentTime)) % 5] : 0.1
+          }}
+          transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+          className="w-1 bg-apple-blue rounded-full"
+        />
+      ))}
+    </motion.div>
+  );
+}
+
+function PlaybackControls({ settings, seekTo }: { settings: any, seekTo: (t: number) => void }) {
+  const { currentTime, duration } = usePlayback();
+  
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className={`flex flex-col gap-2 ${!settings.showArtwork ? 'mb-8' : ''}`}>
+      <div className="relative h-6 flex items-center">
+        <input 
+          type="range"
+          min={0}
+          max={duration || 100}
+          value={currentTime}
+          onChange={(e) => seekTo(parseFloat(e.target.value))}
+          className={`w-full ${settings.bigTouchMode ? (settings.showArtwork ? 'h-2' : 'h-3') : (settings.showArtwork ? 'h-1' : 'h-2')} bg-secondary-system-background rounded-full appearance-none cursor-pointer accent-system-label`}
+        />
+      </div>
+      <div className={`flex justify-between font-bold text-system-secondary-label tabular-nums ${settings.bigTouchMode ? (!settings.showArtwork ? 'text-sm' : 'text-[11px]') : (!settings.showArtwork ? 'text-xs' : 'text-[10px]')}`}>
+        <span>{formatTime(currentTime)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
     </div>
   );
 }

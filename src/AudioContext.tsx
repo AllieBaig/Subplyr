@@ -49,10 +49,6 @@ interface AudioContextType {
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   
-  currentTime: number;
-  setCurrentTime: (time: number) => void;
-  duration: number;
-  setDuration: (duration: number) => void;
   seekTo: (time: number) => void;
   seekRequest: number | null;
   clearSeekRequest: () => void;
@@ -85,8 +81,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
   const [playingPlaylistId, setPlayingPlaylistId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [seekRequest, setSeekRequest] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
@@ -490,34 +484,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.appearance]);
 
-  // Playlist Memory Tracker
-  useEffect(() => {
-    if (!playingPlaylistId || isLoading || currentTrackIndex === null || !isPlaying) return;
-    
-    const playlist = playlists.find(p => p.id === playingPlaylistId);
-    if (!playlist) return;
-
-    const currentTrackId = playlist.trackIds[currentTrackIndex];
-    if (!currentTrackId) return;
-
-    // Throttle memory updates to once every 5 seconds to minimize DB writes
-    const timer = setTimeout(() => {
-      setSettings(prev => ({
-        ...prev,
-        playlistMemory: {
-          ...prev.playlistMemory,
-          [playingPlaylistId]: {
-            trackId: currentTrackId,
-            position: currentTime,
-            timestamp: Date.now()
-          }
-        }
-      }));
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, [playingPlaylistId, currentTrackIndex, Math.floor(currentTime / 5), isPlaying, isLoading]);
-
   const addTrack = async (file: File, targetPlaylistId?: string) => {
     const isValid = await validateAudioFile(file);
     if (!isValid) {
@@ -857,7 +823,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const seekTo = (time: number) => {
     setSeekRequest(time);
-    setCurrentTime(time);
   };
 
   const clearSeekRequest = () => setSeekRequest(null);
@@ -906,7 +871,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     
     if (isAutoEnded && settings.loop === 'one' && currentTrackIndex !== null) {
       // Loop one: just restart the same track
-      setCurrentTime(0);
       setSeekRequest(0);
       setIsPlaying(true);
       return;
@@ -1111,10 +1075,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       toggleLoop,
       isPlaying,
       setIsPlaying,
-      currentTime,
-      setCurrentTime,
-      duration,
-      setDuration,
       seekTo,
       seekRequest,
       clearSeekRequest,

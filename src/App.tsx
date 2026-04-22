@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AudioProvider, useAudio } from './AudioContext';
+import { PlaybackProvider } from './PlaybackContext';
 import AudioEngine from './components/AudioEngine';
 import TabBar from './components/TabBar';
 import LibraryView from './views/LibraryView';
@@ -208,7 +209,9 @@ export default function App() {
     <GlobalSafetyManager>
       <ModalProvider>
         <AudioProvider>
-          <AppContent />
+          <PlaybackProvider>
+            <AppContent />
+          </PlaybackProvider>
         </AudioProvider>
       </ModalProvider>
     </GlobalSafetyManager>
