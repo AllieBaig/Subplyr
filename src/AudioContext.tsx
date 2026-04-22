@@ -32,6 +32,7 @@ interface AudioContextType {
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   updateAppearanceSettings: (newSettings: Partial<AppSettings['appearance']>) => void;
+  updateVisibilitySettings: (newSettings: Partial<AppSettings['visibility']>) => void;
   updateAudioTools: (newSettings: Partial<AppSettings['audioTools']>) => void;
   exportAppData: () => Promise<void>;
   importAppData: (file: File) => Promise<void>;
@@ -271,6 +272,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     subliminalExpanded: false,
     showArtwork: true,
     displayAlwaysOn: false,
+    visibility: {
+      audioLayers: true,
+      appControl: true
+    },
     sleepTimer: {
       isEnabled: false,
       minutes: 30,
@@ -604,6 +609,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({
       ...prev,
       appearance: { ...prev.appearance, ...newApp }
+    }));
+  };
+
+  const updateVisibilitySettings = (newVisibility: Partial<AppSettings['visibility']>) => {
+    setSettings(prev => ({
+      ...prev,
+      visibility: { ...prev.visibility, ...newVisibility }
     }));
   };
 
@@ -1067,6 +1079,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateNoiseSettings,
       updateLibrarySettings,
       updateAppearanceSettings,
+      updateVisibilitySettings,
       updateAudioTools,
       exportAppData,
       importAppData,

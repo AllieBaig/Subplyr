@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
 import { NATURE_SOUNDS, AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette, Timer, Repeat, Repeat1 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette, Timer, Repeat, Repeat1, Focus as FocusIcon } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -19,6 +19,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     updateNoiseSettings,
     updateLibrarySettings,
     updateAppearanceSettings,
+    updateVisibilitySettings,
     updateAudioTools,
     updateSettings,
     updateSleepTimer,
@@ -291,9 +292,51 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     );
   };
 
+  const MinimalSettings = () => {
+    return (
+      <Section
+        id="minimal"
+        title="Minimal Settings"
+        subtitle="UI Visibility Control"
+        icon={FocusIcon}
+        color="bg-purple-500/10 text-purple-600"
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-system-label">Audio Layers</p>
+              <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Subliminal, Binaural, Nature, Noise</p>
+            </div>
+            <button 
+              onClick={() => updateVisibilitySettings({ audioLayers: !settings.visibility.audioLayers })}
+              className={`w-8 h-5 rounded-full relative transition-colors ${settings.visibility.audioLayers ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+            >
+              <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.visibility.audioLayers ? 12 : 0 }} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-system-label">App Control</p>
+              <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Management & Maintenance</p>
+            </div>
+            <button 
+              onClick={() => updateVisibilitySettings({ appControl: !settings.visibility.appControl })}
+              className={`w-8 h-5 rounded-full relative transition-colors ${settings.visibility.appControl ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+            >
+              <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.visibility.appControl ? 12 : 0 }} />
+            </button>
+          </div>
+        </div>
+      </Section>
+    );
+  };
+
   return (
     <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto">
       <VersionHistory />
+
+      <MinimalSettings />
 
       <Section
         id="appearance"
@@ -357,6 +400,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
           </div>
         </div>
       </Section>
+
+      <div className="h-px bg-apple-border/50 my-2" />
 
       <Section
         id="playback"
@@ -443,7 +488,13 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
         </div>
       </Section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+      {settings.visibility.audioLayers && (
+        <div className="mt-8 mb-4 px-2">
+          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label">Audio Layers</h4>
+        </div>
+      )}
+
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start transition-all duration-300 ${!settings.visibility.audioLayers ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'}`}>
         {/* Row 1: Core Layers */}
         <div className="flex flex-col gap-6">
           {/* 1. Subliminal Layer */}
@@ -711,10 +762,14 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
             </div>
           </Section>
         </div>
+      </div>
 
-        {/* Column 3: Advanced Tools & Management */}
-        <div className="flex-1 flex flex-col gap-6">
-          {/* 5. Personalization */}
+      <div className="h-px bg-apple-border/50 my-10" />
+
+      {/* Row 3: Advanced Tools & Management */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+        <div className="flex flex-col gap-8">
+           {/* 5. Personalization */}
           <Section 
             id="personalization"
             title="Personalization"
@@ -811,108 +866,126 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               </div>
             </div>
           </Section>
+        </div>
 
-          <div className="mt-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label mb-4 ml-2">App Management</h4>
-            <div className="bg-apple-card rounded-[2rem] border border-apple-border overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-apple-border bg-secondary-system-background/20">
-                <VolumeSlider 
-                  label="Master Music Volume"
-                  value={settings.mainVolume}
-                  onChange={(v: number) => updateSettings({ mainVolume: v })}
-                  color="system-label"
-                />
+        <div className="md:col-span-2 flex flex-col gap-8">
+          {settings.visibility.appControl ? (
+            <div className="flex flex-col gap-8">
+              <div className="px-2">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label">App Control</h4>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label mb-2 ml-2">App Management</h4>
+                  <div className="bg-apple-card rounded-[2rem] border border-apple-border overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-apple-border bg-secondary-system-background/20">
+                      <VolumeSlider 
+                        label="Master Music Volume"
+                        value={settings.mainVolume}
+                        onChange={(v: number) => updateSettings({ mainVolume: v })}
+                        color="system-label"
+                      />
+                    </div>
+
+                    <button 
+                      onClick={() => updateSettings({ miniMode: !settings.miniMode })}
+                      className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors border-b border-apple-border"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-system-background rounded-xl border border-apple-border flex items-center justify-center text-system-label">
+                          <Music size={14} />
+                        </div>
+                        <span className="text-sm font-medium text-system-label">Mini Mode</span>
+                      </div>
+                      <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.miniMode ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
+                        <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.miniMode ? 12 : 0 }} />
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => updateSettings({ showArtwork: !settings.showArtwork })}
+                      className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors border-b border-apple-border"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-system-background rounded-xl border border-apple-border flex items-center justify-center text-system-label">
+                          <Music size={14} />
+                        </div>
+                        <span className="text-sm font-medium text-system-label">Show Artwork</span>
+                      </div>
+                      <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.showArtwork ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
+                        <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.showArtwork ? 12 : 0 }} />
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={exportAppData}
+                      className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-apple-blue border-b border-apple-border font-semibold shadow-inner-sm active:scale-[0.98]"
+                    >
+                      <Download size={16} />
+                      <span className="text-sm ">Export All Data</span>
+                    </button>
+
+                    <label className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-apple-blue cursor-pointer font-semibold active:scale-[0.98]">
+                      <Upload size={16} />
+                      <span className="text-sm ">Import All Data</span>
+                      <input type="file" accept=".json" className="hidden" onChange={(e) => e.target.files && importAppData(e.target.files[0])} />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label mb-2 ml-2">App Maintenance</h4>
+                  <div className="bg-apple-card rounded-3xl border border-apple-border overflow-hidden flex flex-col">
+                    <button 
+                      onClick={() => clearAppCache()}
+                      className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors border-b border-apple-border"
+                    >
+                      <ShieldCheck size={16} className="text-amber-600" />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-system-label">Clear Cache</p>
+                        <p className="text-[10px] text-system-secondary-label">Removes temporary data</p>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => resetUISettings()}
+                      className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-red-500 font-medium active:scale-[0.98]"
+                    >
+                      <RotateCcw size={16} />
+                      <p className="text-sm">Reset UI Settings</p>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <button 
-                onClick={() => updateSettings({ miniMode: !settings.miniMode })}
-                className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors border-b border-apple-border"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-system-background rounded-xl border border-apple-border flex items-center justify-center text-system-label">
-                    <Music size={14} />
-                  </div>
-                  <span className="text-sm font-medium text-system-label">Mini Mode</span>
+              {swSupported && (
+                <div className="mt-4">
+                  <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className="w-full flex items-center justify-between px-2 mb-4 group">
+                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label group-hover:text-system-label transition-colors">Advanced Developer Tools</h4>
+                    <ChevronRight size={14} className={`text-system-secondary-label transition-transform duration-300 ${isAdvancedOpen ? 'rotate-90 text-system-label' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {isAdvancedOpen && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-apple-card rounded-3xl border border-apple-border overflow-hidden flex flex-col mb-4"
+                      >
+                         <button onClick={resetServiceWorker} className="p-4 border-b border-apple-border text-xs font-bold uppercase text-center hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
+                         <button onClick={fullAppReset} className="p-4 bg-red-500 text-white font-bold text-xs uppercase hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.miniMode ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
-                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.miniMode ? 12 : 0 }} />
-                </div>
-              </button>
-
-              <button 
-                onClick={() => updateSettings({ showArtwork: !settings.showArtwork })}
-                className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors border-b border-apple-border"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-system-background rounded-xl border border-apple-border flex items-center justify-center text-system-label">
-                    <Music size={14} />
-                  </div>
-                  <span className="text-sm font-medium text-system-label">Show Artwork</span>
-                </div>
-                <div className={`w-8 h-5 rounded-full relative transition-colors ${settings.showArtwork ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
-                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.showArtwork ? 12 : 0 }} />
-                </div>
-              </button>
-
-              <button 
-                onClick={exportAppData}
-                className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-apple-blue border-b border-apple-border font-semibold shadow-inner-sm active:scale-[0.98]"
-              >
-                <Download size={16} />
-                <span className="text-sm ">Export All Data</span>
-              </button>
-
-              <label className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-apple-blue cursor-pointer font-semibold active:scale-[0.98]">
-                <Upload size={16} />
-                <span className="text-sm ">Import All Data</span>
-                <input type="file" accept=".json" className="hidden" onChange={(e) => e.target.files && importAppData(e.target.files[0])} />
-              </label>
+              )}
             </div>
-          </div>
-
-          <div className="mt-8 pt-8 border-t border-apple-border">
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label mb-4 ml-2">App Maintenance</h4>
-            <div className="bg-apple-card rounded-3xl border border-apple-border overflow-hidden flex flex-col">
-              <button 
-                onClick={() => clearAppCache()}
-                className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors border-b border-apple-border"
-              >
-                <ShieldCheck size={16} className="text-amber-600" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-system-label">Clear Cache</p>
-                  <p className="text-[10px] text-system-secondary-label">Removes temporary data</p>
-                </div>
-              </button>
-              <button 
-                onClick={() => resetUISettings()}
-                className="w-full p-4 flex items-center gap-3 hover:bg-secondary-system-background transition-colors text-red-500 font-medium active:scale-[0.98]"
-              >
-                <RotateCcw size={16} />
-                <p className="text-sm">Reset UI Settings</p>
-              </button>
-            </div>
-          </div>
-
-          {swSupported && (
-            <div className="mt-8 pt-8 border-t border-apple-border">
-              <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className="w-full flex items-center justify-between px-2 mb-4 group">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label group-hover:text-system-label transition-colors">Advanced Developer Tools</h4>
-                <ChevronRight size={14} className={`text-system-secondary-label transition-transform duration-300 ${isAdvancedOpen ? 'rotate-90 text-system-label' : ''}`} />
-              </button>
-              <AnimatePresence>
-                {isAdvancedOpen && (
-                  <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="bg-apple-card rounded-3xl border border-apple-border overflow-hidden flex flex-col mb-4"
-                  >
-                     <button onClick={resetServiceWorker} className="p-4 border-b border-apple-border text-xs font-bold uppercase text-center hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
-                     <button onClick={fullAppReset} className="p-4 bg-red-500 text-white font-bold text-xs uppercase hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+          ) : (
+             <div className="bg-secondary-system-background/20 rounded-[2.5rem] border border-dashed border-apple-border p-12 flex flex-col items-center justify-center text-center">
+                <SettingsIcon size={32} className="text-system-tertiary-label mb-4" />
+                <p className="text-sm font-semibold text-system-secondary-label uppercase tracking-widest">App Controls Hidden</p>
+                <p className="text-[10px] text-system-tertiary-label font-bold uppercase tracking-widest mt-2 max-w-[200px]">Management and maintenance tools are currently minimized.</p>
+             </div>
           )}
         </div>
       </div>

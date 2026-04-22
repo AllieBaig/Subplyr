@@ -103,6 +103,10 @@ export interface AppSettings {
   subliminalExpanded: boolean;
   showArtwork: boolean;
   displayAlwaysOn: boolean;
+  visibility: {
+    audioLayers: boolean;
+    appControl: boolean;
+  };
   sleepTimer: {
     isEnabled: boolean;
     minutes: number;
