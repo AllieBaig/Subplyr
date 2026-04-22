@@ -205,9 +205,9 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       </div>
 
       {/* Playback Controls & Progress */}
-      <div className={`w-full max-w-sm flex flex-col px-8 ${settings.bigTouchMode ? 'gap-10 mb-8' : 'gap-8 mb-4'}`}>
+      <div className={`w-full flex flex-col px-8 transition-all duration-500 ${!settings.showArtwork ? 'max-w-xl flex-1 justify-center' : 'max-w-sm mb-4'} ${settings.bigTouchMode ? 'gap-10 mb-8' : 'gap-8'}`}>
         {/* Progress Bar */}
-        <div className="flex flex-col gap-2">
+        <div className={`flex flex-col gap-2 ${!settings.showArtwork ? 'mb-8' : ''}`}>
           <div className="relative h-6 flex items-center">
             <input 
               type="range"
@@ -215,34 +215,34 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               max={duration || 100}
               value={currentTime}
               onChange={(e) => seekTo(parseFloat(e.target.value))}
-              className={`w-full ${settings.bigTouchMode ? 'h-2' : 'h-1'} bg-secondary-system-background rounded-full appearance-none cursor-pointer accent-system-label`}
+              className={`w-full ${settings.bigTouchMode ? (settings.showArtwork ? 'h-2' : 'h-3') : (settings.showArtwork ? 'h-1' : 'h-2')} bg-secondary-system-background rounded-full appearance-none cursor-pointer accent-system-label`}
             />
           </div>
-          <div className={`flex justify-between font-bold text-system-secondary-label tabular-nums ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>
+          <div className={`flex justify-between font-bold text-system-secondary-label tabular-nums ${settings.bigTouchMode ? (!settings.showArtwork ? 'text-sm' : 'text-[11px]') : (!settings.showArtwork ? 'text-xs' : 'text-[10px]')}`}>
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center justify-between px-2 pb-2">
+        <div className={`flex items-center justify-between px-2 pb-2 transition-all duration-500 ${!settings.showArtwork ? 'scale-110 mt-8' : ''}`}>
           <button onClick={() => playPrevious()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
-            <SkipBack size={settings.bigTouchMode ? 48 : 40} fill="currentColor" stroke="none" />
+            <SkipBack size={settings.bigTouchMode ? (!settings.showArtwork ? 64 : 48) : (!settings.showArtwork ? 52 : 40)} fill="currentColor" stroke="none" />
           </button>
           
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            className={`${settings.bigTouchMode ? 'w-24 h-24' : 'w-20 h-20'} bg-system-label text-system-background rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all`}
+            className={`${settings.bigTouchMode ? (!settings.showArtwork ? 'w-32 h-32' : 'w-24 h-24') : (!settings.showArtwork ? 'w-28 h-28' : 'w-20 h-20')} bg-system-label text-system-background rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all`}
           >
             {isPlaying ? (
-              <Pause size={settings.bigTouchMode ? 44 : 36} fill="currentColor" stroke="none" />
+              <Pause size={settings.bigTouchMode ? (!settings.showArtwork ? 60 : 44) : (!settings.showArtwork ? 52 : 36)} fill="currentColor" stroke="none" />
             ) : (
-              <Play size={settings.bigTouchMode ? 44 : 36} fill="currentColor" stroke="none" className="ml-1" />
+              <Play size={settings.bigTouchMode ? (!settings.showArtwork ? 60 : 44) : (!settings.showArtwork ? 52 : 36)} fill="currentColor" stroke="none" className="ml-1" />
             )}
           </button>
-
+          
           <button onClick={() => playNext()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
-            <SkipForward size={settings.bigTouchMode ? 48 : 40} fill="currentColor" stroke="none" />
+            <SkipForward size={settings.bigTouchMode ? (!settings.showArtwork ? 64 : 48) : (!settings.showArtwork ? 52 : 40)} fill="currentColor" stroke="none" />
           </button>
         </div>
       </div>

@@ -238,6 +238,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       delayMs: 0,
       isPlaylistMode: false,
       sourcePlaylistId: null,
+      gainDb: 0,
     },
     binaural: {
       isEnabled: false,

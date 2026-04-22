@@ -27,6 +27,7 @@ export interface SubliminalSettings {
   delayMs: number;
   isPlaylistMode: boolean;
   sourcePlaylistId: string | null;
+  gainDb: number;
 }
 
 export interface BinauralSettings {

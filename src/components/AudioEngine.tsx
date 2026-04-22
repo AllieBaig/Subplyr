@@ -34,6 +34,7 @@ export default function AudioEngine() {
   // Audio Tools Refs
   const mainSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const subSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const subSpecificGainRef = useRef<GainNode | null>(null);
   const toolGainRef = useRef<GainNode | null>(null);
   const toolCompressorRef = useRef<DynamicsCompressorNode | null>(null);
 
@@ -418,7 +419,14 @@ export default function AudioEngine() {
       
       if (subAudioRef.current && !subSourceRef.current) {
         subSourceRef.current = ctx.createMediaElementSource(subAudioRef.current);
-        subSourceRef.current.connect(toolGainRef.current);
+        
+        // Create Subliminal-specific gain node
+        if (!subSpecificGainRef.current) {
+          subSpecificGainRef.current = ctx.createGain();
+        }
+        
+        subSourceRef.current.connect(subSpecificGainRef.current);
+        subSpecificGainRef.current.connect(toolGainRef.current);
       }
     } catch (err) {
       console.error("Audio tools setup failed:", err);
@@ -427,16 +435,28 @@ export default function AudioEngine() {
 
   // Handle Audio Tools Real-time Updates
   useEffect(() => {
-    if (audioCtxRef.current && toolGainRef.current && toolCompressorRef.current) {
+    if (audioCtxRef.current) {
       const ctx = audioCtxRef.current;
-      // Convert dB to linear gain: Math.pow(10, db / 20)
-      const gainValue = Math.pow(10, settings.audioTools.gainDb / 20);
-      toolGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
       
-      const targetDb = settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0;
-      toolCompressorRef.current.threshold.setTargetAtTime(targetDb, ctx.currentTime, 0.1);
+      // Update Master Gain
+      if (toolGainRef.current) {
+        const gainValue = Math.pow(10, settings.audioTools.gainDb / 20);
+        toolGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
+      }
+      
+      // Update Subliminal Specific Gain
+      if (subSpecificGainRef.current) {
+        const subGainValue = Math.pow(10, settings.subliminal.gainDb / 20);
+        subSpecificGainRef.current.gain.setTargetAtTime(subGainValue, ctx.currentTime, 0.1);
+      }
+      
+      // Update Normalization Compressor
+      if (toolCompressorRef.current) {
+        const targetDb = settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0;
+        toolCompressorRef.current.threshold.setTargetAtTime(targetDb, ctx.currentTime, 0.1);
+      }
     }
-  }, [settings.audioTools.gainDb, settings.audioTools.normalizeTargetDb]);
+  }, [settings.audioTools.gainDb, settings.audioTools.normalizeTargetDb, settings.subliminal.gainDb]);
 
   // Handle Main Track Source Change
   useEffect(() => {

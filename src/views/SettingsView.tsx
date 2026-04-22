@@ -525,25 +525,69 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">
-                    {settings.subliminal.isPlaylistMode ? 'Source Playlist' : 'Selected Track'}
+                    Active Source
                   </label>
-                  <div className="flex flex-col gap-2">
+                  <div className="p-4 bg-apple-blue shadow-[0_8px_20px_rgba(0,122,255,0.15)] rounded-2xl border border-apple-blue/20 flex items-center justify-between group overflow-hidden relative">
+                    <div className="flex flex-col min-w-0 relative z-10">
+                      <p className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em] mb-1">
+                        {settings.subliminal.isPlaylistMode ? 'Playing Playlist' : 'Selected Track'}
+                      </p>
+                      <h4 className="text-sm font-bold text-white truncate">
+                        {settings.subliminal.isPlaylistMode 
+                          ? (playlists.find(p => p.id === settings.subliminal.sourcePlaylistId)?.name || 'No Playlist Selected')
+                          : (subliminalTracks.find(t => t.id === settings.subliminal.selectedTrackId)?.name || 
+                             tracks.find(t => t.id === settings.subliminal.selectedTrackId)?.name || 
+                             'No Track Selected')
+                        }
+                      </h4>
+                    </div>
+                    <Ear size={24} className="text-white/20 -rotate-12 group-hover:rotate-0 transition-transform duration-500" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
                     {settings.subliminal.isPlaylistMode ? (
                       <div className="flex flex-col gap-2">
                         {playlists.length === 0 ? (
                           <p className="text-[10px] text-system-secondary-label italic px-2 py-4 bg-system-background/50 border border-dashed border-apple-border rounded-xl text-center">No playlists created yet</p>
                         ) : (
                           playlists.map(playlist => (
-                            <button
-                              key={playlist.id}
-                              onClick={() => updateSubliminalSettings({ sourcePlaylistId: playlist.id })}
-                              className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${settings.subliminal.sourcePlaylistId === playlist.id ? 'border-apple-blue bg-apple-blue/5' : 'border-apple-border bg-system-background'}`}
-                            >
-                              <div className="min-w-0">
-                                <p className={`text-xs font-bold truncate ${settings.subliminal.sourcePlaylistId === playlist.id ? 'text-apple-blue' : 'text-system-label'}`}>{playlist.name}</p>
-                                <p className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest">{playlist.trackIds.length} tracks</p>
-                              </div>
-                              {settings.subliminal.sourcePlaylistId === playlist.id && <Check size={14} className="text-apple-blue" />}
+                              <button
+                                key={playlist.id}
+                                onClick={() => updateSubliminalSettings({ sourcePlaylistId: playlist.id })}
+                                className={`flex flex-col p-4 rounded-xl border transition-all text-left relative ${settings.subliminal.sourcePlaylistId === playlist.id ? 'border-apple-blue bg-apple-blue/5' : 'border-apple-border bg-system-background'}`}
+                              >
+                                <div className="min-w-0">
+                                  <p className={`text-xs font-bold truncate ${settings.subliminal.sourcePlaylistId === playlist.id ? 'text-apple-blue' : 'text-system-label'}`}>{playlist.name}</p>
+                                  <p className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest">{playlist.trackIds.length} tracks</p>
+                                </div>
+                               {settings.subliminal.sourcePlaylistId === playlist.id && (
+                                 <div className="mt-4 pt-4 border-t border-apple-border/50 flex flex-col gap-2">
+                                   <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Pick Single Track</p>
+                                   <div className="max-h-48 overflow-y-auto no-scrollbar flex flex-col gap-1 pr-1">
+                                      {playlist.trackIds.map(tid => {
+                                        const t = tracks.find(mt => mt.id === tid);
+                                        if (!t) return null;
+                                        return (
+                                          <button
+                                            key={tid}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              updateSubliminalSettings({ isPlaylistMode: false, selectedTrackId: tid });
+                                              showToast(`Selected "${t.name}" for subliminal`);
+                                            }}
+                                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-apple-blue/10 text-left transition-colors group"
+                                          >
+                                            <div className="w-1.5 h-1.5 rounded-full bg-apple-blue opacity-40 group-hover:opacity-100" />
+                                            <span className="text-[11px] font-medium text-system-label truncate">{t.name}</span>
+                                          </button>
+                                        );
+                                      })}
+                                   </div>
+                                 </div>
+                               )}
+                               {settings.subliminal.sourcePlaylistId === playlist.id && <Check size={14} className="text-apple-blue absolute top-4 right-4" />}
                             </button>
                           ))
                         )}
@@ -604,7 +648,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   </div>
                 </div>
                 
-                <div className="flex flex-col gap-2 pt-2">
+                <div className="flex flex-col gap-6 pt-2">
                   <VolumeSlider 
                     label="Subliminal Intensity"
                     value={settings.subliminal.volume}
@@ -612,7 +656,14 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                     max={0.3}
                     color="apple-blue"
                   />
-                  <p className="text-[9px] text-system-secondary-label italic">Volume is limited to 30% for safety.</p>
+                  <DbSlider 
+                    label="Gain (dB)"
+                    value={settings.subliminal.gainDb}
+                    onChange={(v: number) => updateSubliminalSettings({ gainDb: v })}
+                    min={-60}
+                    max={0}
+                  />
+                  <p className="text-[9px] text-system-secondary-label italic">Intensity is linear (0-30%), Gain is logarithmic (dB).</p>
                 </div>
 
                 <div className="flex flex-col gap-4 p-4 bg-system-background/50 rounded-2xl border border-apple-border">
