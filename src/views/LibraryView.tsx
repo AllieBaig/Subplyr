@@ -4,14 +4,16 @@ import {
   Upload, Plus, Trash2, Share, SortAsc, 
   LayoutGrid, List, Calendar, CheckCircle2, 
   Circle, X, FolderPlus, ListPlus, Zap,
-  AlertCircle, Link, ArrowLeft, MoreVertical, Edit2,
+  AlertCircle, Link, ArrowLeft, MoreVertical, Edit2, Check,
   Play, Pause, Search, ChevronRight
 } from 'lucide-react';
 import { Track, SortOption, GroupOption } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
+import { useModal } from '../components/SafeModal';
 
 export default function LibraryView() {
+  const modal = useModal();
   const { 
     tracks, 
     addTrack, 
@@ -50,7 +52,32 @@ export default function LibraryView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportTargetMenu, setShowImportTargetMenu] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [showPlaylistModal, setShowPlaylistModal] = useState<{ show: boolean; mode: 'create' | 'rename'; playlistId?: string; initialName?: string }>({ show: false, mode: 'create' });
+
+  const handleCreatePlaylist = async (initialTrackIds: string[] = []) => {
+    const name = await modal.prompt({
+      title: "New Playlist",
+      subtitle: "Enter a name for your collection",
+      placeholder: "Playlist Name",
+      confirmLabel: "Create"
+    });
+    if (name) {
+      const pid = await createPlaylist(name, initialTrackIds);
+      return pid;
+    }
+    return null;
+  };
+
+  const handleRenamePlaylist = async (id: string, currentName: string) => {
+    const name = await modal.prompt({
+      title: "Rename Playlist",
+      subtitle: "Enter a new name for this playlist",
+      initialValue: currentName,
+      confirmLabel: "Save"
+    });
+    if (name) {
+      await renamePlaylist(id, name);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -69,10 +96,8 @@ export default function LibraryView() {
   const processImport = async (targetPlaylistId?: string) => {
     let pid = targetPlaylistId;
     if (targetPlaylistId === 'new') {
-      setShowPlaylistModal({ show: true, mode: 'create' });
-      // We'll handle the import after the playlist is created if needed, 
-      // but for now let's just use the modal.
-      return; 
+      pid = (await handleCreatePlaylist()) || undefined;
+      if (!pid) return; // Cancelled
     }
 
     for (const file of pendingFiles) {
@@ -235,7 +260,13 @@ export default function LibraryView() {
     
     const ids = Array.from(selectedTrackIds);
     const pName = playlists.find(p => p.id === targetPlaylistId)?.name;
-    if (confirm(`Remove ${ids.length} tracks from "${pName}"?`)) {
+    
+    if (await modal.confirm({
+      title: "Remove Tracks",
+      subtitle: `Remove ${ids.length} tracks from "${pName}"?`,
+      confirmLabel: "Remove",
+      isDestructive: true
+    })) {
       await removeTracksFromPlaylist(ids, targetPlaylistId);
       setIsSelectMode(false);
       setSelectedTrackIds(new Set());
@@ -245,12 +276,9 @@ export default function LibraryView() {
   };
 
   const handleBulkCreatePlaylist = async () => {
-    const name = prompt("Playlist name:");
-    if (name) {
-      await createPlaylist(name, Array.from(selectedTrackIds));
-      setIsSelectMode(false);
-      setSelectedTrackIds(new Set());
-    }
+    await handleCreatePlaylist(Array.from(selectedTrackIds));
+    setIsSelectMode(false);
+    setSelectedTrackIds(new Set());
   };
 
   const sortedPlaylists = useMemo(() => {
@@ -417,7 +445,7 @@ export default function LibraryView() {
             onRemoveTrack={(tid: string) => removeTracksFromPlaylist([tid], activePlaylistId!)}
             onAddToPlaylist={addTrackToPlaylist}
             isSelectMode={isSelectMode}
-            onEnterSelect={() => setIsSelectMode(true)}
+            onEnterSelect={(val: boolean) => setIsSelectMode(val)}
             selectedTrackIds={selectedTrackIds}
             onToggleSelection={(tid) => toggleTrackSelection(tid)}
             sort={playlistSort}
@@ -504,9 +532,20 @@ export default function LibraryView() {
       ) : (
         <PlaylistView 
           playlists={sortedPlaylists} 
-          onCreate={() => setShowPlaylistModal({ show: true, mode: 'create' })}
-          onDelete={deletePlaylist}
-          onRename={(id: string, name: string) => setShowPlaylistModal({ show: true, mode: 'rename', playlistId: id, initialName: name })}
+          onCreate={() => handleCreatePlaylist()}
+          onDelete={async (id: string) => {
+            const p = playlists.find(p => p.id === id);
+            if (await modal.confirm({
+              title: "Delete Playlist",
+              subtitle: `Are you sure you want to delete "${p?.name}"? This action cannot be undone.`,
+              confirmLabel: "Delete",
+              isDestructive: true
+            })) {
+              await deletePlaylist(id);
+              showToast("Playlist deleted");
+            }
+          }}
+          onRename={(id: string, name: string) => handleRenamePlaylist(id, name)}
           tracks={tracks}
           onTrackPlay={(id) => {
             const idx = tracks.findIndex(t => t.id === id);
@@ -629,25 +668,6 @@ export default function LibraryView() {
         )}
       </AnimatePresence>
 
-      {/* Playlist Create/Rename Modal */}
-      <AnimatePresence>
-        {showPlaylistModal.show && (
-          <PlaylistModal 
-            mode={showPlaylistModal.mode}
-            initialName={showPlaylistModal.initialName}
-            onClose={() => setShowPlaylistModal({ show: false, mode: 'create' })}
-            onConfirm={(name) => {
-              if (showPlaylistModal.mode === 'create') {
-                createPlaylist(name);
-              } else if (showPlaylistModal.playlistId) {
-                renamePlaylist(showPlaylistModal.playlistId, name);
-              }
-              setShowPlaylistModal({ show: false, mode: 'create' });
-            }}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Bulk Action Bar - Minimal & Fluid */}
       <AnimatePresence>
         {isSelectMode && (
@@ -729,7 +749,12 @@ export default function LibraryView() {
 
               <button 
                 onClick={async () => {
-                   if (confirm(`Delete ${selectedTrackIds.size} tracks from device?`)) {
+                   if (await modal.confirm({
+                     title: "Delete Tracks",
+                     subtitle: `Delete ${selectedTrackIds.size} tracks from device?`,
+                     confirmLabel: "Delete",
+                     isDestructive: true
+                   })) {
                       for (const id of Array.from(selectedTrackIds)) await removeTrack(id);
                       setIsSelectMode(false);
                       setSelectedTrackIds(new Set());
@@ -896,6 +921,7 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
 
 
 const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrackPlay, isSelectMode, editingPlaylistId, selectedTrackIds, onToggleSelection, onEnterSelect, onOpen, searchQuery }: any) => {
+  const modal = useModal();
   const { settings, showToast } = useAudio();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
@@ -982,8 +1008,13 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
                                 Rename
                               </button>
                               <button 
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to delete "${playlist.name}"? This action cannot be undone.`)) {
+                                onClick={async () => {
+                                  if (await modal.confirm({
+                                    title: "Delete Playlist",
+                                    subtitle: `Are you sure you want to delete "${playlist.name}"? This action cannot be undone.`,
+                                    confirmLabel: "Delete",
+                                    isDestructive: true
+                                  })) {
                                     onDelete(playlist.id);
                                     showToast(`Deleted "${playlist.name}"`);
                                   }
@@ -1038,6 +1069,7 @@ const PlaylistDetailView = ({
   settings
 }: any) => {
   const activeTrackRef = React.useRef<HTMLDivElement>(null);
+  const modal = useModal();
   
   const sortedTracks = useMemo(() => {
     let list = playlist.trackIds.map((tid: string) => tracks.find((t: any) => t.id === tid)).filter(Boolean);
@@ -1062,19 +1094,94 @@ const PlaylistDetailView = ({
             <span className="text-[15px]">Library</span>
           </button>
           
-          <div className="flex gap-1">
+          <div className="flex gap-1 relative">
             {!isSelectMode && (
-              <button 
-                onClick={onToggleSettings}
-                className={`p-2 rounded-full ${showSettings ? 'text-system-label' : 'text-system-tertiary-label'}`}
-              >
-                <MoreVertical size={20} />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={onToggleSettings}
+                  className={`p-2 rounded-full transition-colors ${showSettings ? 'bg-secondary-system-background text-system-label' : 'text-system-tertiary-label'}`}
+                >
+                  <MoreVertical size={20} />
+                </button>
+
+                <AnimatePresence>
+                  {showSettings && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={onToggleSettings} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        className="absolute right-0 top-full mt-2 w-48 bg-apple-card rounded-2xl shadow-2xl border border-apple-border z-50 py-2 overflow-hidden"
+                      >
+                        <button 
+                          onClick={() => {
+                            onRename(playlist.id, playlist.name);
+                            onToggleSettings();
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary-system-background text-[13px] font-bold text-left text-system-label"
+                        >
+                          <Edit2 size={16} className="text-system-secondary-label" />
+                          Rename
+                        </button>
+                        
+                        <div className="h-px bg-apple-border mx-2 my-1" />
+                        
+                        <div className="px-4 py-2">
+                          <p className="text-[10px] font-bold text-system-tertiary-label uppercase tracking-widest mb-2">Sort Order</p>
+                          {(['recent', 'alphabetical', 'date'] as SortOption[]).map(s => (
+                            <button
+                              key={s}
+                              onClick={() => {
+                                onSort(s);
+                                onToggleSettings();
+                              }}
+                              className={`w-full flex items-center justify-between py-1.5 text-[12px] font-bold ${sort === s ? 'text-apple-blue' : 'text-system-secondary-label'}`}
+                            >
+                              {s === 'recent' ? 'Recent' : s === 'alphabetical' ? 'A-Z' : 'Date Added'}
+                              {sort === s && <Check size={14} />}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="h-px bg-apple-border mx-2 my-1" />
+
+                        <button 
+                          onClick={async () => {
+                            onToggleSettings();
+                            if (await modal.confirm({
+                              title: "Delete Playlist",
+                              subtitle: `Delete "${playlist.name}"? This will not delete the actual audio files.`,
+                              confirmLabel: "Delete",
+                              isDestructive: true
+                            })) {
+                              onDelete(playlist.id);
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary-system-background text-[13px] font-bold text-red-500 text-left"
+                        >
+                          <Trash2 size={16} className="text-red-400" />
+                          Delete Playlist
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
             {isSelectMode ? (
-              <button onClick={() => onToggleSettings()} className="text-apple-blue text-[15px] font-bold px-3">Done</button>
+              <button 
+                onClick={() => {
+                  if (isSelectMode) {
+                    onEnterSelect(false); // Map false to toggle off
+                  }
+                }} 
+                className="text-apple-blue text-[15px] font-bold px-3 active:opacity-50"
+              >
+                Done
+              </button>
             ) : (
-              <button onClick={onEnterSelect} className="text-apple-blue text-[15px] font-bold px-3">Select</button>
+              <button onClick={() => onEnterSelect(true)} className="text-apple-blue text-[15px] font-bold px-3 active:opacity-50">Select</button>
             )}
           </div>
         </div>
@@ -1151,84 +1258,6 @@ const PlaylistDetailView = ({
     </div>
   );
 };
-
-const PlaylistModal = ({ mode, initialName = '', onClose, onConfirm }: { mode: 'create' | 'rename'; initialName?: string; onClose: () => void; onConfirm: (name: string) => void }) => {
-  const [name, setName] = useState(initialName);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    // Small timeout to ensure keyboard pops up on mobile correctly
-    const timer = setTimeout(() => {
-      inputRef.current?.focus();
-      if (mode === 'rename') {
-        inputRef.current?.select();
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [mode]);
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-black/30 backdrop-blur-md"
-      />
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative w-full max-w-sm bg-apple-card rounded-[2.5rem] shadow-2xl border border-apple-border overflow-hidden"
-      >
-        <div className="p-8 pb-4">
-          <h3 className="text-2xl font-extrabold tracking-tight text-system-label mb-2">
-            {mode === 'create' ? 'New Playlist' : 'Rename Playlist'}
-          </h3>
-          <p className="text-[11px] text-system-secondary-label font-bold uppercase tracking-widest leading-relaxed">
-            {mode === 'create' ? 'Enter a name for your new collection' : 'Enter a new name for this playlist'}
-          </p>
-        </div>
-        
-        <div className="p-8 pt-2">
-          <input 
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && name.trim()) {
-                onConfirm(name);
-              } else if (e.key === 'Escape') {
-                onClose();
-              }
-            }}
-            placeholder="Playlist Name"
-            className="w-full bg-secondary-system-background text-system-label rounded-2xl p-5 text-lg font-bold outline-none focus:ring-2 focus:ring-apple-blue/20 transition-all placeholder:text-system-tertiary-label border border-apple-border shadow-inner-sm"
-          />
-        </div>
-
-        <div className="p-4 bg-secondary-system-background/30 flex gap-3">
-          <button 
-            onClick={onClose}
-            className="flex-1 p-4 rounded-2xl hover:bg-secondary-system-background text-system-secondary-label font-bold uppercase text-[11px] tracking-widest transition-all active:scale-[0.98]"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={() => name.trim() && onConfirm(name)}
-            disabled={!name.trim()}
-            className="flex-2 p-4 rounded-2xl bg-apple-blue text-white font-bold uppercase text-[11px] tracking-widest transition-all active:scale-[0.98] disabled:opacity-30 shadow-lg shadow-apple-blue/20"
-          >
-            {mode === 'create' ? 'Create' : 'Save'}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
 
 const Music = ({ className, size }: { className?: string, size?: number }) => (
   <svg 

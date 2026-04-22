@@ -2,6 +2,7 @@ import { useState, createContext, useContext, ReactNode, useEffect, useMemo, use
 import { Track, AppSettings, Playlist, SortOption, GroupOption, VersionEntry } from './types';
 import * as db from './db';
 import { APP_HISTORY, CURRENT_VERSION } from './constants/history';
+import { useModal } from './components/SafeModal';
 
 interface AudioContextType {
   tracks: Track[];
@@ -75,6 +76,7 @@ interface AudioContextType {
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export function AudioProvider({ children }: { children: ReactNode }) {
+  const modal = useModal();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [subliminalTracks, setSubliminalTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -187,7 +189,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const clearDatabase = async () => {
-    if (!confirm("This will delete all your tracks and playlists. This action cannot be undone. Continue?")) return;
+    if (!(await modal.confirm({ 
+      title: "Clear Database", 
+      subtitle: "This will delete all your tracks and playlists. This action cannot be undone.",
+      confirmLabel: "Delete Everything",
+      isDestructive: true 
+    }))) return;
     try {
       await db.clearAllData();
       showToast("All data cleared. Refreshing tracks...");
@@ -202,7 +209,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const fullAppReset = async () => {
-    if (!confirm("This will perform a factory reset: unregister service worker, clear cache, and delete all your music/settings. The app will then reload. Continue?")) return;
+    if (!(await modal.confirm({ 
+      title: "Factory Reset", 
+      subtitle: "This will unregister service worker, clear cache, and delete all music/settings. The app will then reload.",
+      confirmLabel: "Perform Reset",
+      isDestructive: true 
+    }))) return;
     try {
       await resetServiceWorker();
       await clearCacheStorage();

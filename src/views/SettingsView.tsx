@@ -756,35 +756,137 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
         </Group>
       )}
 
-      {/* App Control Group */}
-      {settings.visibility.appControl && (
-        <Group
-          title="App Control"
-          icon={SettingsIcon}
-          color="bg-gray-700/10 text-gray-700"
-          isExpanded={expandedGroups.has('control')}
-          onToggle={() => toggleGroup('control')}
-        >
-          <div className="flex flex-col gap-2">
-            <AppManagement />
-            <AppMaintenance />
-            {swSupported && (
-              <Section
-                id="advanced"
-                title="Advanced Developer"
-                subtitle="System Recovery"
-                icon={Terminal}
-                color="bg-red-500/10 text-red-600"
-              >
-                <div className="flex flex-col gap-3">
-                   <button onClick={resetServiceWorker} className="w-full p-4 border border-apple-border rounded-xl text-xs font-bold uppercase hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
-                   <button onClick={fullAppReset} className="w-full p-4 bg-red-500 text-white font-bold text-xs uppercase rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
+      {/* Playback & Control Group */}
+      <Group
+        title="Playback & Control"
+        icon={SettingsIcon}
+        color="bg-gray-700/10 text-gray-700"
+        isExpanded={expandedGroups.has('control')}
+        onToggle={() => toggleGroup('control')}
+      >
+        <div className="flex flex-col gap-2">
+          <Section
+            id="playback"
+            title="Timing & Playback"
+            subtitle="Timer & Speed"
+            icon={Timer}
+            color="bg-blue-500/10 text-blue-600"
+          >
+            <div className="flex flex-col gap-6">
+              {/* Playback Speed */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Playback Speed</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 1.5, 2, 2.5].map(speed => (
+                    <button 
+                      key={speed}
+                      onClick={() => updateSettings({ playbackRate: speed })}
+                      className={`py-2 rounded-xl border text-[10px] font-bold transition-all ${settings.playbackRate === speed ? 'bg-apple-blue text-white border-apple-blue shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
                 </div>
-              </Section>
-            )}
-          </div>
-        </Group>
-      )}
+              </div>
+
+              <div className="h-px bg-apple-border/50" />
+
+              {/* Loop Mode */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Loop Options</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => updateSettings({ loop: settings.loop === 'all' ? 'none' : 'all' })}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${settings.loop === 'all' ? 'bg-blue-500 border-blue-500 text-white shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                  >
+                    <Repeat size={14} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Playlist</span>
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ loop: settings.loop === 'one' ? 'none' : 'one' })}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${settings.loop === 'one' ? 'bg-blue-500 border-blue-500 text-white shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                  >
+                    <Repeat1 size={14} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Single</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-apple-border/50" />
+
+              {/* Sleep Timer */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-system-label">Sleep Timer</p>
+                    <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Auto-stop playback</p>
+                  </div>
+                  <button 
+                    onClick={() => updateSleepTimer({ isEnabled: !settings.sleepTimer.isEnabled, remainingSeconds: !settings.sleepTimer.isEnabled ? settings.sleepTimer.minutes * 60 : null })}
+                    className={`w-8 h-5 rounded-full relative transition-colors ${settings.sleepTimer.isEnabled ? 'bg-indigo-500' : 'bg-system-tertiary-label'}`}
+                  >
+                    <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.sleepTimer.isEnabled ? 12 : 0 }} />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="number"
+                    min="1"
+                    max="240"
+                    value={settings.sleepTimer.minutes}
+                    onChange={(e) => updateSleepTimer({ minutes: Math.max(1, parseInt(e.target.value) || 1) })}
+                    className="w-20 h-10 bg-secondary-system-background rounded-xl border-none text-xs font-bold text-center focus:ring-1 focus:ring-indigo-500 text-system-label"
+                  />
+                  <span className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Minutes</span>
+                  {settings.sleepTimer.isEnabled && settings.sleepTimer.remainingSeconds !== null && (
+                    <div className="ml-auto flex items-center gap-2 bg-indigo-500/10 px-3 py-1.5 rounded-full">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                      <span className="text-[10px] font-black text-indigo-600 tabular-nums">
+                        {Math.floor(settings.sleepTimer.remainingSeconds / 60)}:{(settings.sleepTimer.remainingSeconds % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="h-px bg-apple-border/50" />
+
+              {/* Display Stay Awake */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Display Always ON</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Prevent screen sleep</p>
+                </div>
+                <button 
+                  onClick={() => updateSettings({ displayAlwaysOn: !settings.displayAlwaysOn })}
+                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.displayAlwaysOn ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.displayAlwaysOn ? 12 : 0 }} />
+                </button>
+              </div>
+            </div>
+          </Section>
+
+          <AppManagement />
+          <AppMaintenance />
+          
+          {swSupported && (
+            <Section
+              id="advanced"
+              title="Advanced System"
+              subtitle="Recovery Tools"
+              icon={Terminal}
+              color="bg-red-500/10 text-red-600"
+            >
+              <div className="flex flex-col gap-3">
+                <button onClick={resetServiceWorker} className="w-full p-4 border border-apple-border rounded-xl text-xs font-bold uppercase hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
+                <button onClick={fullAppReset} className="w-full p-4 bg-red-500 text-white font-bold text-xs uppercase rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
+              </div>
+            </Section>
+          )}
+        </div>
+      </Group>
 
       <div className="h-px bg-apple-border/50 my-6" />
 
@@ -847,93 +949,6 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 Soft Blue
               </button>
             </div>
-          </div>
-        </div>
-      </Section>
-
-      <div className="h-px bg-apple-border/50 my-2" />
-
-      <Section
-        id="playback"
-        title="Playback & Control"
-        subtitle="Timer & Loop Settings"
-        icon={Timer}
-        color="bg-blue-500/10 text-blue-600"
-      >
-        <div className="flex flex-col gap-6">
-          {/* Loop Mode */}
-          <div className="flex flex-col gap-3">
-             <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Loop Options</label>
-             <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={() => updateSettings({ loop: settings.loop === 'all' ? 'none' : 'all' })}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${settings.loop === 'all' ? 'bg-blue-500 border-blue-500 text-white shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
-                >
-                  <Repeat size={14} />
-                  <span className="text-[9px] font-black uppercase tracking-widest">Playlist</span>
-                </button>
-                <button 
-                  onClick={() => updateSettings({ loop: settings.loop === 'one' ? 'none' : 'one' })}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${settings.loop === 'one' ? 'bg-blue-500 border-blue-500 text-white shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
-                >
-                  <Repeat1 size={14} />
-                  <span className="text-[9px] font-black uppercase tracking-widest">Single</span>
-                </button>
-             </div>
-          </div>
-
-          <div className="h-px bg-apple-border/50" />
-
-          {/* Sleep Timer */}
-          <div className="flex flex-col gap-4">
-             <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-system-label">Sleep Timer</p>
-                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Auto-stop playback</p>
-                </div>
-                <button 
-                  onClick={() => updateSleepTimer({ isEnabled: !settings.sleepTimer.isEnabled, remainingSeconds: !settings.sleepTimer.isEnabled ? settings.sleepTimer.minutes * 60 : null })}
-                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.sleepTimer.isEnabled ? 'bg-indigo-500' : 'bg-system-tertiary-label'}`}
-                >
-                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.sleepTimer.isEnabled ? 12 : 0 }} />
-                </button>
-             </div>
-
-             <div className="flex items-center gap-3">
-                <input 
-                  type="number"
-                  min="1"
-                  max="240"
-                  value={settings.sleepTimer.minutes}
-                  onChange={(e) => updateSleepTimer({ minutes: Math.max(1, parseInt(e.target.value) || 1) })}
-                  className="w-20 h-10 bg-secondary-system-background rounded-xl border-none text-xs font-bold text-center focus:ring-1 focus:ring-indigo-500 text-system-label"
-                />
-                <span className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Minutes</span>
-                {settings.sleepTimer.isEnabled && settings.sleepTimer.remainingSeconds !== null && (
-                  <div className="ml-auto flex items-center gap-2 bg-indigo-500/10 px-3 py-1.5 rounded-full">
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-indigo-600 tabular-nums">
-                      {Math.floor(settings.sleepTimer.remainingSeconds / 60)}:{(settings.sleepTimer.remainingSeconds % 60).toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                )}
-             </div>
-          </div>
-
-          <div className="h-px bg-apple-border/50" />
-
-          {/* Display Stay Awake */}
-          <div className="flex items-center justify-between">
-             <div>
-               <p className="text-xs font-semibold text-system-label">Display Always ON</p>
-               <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Prevent screen sleep</p>
-             </div>
-             <button 
-               onClick={() => updateSettings({ displayAlwaysOn: !settings.displayAlwaysOn })}
-               className={`w-8 h-5 rounded-full relative transition-colors ${settings.displayAlwaysOn ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}
-             >
-               <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.displayAlwaysOn ? 12 : 0 }} />
-             </button>
           </div>
         </div>
       </Section>

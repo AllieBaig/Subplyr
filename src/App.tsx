@@ -201,12 +201,16 @@ function AppContent() {
   );
 }
 
+import { ModalProvider } from './components/SafeModal';
+
 export default function App() {
   return (
     <GlobalSafetyManager>
-      <AudioProvider>
-        <AppContent />
-      </AudioProvider>
+      <ModalProvider>
+        <AudioProvider>
+          <AppContent />
+        </AudioProvider>
+      </ModalProvider>
     </GlobalSafetyManager>
   );
 }
