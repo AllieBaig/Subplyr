@@ -2,6 +2,23 @@ import { VersionEntry } from '../types';
 
 export const APP_HISTORY: VersionEntry[] = [
   {
+    version: '1.4.0',
+    date: '2026-04-22',
+    changes: {
+      added: [
+        'Playback & Control hidden layer in Player',
+        'Intelligent Sleep Timer with live countdown',
+        'Display Always ON (Wake Lock) support',
+        'Dedicated Playback settings section'
+      ],
+      improved: [
+        'Organized settings hierarchy',
+        'Adaptive Loop Mode toggles (Single/Playlist)',
+        'Screen wake management for uninterrupted sessions'
+      ]
+    }
+  },
+  {
     version: '1.3.1',
     date: '2026-04-22',
     changes: {

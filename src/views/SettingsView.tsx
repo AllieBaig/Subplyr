@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
 import { NATURE_SOUNDS, AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette, Timer, Repeat, Repeat1 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -21,6 +21,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     updateAppearanceSettings,
     updateAudioTools,
     updateSettings,
+    updateSleepTimer,
     exportAppData,
     importAppData,
     relinkTrack,
@@ -353,6 +354,91 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 Soft Blue
               </button>
             </div>
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        id="playback"
+        title="Playback & Control"
+        subtitle="Timer & Loop Settings"
+        icon={Timer}
+        color="bg-blue-500/10 text-blue-600"
+      >
+        <div className="flex flex-col gap-6">
+          {/* Loop Mode */}
+          <div className="flex flex-col gap-3">
+             <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Loop Options</label>
+             <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={() => updateSettings({ loop: settings.loop === 'all' ? 'none' : 'all' })}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${settings.loop === 'all' ? 'bg-blue-500 border-blue-500 text-white shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                >
+                  <Repeat size={14} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Playlist</span>
+                </button>
+                <button 
+                  onClick={() => updateSettings({ loop: settings.loop === 'one' ? 'none' : 'one' })}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${settings.loop === 'one' ? 'bg-blue-500 border-blue-500 text-white shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                >
+                  <Repeat1 size={14} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Single</span>
+                </button>
+             </div>
+          </div>
+
+          <div className="h-px bg-apple-border/50" />
+
+          {/* Sleep Timer */}
+          <div className="flex flex-col gap-4">
+             <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Sleep Timer</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Auto-stop playback</p>
+                </div>
+                <button 
+                  onClick={() => updateSleepTimer({ isEnabled: !settings.sleepTimer.isEnabled, remainingSeconds: !settings.sleepTimer.isEnabled ? settings.sleepTimer.minutes * 60 : null })}
+                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.sleepTimer.isEnabled ? 'bg-indigo-500' : 'bg-system-tertiary-label'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.sleepTimer.isEnabled ? 12 : 0 }} />
+                </button>
+             </div>
+
+             <div className="flex items-center gap-3">
+                <input 
+                  type="number"
+                  min="1"
+                  max="240"
+                  value={settings.sleepTimer.minutes}
+                  onChange={(e) => updateSleepTimer({ minutes: Math.max(1, parseInt(e.target.value) || 1) })}
+                  className="w-20 h-10 bg-secondary-system-background rounded-xl border-none text-xs font-bold text-center focus:ring-1 focus:ring-indigo-500 text-system-label"
+                />
+                <span className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Minutes</span>
+                {settings.sleepTimer.isEnabled && settings.sleepTimer.remainingSeconds !== null && (
+                  <div className="ml-auto flex items-center gap-2 bg-indigo-500/10 px-3 py-1.5 rounded-full">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                    <span className="text-[10px] font-black text-indigo-600 tabular-nums">
+                      {Math.floor(settings.sleepTimer.remainingSeconds / 60)}:{(settings.sleepTimer.remainingSeconds % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
+             </div>
+          </div>
+
+          <div className="h-px bg-apple-border/50" />
+
+          {/* Display Stay Awake */}
+          <div className="flex items-center justify-between">
+             <div>
+               <p className="text-xs font-semibold text-system-label">Display Always ON</p>
+               <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Prevent screen sleep</p>
+             </div>
+             <button 
+               onClick={() => updateSettings({ displayAlwaysOn: !settings.displayAlwaysOn })}
+               className={`w-8 h-5 rounded-full relative transition-colors ${settings.displayAlwaysOn ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}
+             >
+               <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.displayAlwaysOn ? 12 : 0 }} />
+             </button>
           </div>
         </div>
       </Section>

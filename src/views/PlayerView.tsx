@@ -8,7 +8,8 @@ import {
   Sliders, ChevronDown, Check, X, 
   Moon, Zap, Focus as FocusIcon, List, Plus,
   Shuffle, Repeat, Repeat1, MoreHorizontal,
-  ChevronLeft, Music as MusicIcon, Flame, Droplets, Waves, Trees
+  ChevronLeft, Music as MusicIcon, Flame, Droplets, Waves, Trees,
+  Timer, Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -40,6 +41,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     updateNoiseSettings,
     updateSettings,
     updateAudioTools,
+    updateSleepTimer,
     addTrack
   } = useAudio();
 
@@ -391,6 +393,90 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         ))}
                       </div>
                   </LayerOption>
+
+                  {/* New Playback & Time Layer */}
+                  <LayerOption 
+                    icon={Timer} 
+                    label="Playback & Time" 
+                    isEnabled={settings.sleepTimer.isEnabled || settings.displayAlwaysOn || settings.loop !== 'none'} 
+                    onToggle={() => {}} // Virtual toggle for header
+                    color="text-blue-500"
+                    noVolume
+                    subtitle={settings.sleepTimer.isEnabled ? `Timer Active (${Math.ceil((settings.sleepTimer.remainingSeconds || 0) / 60)}m)` : 'Settings'}
+                  >
+                    <div className="flex flex-col gap-5 pt-2">
+                      {/* Loop Options */}
+                      <div className="space-y-3">
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-system-secondary-label px-1">Loop Mode</p>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => updateSettings({ loop: settings.loop === 'all' ? 'none' : 'all' })}
+                            className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all ${settings.loop === 'all' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                          >
+                            <Repeat size={16} />
+                            <span className="text-[9px] font-black uppercase">Playlist</span>
+                          </button>
+                          <button 
+                            onClick={() => updateSettings({ loop: settings.loop === 'one' ? 'none' : 'one' })}
+                            className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl border transition-all ${settings.loop === 'one' ? 'bg-blue-500 border-blue-500 text-white shadow-md' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                          >
+                            <Repeat1 size={16} />
+                            <span className="text-[9px] font-black uppercase">Single</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Display & Sleep */}
+                      <div className="grid grid-cols-1 gap-3">
+                         {/* Display Always ON */}
+                         <button 
+                            onClick={() => updateSettings({ displayAlwaysOn: !settings.displayAlwaysOn })}
+                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${settings.displayAlwaysOn ? 'bg-amber-500/10 border-amber-500/20' : 'bg-system-background border-apple-border'}`}
+                         >
+                            <div className="flex items-center gap-3">
+                              <Monitor size={16} className={settings.displayAlwaysOn ? 'text-amber-500' : 'text-system-secondary-label'} />
+                              <span className={`text-[11px] font-black uppercase tracking-tight ${settings.displayAlwaysOn ? 'text-amber-600' : 'text-system-label'}`}>Display Always ON</span>
+                            </div>
+                            <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.displayAlwaysOn ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}>
+                               <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.displayAlwaysOn ? 16 : 0 }} />
+                            </div>
+                         </button>
+
+                         {/* Sleep Timer */}
+                         <div className={`flex flex-col gap-4 p-4 rounded-2xl border transition-all ${settings.sleepTimer.isEnabled ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-system-background border-apple-border'}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Moon size={16} className={settings.sleepTimer.isEnabled ? 'text-indigo-500' : 'text-system-secondary-label'} />
+                                <span className={`text-[11px] font-black uppercase tracking-tight ${settings.sleepTimer.isEnabled ? 'text-indigo-600' : 'text-system-label'}`}>Sleep Timer</span>
+                              </div>
+                              <button 
+                                onClick={() => updateSleepTimer({ isEnabled: !settings.sleepTimer.isEnabled, remainingSeconds: !settings.sleepTimer.isEnabled ? settings.sleepTimer.minutes * 60 : null })}
+                                className={`w-8 h-4 rounded-full relative transition-colors ${settings.sleepTimer.isEnabled ? 'bg-indigo-500' : 'bg-system-tertiary-label'}`}
+                              >
+                                <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.sleepTimer.isEnabled ? 16 : 0 }} />
+                              </button>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type="number"
+                                min="1"
+                                max="240"
+                                value={settings.sleepTimer.minutes}
+                                onChange={(e) => updateSleepTimer({ minutes: Math.max(1, parseInt(e.target.value) || 1) })}
+                                className="w-16 h-8 bg-secondary-system-background rounded-lg border-none text-[12px] font-black text-center focus:ring-1 focus:ring-indigo-500"
+                              />
+                              <span className="text-[10px] font-bold text-system-secondary-label uppercase">Minutes</span>
+                              {settings.sleepTimer.isEnabled && settings.sleepTimer.remainingSeconds !== null && (
+                                <span className="ml-auto text-[10px] font-black text-indigo-500 tabular-nums">
+                                  {Math.floor(settings.sleepTimer.remainingSeconds / 60)}:{(settings.sleepTimer.remainingSeconds % 60).toString().padStart(2, '0')}
+                                </span>
+                              )}
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  </LayerOption>
                 </div>
 
                 {/* 3. Audio Tools */}
@@ -471,7 +557,7 @@ const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
   </button>
 );
 
-const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle, children }: any) => {
+const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, color, maxVol = 1, subtitle, children, noVolume }: any) => {
   return (
     <div className="bg-secondary-system-background border border-apple-border p-5 rounded-[2rem] flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -484,28 +570,32 @@ const LayerOption = ({ icon: Icon, label, isEnabled, onToggle, vol, setVol, colo
             {subtitle && <p className="text-[9px] text-system-secondary-label uppercase font-bold tracking-widest truncate">{subtitle}</p>}
           </div>
         </div>
-        <button 
-          onClick={() => onToggle(!isEnabled)}
-          className={`flex-shrink-0 w-10 h-6 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
-        >
-          <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: isEnabled ? 16 : 0 }} />
-        </button>
+        {!noVolume && (
+          <button 
+            onClick={() => onToggle(!isEnabled)}
+            className={`flex-shrink-0 w-10 h-6 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
+          >
+            <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: isEnabled ? 16 : 0 }} />
+          </button>
+        )}
       </div>
       
       {isEnabled && (
         <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="flex items-center gap-4">
-            <input 
-              type="range"
-              min={0}
-              max={maxVol}
-              step={0.01}
-              value={vol}
-              onChange={(e) => setVol(parseFloat(e.target.value))}
-              className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-system-label"
-            />
-            <span className="text-[10px] font-extrabold text-system-label w-8 text-right tabular-nums">{Math.round(vol * 100)}%</span>
-          </div>
+          {!noVolume && (
+            <div className="flex items-center gap-4">
+              <input 
+                type="range"
+                min={0}
+                max={maxVol}
+                step={0.01}
+                value={vol}
+                onChange={(e) => setVol(parseFloat(e.target.value))}
+                className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-system-label"
+              />
+              <span className="text-[10px] font-extrabold text-system-label w-8 text-right tabular-nums">{Math.round(vol * 100)}%</span>
+            </div>
+          )}
           {children}
         </div>
       )}

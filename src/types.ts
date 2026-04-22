@@ -102,5 +102,11 @@ export interface AppSettings {
   animationStyle: AnimationStyle;
   subliminalExpanded: boolean;
   showArtwork: boolean;
+  displayAlwaysOn: boolean;
+  sleepTimer: {
+    isEnabled: boolean;
+    minutes: number;
+    remainingSeconds: number | null;
+  };
   versionHistory: VersionEntry[];
 }

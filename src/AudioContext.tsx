@@ -68,6 +68,7 @@ interface AudioContextType {
   showToast: (message: string) => void;
   resetUISettings: () => void;
   clearAppCache: () => void;
+  updateSleepTimer: (newSettings: Partial<AppSettings['sleepTimer']>) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -269,6 +270,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     animationStyle: 'slide-up',
     subliminalExpanded: false,
     showArtwork: true,
+    displayAlwaysOn: false,
+    sleepTimer: {
+      isEnabled: false,
+      minutes: 30,
+      remainingSeconds: null
+    },
     versionHistory: APP_HISTORY
   };
   
@@ -607,6 +614,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const updateSleepTimer = (newSleep: Partial<AppSettings['sleepTimer']>) => {
+    setSettings(prev => ({
+      ...prev,
+      sleepTimer: { ...prev.sleepTimer, ...newSleep }
+    }));
+  };
+
   const createPlaylist = async (name: string, initialTrackIds: string[] = []) => {
     const playlistId = Math.random().toString(36).substr(2, 9);
     const playlist: Playlist = {
@@ -930,6 +944,107 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [currentPlaybackList, settings.shuffle, currentTrackIndex]);
 
+  // Display Always ON (Wake Lock)
+  useEffect(() => {
+    let wakeLock: any = null;
+
+    const requestWakeLock = async () => {
+      if (!settings.displayAlwaysOn || !isPlaying) return;
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+          console.log('[WakeLock] Active');
+        }
+      } catch (err) {
+        console.warn('[WakeLock] Failed:', err);
+      }
+    };
+
+    const releaseWakeLock = async () => {
+      if (wakeLock) {
+        await wakeLock.release();
+        wakeLock = null;
+        console.log('[WakeLock] Released');
+      }
+    };
+
+    if (settings.displayAlwaysOn && isPlaying) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+
+    const handleVisibilityChange = () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      releaseWakeLock();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [settings.displayAlwaysOn, isPlaying]);
+
+  // Sleep Timer logic
+  useEffect(() => {
+    let interval: any = null;
+
+    if (settings.sleepTimer.isEnabled && isPlaying) {
+      // Initialize remaining seconds if not set
+      if (settings.sleepTimer.remainingSeconds === null) {
+        setSettings(prev => ({
+          ...prev,
+          sleepTimer: {
+            ...prev.sleepTimer,
+            remainingSeconds: prev.sleepTimer.minutes * 60
+          }
+        }));
+      }
+
+      interval = setInterval(() => {
+        setSettings(prev => {
+          if (!prev.sleepTimer.isEnabled || !isPlaying) return prev;
+          
+          const rem = prev.sleepTimer.remainingSeconds;
+          if (rem === null) return prev;
+
+          if (rem <= 1) {
+            clearInterval(interval);
+            setTimeout(() => {
+              setIsPlaying(false);
+              showToast("Sleep timer: Playback stopped");
+            }, 0);
+            return {
+              ...prev,
+              sleepTimer: {
+                ...prev.sleepTimer,
+                isEnabled: false,
+                remainingSeconds: null
+              }
+            };
+          }
+
+          return {
+            ...prev,
+            sleepTimer: {
+              ...prev.sleepTimer,
+              remainingSeconds: rem - 1
+            }
+          };
+        });
+      }, 1000);
+    } else {
+      if (interval) clearInterval(interval);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [settings.sleepTimer.isEnabled, isPlaying]);
+
   return (
     <AudioContext.Provider value={{
       tracks,
@@ -988,7 +1103,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       toast,
       showToast,
       resetUISettings,
-      clearAppCache
+      clearAppCache,
+      updateSleepTimer
     }}>
       {children}
     </AudioContext.Provider>
