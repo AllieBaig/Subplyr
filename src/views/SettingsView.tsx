@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
 import { NATURE_SOUNDS, AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
-import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History } from 'lucide-react';
+import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SettingsView({ onBack }: { onBack?: () => void }) {
@@ -17,6 +18,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     updateNatureSettings,
     updateNoiseSettings,
     updateLibrarySettings,
+    updateAppearanceSettings,
     updateAudioTools,
     updateSettings,
     exportAppData,
@@ -291,6 +293,70 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
   return (
     <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto">
       <VersionHistory />
+
+      <Section
+        id="appearance"
+        title="Appearance"
+        subtitle="Themes & Mode"
+        icon={Palette}
+        color="bg-pink-500/10 text-pink-600"
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold">Follow System</p>
+                <p className="text-[9px] text-apple-text-secondary font-bold uppercase tracking-widest mt-0.5">Sync with device theme</p>
+              </div>
+              <button 
+                onClick={() => updateAppearanceSettings({ followSystem: !settings.appearance.followSystem })}
+                className={`w-8 h-5 rounded-full relative transition-colors ${settings.appearance.followSystem ? 'bg-apple-blue' : 'bg-gray-200'}`}
+              >
+                <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.appearance.followSystem ? 12 : 0 }} />
+              </button>
+            </div>
+          </div>
+
+          {!settings.appearance.followSystem && (
+            <div className="flex flex-col gap-3">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Manual Theme</label>
+              <div className="bg-gray-100 p-1 rounded-2xl flex items-center h-10">
+                <button 
+                  onClick={() => updateAppearanceSettings({ theme: 'light' })}
+                  className={`flex-1 h-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.appearance.theme === 'light' ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                >
+                  <Sun size={12} /> Light
+                </button>
+                <button 
+                  onClick={() => updateAppearanceSettings({ theme: 'dark' })}
+                  className={`flex-1 h-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.appearance.theme === 'dark' ? 'bg-white shadow-sm text-apple-blue' : 'text-apple-text-secondary'}`}
+                >
+                  <Moon size={12} /> Dark
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-apple-text-secondary">Dark Mode Style</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button 
+                onClick={() => updateAppearanceSettings({ darkModeStyle: 'soft-purple' })}
+                className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-[10px] font-bold transition-all ${settings.appearance.darkModeStyle === 'soft-purple' ? 'bg-[#AF9CF3] text-white border-[#AF9CF3]' : 'bg-white border-black/5 text-apple-text-secondary'}`}
+              >
+                Soft Purple
+              </button>
+              <button 
+                onClick={() => updateAppearanceSettings({ darkModeStyle: 'soft-blue' })}
+                className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-[10px] font-bold transition-all ${settings.appearance.darkModeStyle === 'soft-blue' ? 'bg-[#9CC8F3] text-white border-[#9CC8F3]' : 'bg-white border-black/5 text-apple-text-secondary'}`}
+              >
+                Soft Blue
+              </button>
+            </div>
+          </div>
+        </div>
+      </Section>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
         {/* Row 1: Core Layers */}
         <div className="flex flex-col gap-6">

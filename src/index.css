@@ -1,18 +1,63 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
+:root {
+  --apple-bg: #FFFFFF;
+  --apple-card: #FFFFFF;
+  --apple-text-primary: #000000;
+  --apple-text-secondary: #86868B;
+  --apple-blue: #007AFF;
+  --apple-border: rgba(0, 0, 0, 0.05);
+  --apple-gray-100: #f3f4f6;
+  --apple-gray-50: #f9fafb;
+}
+
+[data-theme='dark'] {
+  --apple-bg: #000000;
+  --apple-card: #1C1C1E;
+  --apple-text-primary: #FFFFFF;
+  --apple-text-secondary: #A1A1A6;
+  --apple-blue: #0A84FF;
+  --apple-border: rgba(255, 255, 255, 0.1);
+  --apple-gray-100: #2C2C2E;
+  --apple-gray-50: #1c1c1e;
+}
+
+[data-theme='soft-purple'] {
+  --apple-bg: #0C0B10;
+  --apple-card: #14121A;
+  --apple-text-primary: #F0EDF5;
+  --apple-text-secondary: #9C96AC;
+  --apple-blue: #AF9CF3;
+  --apple-border: rgba(175, 156, 243, 0.1);
+  --apple-gray-100: #1D1A25;
+  --apple-gray-50: #14121a;
+}
+
+[data-theme='soft-blue'] {
+  --apple-bg: #0B0D10;
+  --apple-card: #12151A;
+  --apple-text-primary: #EDF1F5;
+  --apple-text-secondary: #96A2AC;
+  --apple-blue: #9CC8F3;
+  --apple-border: rgba(156, 200, 243, 0.1);
+  --apple-gray-100: #1A1E25;
+  --apple-gray-50: #12151a;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-apple-bg: #FFFFFF;
-  --color-apple-card: #FFFFFF;
-  --color-apple-text-primary: #000000;
-  --color-apple-text-secondary: #86868B;
-  --color-apple-blue: #007AFF;
+  --color-apple-bg: var(--apple-bg);
+  --color-apple-card: var(--apple-card);
+  --color-apple-text-primary: var(--apple-text-primary);
+  --color-apple-text-secondary: var(--apple-text-secondary);
+  --color-apple-blue: var(--apple-blue);
+  --color-apple-border: var(--apple-border);
 }
 
 @layer base {
   body {
-    @apply font-sans bg-apple-bg text-apple-text-primary antialiased selection:bg-apple-blue/20;
+    @apply font-sans bg-apple-bg text-apple-text-primary antialiased selection:bg-apple-blue/20 transition-colors duration-500;
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
   }

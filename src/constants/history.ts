@@ -2,6 +2,21 @@ import { VersionEntry } from '../types';
 
 export const APP_HISTORY: VersionEntry[] = [
   {
+    version: '1.3.0',
+    date: '2026-04-22',
+    changes: {
+      added: [
+        'Adaptive Theme System (Light, Dark, System)',
+        'Soft Dark Mode styles (Soft Purple & Soft Blue)',
+        'Appearance management section in settings'
+      ],
+      improved: [
+        'Color consistency across all UI components',
+        'Smooth theme transitions'
+      ]
+    }
+  },
+  {
     version: '1.2.0',
     date: '2026-04-22',
     changes: {

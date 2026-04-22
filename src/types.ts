@@ -69,6 +69,9 @@ export interface VersionEntry {
   };
 }
 
+export type Theme = 'light' | 'dark';
+export type DarkModeStyle = 'soft-purple' | 'soft-blue';
+
 export interface AppSettings {
   subliminal: SubliminalSettings;
   binaural: BinauralSettings;
@@ -83,6 +86,11 @@ export interface AppSettings {
     sort: SortOption;
     group: GroupOption;
     groupByMinutes: boolean;
+  };
+  appearance: {
+    theme: Theme;
+    followSystem: boolean;
+    darkModeStyle: DarkModeStyle;
   };
   miniMode: boolean;
   hiddenLayersPosition: 'top' | 'bottom';

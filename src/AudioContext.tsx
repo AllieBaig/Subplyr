@@ -31,6 +31,7 @@ interface AudioContextType {
   updateNatureSettings: (newSettings: Partial<AppSettings['nature']>) => void;
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
+  updateAppearanceSettings: (newSettings: Partial<AppSettings['appearance']>) => void;
   updateAudioTools: (newSettings: Partial<AppSettings['audioTools']>) => void;
   exportAppData: () => Promise<void>;
   importAppData: (file: File) => Promise<void>;
@@ -255,6 +256,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       group: 'alphabetical',
       groupByMinutes: false,
     },
+    appearance: {
+      theme: 'light',
+      followSystem: true,
+      darkModeStyle: 'soft-purple',
+    },
     miniMode: false,
     hiddenLayersPosition: 'bottom',
     loop: 'none',
@@ -433,6 +439,34 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     db.saveSettings(settings);
   }, [settings]);
 
+  // Theme Manager
+  useEffect(() => {
+    const applyTheme = () => {
+      const { theme, followSystem, darkModeStyle } = settings.appearance;
+      let targetTheme = theme;
+
+      if (followSystem) {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        targetTheme = isDark ? 'dark' : 'light';
+      }
+
+      if (targetTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', darkModeStyle);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    };
+
+    applyTheme();
+
+    if (settings.appearance.followSystem) {
+      const matcher = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = () => applyTheme();
+      matcher.addEventListener('change', listener);
+      return () => matcher.removeEventListener('change', listener);
+    }
+  }, [settings.appearance]);
+
   // Playlist Memory Tracker
   useEffect(() => {
     if (!playingPlaylistId || isLoading || currentTrackIndex === null || !isPlaying) return;
@@ -558,6 +592,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({
       ...prev,
       library: { ...prev.library, ...newLib }
+    }));
+  };
+
+  const updateAppearanceSettings = (newApp: Partial<AppSettings['appearance']>) => {
+    setSettings(prev => ({
+      ...prev,
+      appearance: { ...prev.appearance, ...newApp }
     }));
   };
 
@@ -912,6 +953,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateNatureSettings,
       updateNoiseSettings,
       updateLibrarySettings,
+      updateAppearanceSettings,
       updateAudioTools,
       exportAppData,
       importAppData,
