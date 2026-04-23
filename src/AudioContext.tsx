@@ -31,6 +31,7 @@ interface AudioContextType {
   updateBinauralSettings: (newSettings: Partial<AppSettings['binaural']>) => void;
   updateNatureSettings: (newSettings: Partial<AppSettings['nature']>) => void;
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
+  updateDidgeridooSettings: (newSettings: Partial<AppSettings['didgeridoo']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   updateAppearanceSettings: (newSettings: Partial<AppSettings['appearance']>) => void;
   updateVisibilitySettings: (newSettings: Partial<AppSettings['visibility']>) => void;
@@ -285,6 +286,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       isEnabled: false,
       type: 'white',
       volume: 0.2,
+    },
+    didgeridoo: {
+      isEnabled: false,
+      volume: 0.3,
+      gainDb: -6,
+      playbackRate: 1.0,
+      isLooping: true
     },
     audioTools: {
       gainDb: 0,
@@ -610,6 +618,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({
       ...prev,
       noise: { ...prev.noise, ...newNoi }
+    }));
+  };
+
+  const updateDidgeridooSettings = (newDid: Partial<AppSettings['didgeridoo']>) => {
+    setSettings(prev => ({
+      ...prev,
+      didgeridoo: { ...prev.didgeridoo, ...newDid }
     }));
   };
 
@@ -1090,6 +1105,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateBinauralSettings,
       updateNatureSettings,
       updateNoiseSettings,
+      updateDidgeridooSettings,
       updateLibrarySettings,
       updateAppearanceSettings,
       updateVisibilitySettings,

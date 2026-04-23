@@ -47,6 +47,13 @@ export default function AudioEngine() {
   const noiseGainRef = useRef<GainNode | null>(null);
   const natureAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Didgeridoo Refs
+  const didgOscRef = useRef<OscillatorNode | null>(null);
+  const didgSubOscRef = useRef<OscillatorNode | null>(null);
+  const didgFilterRef = useRef<BiquadFilterNode | null>(null);
+  const didgGainRef = useRef<GainNode | null>(null);
+  const didgLfoRef = useRef<OscillatorNode | null>(null);
+
   // iOS Background Audio & Media Session Setup
   useEffect(() => {
     if ('mediaSession' in navigator) {
@@ -256,6 +263,68 @@ export default function AudioEngine() {
       }
     } catch (err) {
       console.error("Binaural setup failed:", err);
+    }
+  };
+
+  const setupDidgeridoo = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      if (!didgOscRef.current) {
+        const osc = ctx.createOscillator();
+        const subOsc = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        const gain = ctx.createGain();
+
+        // Deep drone fundamental (around 65Hz)
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(65 * settings.didgeridoo.playbackRate, ctx.currentTime);
+
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(65 * settings.didgeridoo.playbackRate, ctx.currentTime);
+
+        // Vocalizing filter
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(180, ctx.currentTime);
+        filter.Q.setValueAtTime(15, ctx.currentTime);
+
+        // Slow modulation for "breath"
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(0.15, ctx.currentTime);
+        lfoGain.gain.setValueAtTime(60, ctx.currentTime);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        osc.connect(filter);
+        subOsc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+
+        osc.start();
+        subOsc.start();
+        lfo.start();
+
+        didgOscRef.current = osc;
+        didgSubOscRef.current = subOsc;
+        didgFilterRef.current = filter;
+        didgGainRef.current = gain;
+        didgLfoRef.current = lfo;
+      }
+    } catch (err) {
+      console.error("Didgeridoo setup failed:", err);
     }
   };
 
@@ -629,6 +698,36 @@ export default function AudioEngine() {
       }
     }
   }, [isPlaying, settings.noise.isEnabled, settings.noise.type]);
+
+  // Handle Didgeridoo Layer
+  useEffect(() => {
+    if (isPlaying && settings.didgeridoo.isEnabled && settings.didgeridoo.isLooping) {
+      setupDidgeridoo();
+      if (didgGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        // Apply both volume and gainDb for precision control
+        const gainValue = settings.didgeridoo.volume * Math.pow(10, settings.didgeridoo.gainDb / 20);
+        didgGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (didgGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        didgGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+      }
+    }
+  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb]);
+
+  // Handle Didgeridoo Real-time Updates (Rate)
+  useEffect(() => {
+    if (didgOscRef.current && didgSubOscRef.current && audioCtxRef.current) {
+      const ctx = audioCtxRef.current;
+      const baseFreq = 65 * settings.didgeridoo.playbackRate;
+      didgOscRef.current.frequency.setTargetAtTime(baseFreq, ctx.currentTime, 0.2);
+      didgSubOscRef.current.frequency.setTargetAtTime(baseFreq, ctx.currentTime, 0.2);
+    }
+  }, [settings.didgeridoo.playbackRate]);
 
   // Handle Nature Layer
   useEffect(() => {

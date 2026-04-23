@@ -50,6 +50,14 @@ export interface NoiseSettings {
   volume: number;
 }
 
+export interface DidgeridooSettings {
+  isEnabled: boolean;
+  volume: number;
+  gainDb: number;
+  playbackRate: number;
+  isLooping: boolean;
+}
+
 export interface AudioTools {
   gainDb: number;
   normalizeTargetDb: number | null;
@@ -79,6 +87,7 @@ export interface AppSettings {
   binaural: BinauralSettings;
   nature: NatureSettings;
   noise: NoiseSettings;
+  didgeridoo: DidgeridooSettings;
   audioTools: AudioTools;
   mainVolume: number;
   playbackRate: number;

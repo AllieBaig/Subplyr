@@ -17,6 +17,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     updateBinauralSettings,
     updateNatureSettings,
     updateNoiseSettings,
+    updateDidgeridooSettings,
     updateLibrarySettings,
     updateAppearanceSettings,
     updateVisibilitySettings,
@@ -743,6 +744,71 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                    max={0.5}
                    color="orange-500"
                 />
+              </div>
+            </Section>
+
+            <Section
+              id="didgeridoo"
+              title="Didgeridoo"
+              subtitle="Deep Drone Layer"
+              icon={Music}
+              color="bg-amber-700/10 text-amber-800"
+              isEnabled={settings.didgeridoo.isEnabled}
+              onToggle={(val: boolean) => updateDidgeridooSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-8">
+                  <VolumeSlider 
+                    label="Didgeridoo Volume"
+                    value={settings.didgeridoo.volume}
+                    onChange={(v: number) => updateDidgeridooSettings({ volume: v })}
+                    max={1.0}
+                    color="amber-700"
+                  />
+                  <DbSlider 
+                    label="Output Gain (dB)"
+                    value={settings.didgeridoo.gainDb}
+                    onChange={(v: number) => updateDidgeridooSettings({ gainDb: v })}
+                    min={-60}
+                    max={0}
+                  />
+                </div>
+
+                <div className="h-px bg-apple-border/50" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[13px] font-bold text-system-label">Loop Drone</p>
+                    <p className="text-[10px] text-system-secondary-label font-bold uppercase tracking-widest mt-1">Seamless Meditation Cycle</p>
+                  </div>
+                  <button 
+                    onClick={() => updateDidgeridooSettings({ isLooping: !settings.didgeridoo.isLooping })}
+                    className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${settings.didgeridoo.isLooping ? 'bg-amber-800' : 'bg-system-tertiary-label'}`}
+                  >
+                    <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.didgeridoo.isLooping ? 20 : 0 }} />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3 pt-2">
+                  <div className="flex justify-between items-end px-1">
+                    <p className="text-[10px] font-black text-system-secondary-label uppercase tracking-widest">Base Frequency (Speed)</p>
+                    <span className="text-xs font-black text-amber-800 tabular-nums">{Math.round(65 * settings.didgeridoo.playbackRate)}Hz</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <input 
+                      type="range" min={0.5} max={2.0} step={0.1} 
+                      value={settings.didgeridoo.playbackRate} 
+                      onChange={(e) => updateDidgeridooSettings({ playbackRate: parseFloat(e.target.value) })}
+                      className="flex-1 h-1.5 bg-secondary-system-background rounded-full appearance-none accent-amber-800 border border-apple-border"
+                    />
+                    <button 
+                      onClick={() => updateDidgeridooSettings({ playbackRate: 1.0 })}
+                      className="text-[10px] font-bold text-amber-800 uppercase tracking-widest hover:bg-amber-800/10 px-2 py-1 rounded-lg transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
               </div>
             </Section>
           </>
