@@ -94,24 +94,24 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     };
 
     return (
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-between items-end">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">{label}</label>
-          <div className="flex items-center gap-1 bg-system-background px-2 py-0.5 rounded-lg border border-apple-border">
+      <div className="flex flex-col gap-3 w-full">
+        <div className="flex justify-between items-baseline px-1">
+          <label className="text-[11px] font-bold uppercase tracking-widest text-system-secondary-label">{label}</label>
+          <div className="flex items-center gap-1">
             <input 
               type="text"
               value={inputValue}
               onChange={(e) => handleTextChange(e.target.value)}
-              className="w-7 text-[10px] font-bold text-system-label bg-transparent text-right outline-none"
+              className="w-8 text-[12px] font-black text-system-label bg-transparent text-right outline-none"
             />
-            <span className="text-[10px] font-bold text-system-secondary-label">%</span>
+            <span className="text-[10px] font-bold text-system-tertiary-label">%</span>
           </div>
         </div>
         <input 
           type="range" min={min} max={max} step={step} 
           value={value} 
           onChange={(e) => onChange(parseFloat(e.target.value))}
-          className={`w-full h-1.5 bg-secondary-system-background rounded-full appearance-none accent-${color}`}
+          className={`w-full h-1.5 bg-secondary-system-background rounded-full appearance-none accent-${color} cursor-pointer`}
         />
       </div>
     );
@@ -134,24 +134,24 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     };
 
     return (
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-between items-end">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">{label}</label>
-          <div className="flex items-center gap-1 bg-system-background px-2 py-0.5 rounded-lg border border-apple-border">
+      <div className="flex flex-col gap-3 w-full">
+        <div className="flex justify-between items-baseline px-1">
+          <label className="text-[11px] font-bold uppercase tracking-widest text-system-secondary-label">{label}</label>
+          <div className="flex items-center gap-1">
             <input 
               type="text"
               value={inputValue}
               onChange={(e) => handleTextChange(e.target.value)}
-              className="w-8 text-[10px] font-bold text-system-label bg-transparent text-right outline-none"
+              className="w-10 text-[12px] font-black text-system-label bg-transparent text-right outline-none"
             />
-            <span className="text-[10px] font-bold text-system-secondary-label">{unit}</span>
+            <span className="text-[10px] font-bold text-system-tertiary-label">{unit}</span>
           </div>
         </div>
         <input 
           type="range" min={min} max={max} step={1} 
           value={value} 
           onChange={(e) => onChange(parseInt(e.target.value))}
-          className="w-full h-1.5 bg-secondary-system-background rounded-full appearance-none accent-gray-700"
+          className="w-full h-1.5 bg-secondary-system-background rounded-full appearance-none accent-gray-700 cursor-pointer"
         />
       </div>
     );
@@ -160,37 +160,37 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
   const Section = ({ id, title, subtitle, icon: Icon, color, children, isEnabled, onToggle }: any) => {
     const isExpanded = isSectionExpanded(id);
     return (
-      <div className={`bg-apple-card rounded-[2rem] border border-apple-border shadow-sm overflow-hidden mb-4 transition-all duration-300 ${settings.bigTouchMode ? 'rounded-[2.5rem]' : ''}`}>
-        <div className={`flex items-center ${settings.bigTouchMode ? 'min-h-[88px]' : 'min-h-[72px]'}`}>
+      <div className={`bg-apple-card rounded-[1.5rem] border border-apple-border shadow-sm overflow-hidden mb-4 transition-all duration-300`}>
+        <div className={`flex items-center min-h-[64px]`}>
           <button 
             onClick={() => toggleSection(id)}
-            className={`flex-1 flex items-center gap-4 text-left hover:bg-secondary-system-background transition-colors h-full ${settings.bigTouchMode ? 'p-6' : 'p-5'}`}
+            className={`flex-1 flex items-center gap-4 text-left hover:bg-secondary-system-background transition-colors h-full px-5 py-4`}
           >
-            <div className={`${settings.bigTouchMode ? 'w-12 h-12 rounded-[1.25rem]' : 'w-10 h-10 rounded-2xl'} ${color} flex-shrink-0 flex items-center justify-center`}>
-              <Icon size={settings.bigTouchMode ? 24 : 20} />
+            <div className={`w-9 h-9 rounded-xl ${color} flex-shrink-0 flex items-center justify-center shadow-sm`}>
+              <Icon size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className={`font-semibold truncate text-system-label ${settings.bigTouchMode ? 'text-base' : 'text-sm'}`}>{title}</h3>
-              <p className={`text-system-secondary-label font-medium uppercase tracking-wider truncate ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{subtitle}</p>
+              <h3 className={`font-bold truncate text-system-label text-[14px]`}>{title}</h3>
+              <p className={`text-system-secondary-label font-bold uppercase tracking-widest truncate text-[9px]`}>{subtitle}</p>
             </div>
             <motion.div
               animate={{ rotate: isExpanded ? 90 : 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="flex-shrink-0"
+              className="flex-shrink-0 ml-2"
             >
-              <ChevronRight size={settings.bigTouchMode ? 22 : 18} className="text-system-secondary-label" />
+              <ChevronRight size={16} className="text-system-tertiary-label" />
             </motion.div>
           </button>
           {onToggle && (
-            <div className={`${settings.bigTouchMode ? 'pr-6' : 'pr-5'} flex-shrink-0 h-full flex items-center`}>
+            <div className={`pr-5 flex-shrink-0 h-full flex items-center`}>
               <button 
                 onClick={() => onToggle(!isEnabled)}
-                className={`${settings.bigTouchMode ? 'w-12 h-7' : 'w-10 h-6'} rounded-full relative transition-colors duration-200 ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
+                className={`w-10 h-6 rounded-full relative transition-colors duration-200 ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
               >
                 <motion.div 
-                  className={`absolute top-1 left-1 bg-white rounded-full ${settings.bigTouchMode ? 'w-5 h-5' : 'w-4 h-4'}`}
-                  animate={{ x: isEnabled ? (settings.bigTouchMode ? 20 : 16) : 0 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                   className={`absolute top-1 left-1 bg-white rounded-full w-4 h-4 shadow-sm`}
+                   animate={{ x: isEnabled ? 16 : 0 }}
+                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
               </button>
             </div>
@@ -200,13 +200,13 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
         <AnimatePresence initial={false}>
           {isExpanded && (
             <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 35, mass: 0.8 }}
-              className="border-t border-apple-border bg-secondary-system-background/30 overflow-hidden"
+               initial={{ height: 0, opacity: 0 }}
+               animate={{ height: 'auto', opacity: 1 }}
+               exit={{ height: 0, opacity: 0 }}
+               transition={{ type: 'spring', stiffness: 300, damping: 35, mass: 0.8 }}
+               className="border-t border-apple-border bg-secondary-system-background/20"
             >
-              <div className={settings.bigTouchMode ? 'p-8' : 'p-6'}>
+              <div className="p-5 flex flex-col gap-6">
                 {children}
               </div>
             </motion.div>
@@ -496,57 +496,56 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
       >
         <div className="flex flex-col gap-2">
           {/* Subliminal Audio is ALWAYS visible inside this group */}
-          <Section 
+          <Section
             id="subliminal"
-              title="Subliminal Audio"
-              subtitle="Secondary Layer"
-              icon={Ear}
-              color="bg-apple-blue/10 text-apple-blue"
-              isEnabled={settings.subliminal.isEnabled}
-              onToggle={(val: boolean) => updateSubliminalSettings({ isEnabled: val })}
-            >
-            <div className="flex flex-col gap-8">
-              {/* 1. Mode Toggle */}
-              <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-system-secondary-label px-1">Playback Mode</label>
-                <div className="bg-secondary-system-background p-1.5 rounded-[1.25rem] flex items-center h-12 shadow-inner">
+            title="Subliminal Audio"
+            subtitle="Mindful Layer"
+            icon={Ear}
+            color="bg-apple-blue/10 text-apple-blue"
+            isEnabled={settings.subliminal.isEnabled}
+            onToggle={(val: boolean) => updateSubliminalSettings({ isEnabled: val })}
+          >
+            <div className="flex flex-col gap-6">
+              {/* 1. Mode Selector (Segmented Control) */}
+              <div className="flex flex-col gap-2.5">
+                <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10 shadow-inner">
                   <button 
                     onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
-                    className={`flex-1 h-full text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-md text-apple-blue scale-[1.02]' : 'text-system-secondary-label hover:text-system-label'}`}
+                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                   >
-                    Track Mode
+                    Single Track
                   </button>
                   <button 
                     onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
-                    className={`flex-1 h-full text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-md text-apple-blue scale-[1.02]' : 'text-system-secondary-label hover:text-system-label'}`}
+                    className={`flex-1 h-full text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                   >
-                    Playlist Mode
+                    Full Playlist
                   </button>
                 </div>
               </div>
 
-              {/* 2. Source Selection (Playlist) */}
+              {/* 2. Source Selection */}
               <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-system-secondary-label px-1">Source Playlist</label>
-                <div className="grid grid-cols-1 gap-2.5">
+                <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Source Playlist</p>
+                <div className="flex flex-col gap-2">
                   {playlists.length === 0 ? (
-                    <div className="p-8 border-2 border-dashed border-apple-border rounded-3xl flex flex-col items-center justify-center text-center gap-2">
-                       <Music className="text-system-tertiary-label mb-1" size={24} />
-                       <p className="text-[11px] font-bold text-system-secondary-label uppercase tracking-widest">No Playlists Available</p>
+                    <div className="p-6 border border-dashed border-apple-border rounded-2xl flex flex-col items-center justify-center text-center gap-2">
+                       <Music className="text-system-tertiary-label mb-1" size={18} />
+                       <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">No Playlists Available</p>
                     </div>
                   ) : (
                     playlists.map(playlist => (
                       <button
                         key={playlist.id}
                         onClick={() => updateSubliminalSettings({ sourcePlaylistId: playlist.id })}
-                        className={`group p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between ${settings.subliminal.sourcePlaylistId === playlist.id ? 'border-apple-blue bg-apple-blue/5 shadow-sm' : 'border-apple-border bg-system-background hover:border-system-tertiary-label'}`}
+                        className={`p-4 rounded-xl border transition-all text-left flex items-center justify-between min-h-[56px] ${settings.subliminal.sourcePlaylistId === playlist.id ? 'border-apple-blue bg-apple-blue/5' : 'border-apple-border bg-system-background'}`}
                       >
                         <div className="min-w-0">
-                          <p className={`text-sm font-bold truncate ${settings.subliminal.sourcePlaylistId === playlist.id ? 'text-apple-blue' : 'text-system-label'}`}>{playlist.name}</p>
-                          <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest mt-0.5">{playlist.trackIds.length} tracks</p>
+                          <p className={`text-[13px] font-bold truncate ${settings.subliminal.sourcePlaylistId === playlist.id ? 'text-apple-blue' : 'text-system-label'}`}>{playlist.name}</p>
+                          <p className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest mt-0.5">{playlist.trackIds.length} tracks</p>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${settings.subliminal.sourcePlaylistId === playlist.id ? 'bg-apple-blue border-apple-blue' : 'border-apple-border group-hover:border-system-tertiary-label'}`}>
-                          {settings.subliminal.sourcePlaylistId === playlist.id && <div className="w-2 h-2 rounded-full bg-white" />}
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${settings.subliminal.sourcePlaylistId === playlist.id ? 'bg-apple-blue border-apple-blue' : 'border-apple-border'}`}>
+                          {settings.subliminal.sourcePlaylistId === playlist.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
                       </button>
                     ))
@@ -554,11 +553,11 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 </div>
               </div>
 
-              {/* 3. Track Selection (Only in Track Mode) */}
+              {/* 3. Track List (Only in Single Track mode) */}
               {!settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId && (
-                <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-system-secondary-label px-1">Select Active Track</label>
-                  <div className="bg-system-background rounded-3xl border-2 border-apple-border overflow-hidden divide-y divide-apple-border/50">
+                <div className="flex flex-col gap-3">
+                  <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Active Track</p>
+                  <div className="bg-system-background rounded-2xl border border-apple-border divide-y divide-apple-border/50 overflow-hidden">
                     {playlists.find(p => p.id === settings.subliminal.sourcePlaylistId)?.trackIds.map(tid => {
                       const t = tracks.find(mt => mt.id === tid);
                       if (!t) return null;
@@ -567,17 +566,15 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                         <button
                           key={tid}
                           onClick={() => updateSubliminalSettings({ selectedTrackId: tid })}
-                          className={`w-full p-4 flex items-center justify-between group transition-colors ${isSelected ? 'bg-apple-blue/[0.03]' : 'hover:bg-secondary-system-background'}`}
+                          className={`w-full p-4 flex items-center justify-between transition-colors min-h-[56px] text-left ${isSelected ? 'bg-apple-blue/5 shadow-inner' : 'hover:bg-secondary-system-background'}`}
                         >
-                          <div className="flex items-center gap-4 min-w-0">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isSelected ? 'bg-apple-blue text-white' : 'bg-secondary-system-background text-system-tertiary-label'}`}>
-                              <Music size={14} />
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-apple-blue text-white' : 'bg-secondary-system-background text-system-tertiary-label'}`}>
+                              <Music size={12} />
                             </div>
-                            <span className={`text-[13px] font-bold truncate ${isSelected ? 'text-apple-blue font-black' : 'text-system-label'}`}>{t.name}</span>
+                            <span className={`text-[13px] font-bold truncate ${isSelected ? 'text-apple-blue' : 'text-system-label'}`}>{t.name}</span>
                           </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-apple-blue border-apple-blue' : 'border-apple-border group-hover:border-system-tertiary-label'}`}>
-                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </div>
+                          {isSelected && <Check size={14} className="text-apple-blue" />}
                         </button>
                       );
                     })}
@@ -585,107 +582,123 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 </div>
               )}
 
-              {/* 4. Performance Controls */}
-              <div className="flex flex-col gap-8 pt-8 mt-4 border-t border-apple-border mb-2">
-                <div className="space-y-8">
-                  <VolumeSlider 
-                    label="Subliminal Intensity"
-                    value={settings.subliminal.volume}
-                    onChange={(v: number) => updateSubliminalSettings({ volume: v })}
-                    max={0.3}
-                    color="apple-blue"
-                  />
-                  <DbSlider 
-                    label="Output Gain (dB)"
-                    value={settings.subliminal.gainDb}
-                    onChange={(v: number) => updateSubliminalSettings({ gainDb: v })}
-                    min={-60}
-                    max={0}
-                  />
-                </div>
+              {/* 4. Controls (Full Width Rows) */}
+              <div className="flex flex-col gap-8 pt-4">
+                <VolumeSlider 
+                  label="Subliminal Intensity"
+                  value={settings.subliminal.volume}
+                  onChange={(v: number) => updateSubliminalSettings({ volume: v })}
+                  max={0.3}
+                  color="apple-blue"
+                />
+                <DbSlider 
+                  label="Precision Output"
+                  value={settings.subliminal.gainDb}
+                  onChange={(v: number) => updateSubliminalSettings({ gainDb: v })}
+                  min={-60}
+                  max={12}
+                />
 
-                <div className="bg-secondary-system-background/50 p-6 rounded-[2rem] border-2 border-apple-border space-y-6">
-                   <div className="flex items-center justify-between">
-                      <div>
-                         <p className="text-[13px] font-bold text-system-label">Continuous Loop</p>
-                         <p className="text-[10px] text-system-secondary-label font-bold uppercase tracking-widest mt-1">Repeat subliminal layer</p>
-                      </div>
-                      <button 
-                        onClick={() => updateSubliminalSettings({ isLooping: !settings.subliminal.isLooping })}
-                        className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${settings.subliminal.isLooping ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-                      >
-                        <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.subliminal.isLooping ? 20 : 0 }} />
-                      </button>
-                   </div>
-                   
-                   <div className="space-y-4">
-                      <div className="flex justify-between items-end px-1">
-                         <p className="text-[10px] font-black text-system-secondary-label uppercase tracking-[0.15em]">Layer Entrance Delay</p>
-                         <span className="text-xs font-black text-apple-blue tabular-nums">{settings.subliminal.delayMs}ms</span>
-                      </div>
-                      <input 
-                        type="range" min={0} max={5000} step={100} 
-                        value={settings.subliminal.delayMs} 
-                        onChange={(e) => updateSubliminalSettings({ delayMs: parseInt(e.target.value) })}
-                        className="w-full h-2 bg-system-background rounded-full appearance-none accent-apple-blue border border-apple-border h-2"
-                      />
-                   </div>
+                <div className="flex flex-col gap-5 bg-secondary-system-background/30 p-5 rounded-2xl border border-apple-border mt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] font-bold text-system-label">Loop Content</p>
+                      <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Continuous meditation flow</p>
+                    </div>
+                    <button 
+                      onClick={() => updateSubliminalSettings({ isLooping: !settings.subliminal.isLooping })}
+                      className={`w-10 h-6 rounded-full relative transition-colors ${settings.subliminal.isLooping ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                    >
+                      <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.subliminal.isLooping ? 16 : 0 }} />
+                    </button>
+                  </div>
+
+                  <div className="h-px bg-apple-border/30" />
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-baseline px-1">
+                      <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Entrance Delay</label>
+                      <span className="text-[12px] font-black text-apple-blue tabular-nums">{settings.subliminal.delayMs}ms</span>
+                    </div>
+                    <input 
+                      type="range" min={0} max={5000} step={100} 
+                      value={settings.subliminal.delayMs} 
+                      onChange={(e) => updateSubliminalSettings({ delayMs: parseInt(e.target.value) })}
+                      className="w-full h-1.5 bg-system-background rounded-full appearance-none accent-apple-blue border border-apple-border cursor-pointer hover:accent-apple-blue/80"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-            </Section>
+          </Section>
 
-            {/* Other audio layers are conditional */}
+          {/* Other audio layers are conditional */}
             {settings.visibility.audioLayers && (
               <>
-                <Section
-                  id="binaural"
-              title="Binaural Beats"
-              subtitle="Stereo Frequency"
-              icon={Activity}
-              color="bg-purple-500/10 text-purple-600"
-              isEnabled={settings.binaural.isEnabled}
-              onToggle={(val: boolean) => updateBinauralSettings({ isEnabled: val })}
-            >
-              <div className="flex flex-col gap-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-tight">Left (Hz)</label>
-                    <input 
-                      type="number" value={settings.binaural.leftFreq} 
-                      onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) || 0 })}
-                      className="bg-system-background text-system-label px-3 py-2 rounded-xl border border-apple-border font-mono text-sm outline-none focus:border-purple-500 transition-colors"
-                    />
+              <Section
+                id="binaural"
+                title="Binaural Beats"
+                subtitle="Brain Entrainment"
+                icon={Activity}
+                color="bg-purple-500/10 text-purple-600"
+                isEnabled={settings.binaural.isEnabled}
+                onToggle={(val: boolean) => updateBinauralSettings({ isEnabled: val })}
+              >
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-3">
+                    <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Frequency Preset</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[{ label: 'Sleep', l: 150, r: 152 }, { label: 'Relax', l: 200, r: 208 }, { label: 'Focus', l: 200, r: 214 }].map(p => (
+                        <button 
+                          key={p.label} 
+                          onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })} 
+                          className="bg-secondary-system-background text-system-label border border-apple-border rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-purple-500 hover:text-white transition-all active:scale-95 text-center"
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-tight">Right (Hz)</label>
-                    <input 
-                      type="number" value={settings.binaural.rightFreq} 
-                      onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) || 0 })}
-                      className="bg-system-background text-system-label px-3 py-2 rounded-xl border border-apple-border font-mono text-sm outline-none focus:border-purple-500 transition-colors"
-                    />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Left Channel</label>
+                      <div className="flex items-center bg-system-background border border-apple-border rounded-xl px-3 py-2">
+                        <input 
+                          type="number" value={settings.binaural.leftFreq} 
+                          onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) || 0 })}
+                          className="flex-1 bg-transparent text-system-label font-mono text-sm outline-none"
+                        />
+                        <span className="text-[10px] font-bold text-system-tertiary-label ml-1">Hz</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Right Channel</label>
+                      <div className="flex items-center bg-system-background border border-apple-border rounded-xl px-3 py-2">
+                        <input 
+                          type="number" value={settings.binaural.rightFreq} 
+                          onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) || 0 })}
+                          className="flex-1 bg-transparent text-system-label font-mono text-sm outline-none"
+                        />
+                        <span className="text-[10px] font-bold text-system-tertiary-label ml-1">Hz</span>
+                      </div>
+                    </div>
                   </div>
+                  
+                  <VolumeSlider 
+                    label="Tone Intensity"
+                    value={settings.binaural.volume}
+                    onChange={(v: number) => updateBinauralSettings({ volume: v })}
+                    max={0.2}
+                    color="purple-500"
+                  />
                 </div>
-                
-                <VolumeSlider 
-                  label="Beats Volume"
-                  value={settings.binaural.volume}
-                  onChange={(v: number) => updateBinauralSettings({ volume: v })}
-                  max={0.2}
-                  color="purple-500"
-                />
-                <div className="grid grid-cols-3 gap-2">
-                  {[{ label: 'Sleep', l: 150, r: 152 }, { label: 'Relax', l: 200, r: 208 }, { label: 'Focus', l: 200, r: 214 }].map(p => (
-                    <button key={p.label} onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })} className="bg-system-background text-system-secondary-label border border-apple-border rounded-xl py-2 text-[10px] font-bold hover:bg-purple-500 hover:text-white transition-all active:scale-95">{p.label}</button>
-                  ))}
-                </div>
-              </div>
-            </Section>
+              </Section>
 
             <Section
               id="nature"
               title="Nature Ambience"
-              subtitle="Environmental Loop"
+              subtitle="Environment Loop"
               icon={CloudRain}
               color="bg-green-500/10 text-green-600"
               isEnabled={settings.nature.isEnabled}
@@ -695,23 +708,26 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 <div className="grid grid-cols-2 gap-2">
                   {NATURE_SOUNDS.map(sound => {
                     const Icon = sound.id === 'rain' ? CloudRain : sound.id === 'ocean' ? Waves : sound.id === 'forest' ? Trees : sound.id === 'wind' ? Wind : sound.id === 'fire' ? Flame : Droplets;
+                    const isActive = settings.nature.type === sound.id;
                     return (
                       <button 
                         key={sound.id}
                         onClick={() => updateNatureSettings({ type: sound.id as any })}
-                        className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
+                        className={`p-3 rounded-xl border flex items-center gap-3 transition-all min-h-[52px] ${isActive ? 'bg-green-500 text-white border-green-500 shadow-md' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
                       >
-                        <Icon size={14} className={settings.nature.type === sound.id ? 'text-white' : 'text-green-600'} />
-                        <span className="text-[11px] font-bold truncate">{sound.name}</span>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isActive ? 'bg-white/20' : 'bg-green-500/10'}`}>
+                          <Icon size={14} className={isActive ? 'text-white' : 'text-green-600'} />
+                        </div>
+                        <span className="text-[11px] font-bold truncate tracking-tight">{sound.name}</span>
                       </button>
                     );
                   })}
                 </div>
                 <VolumeSlider 
-                   label="Ambience Volume"
-                   value={settings.nature.volume}
-                   onChange={(v: number) => updateNatureSettings({ volume: v })}
-                   color="green-500"
+                  label="Ambience Mix"
+                  value={settings.nature.volume}
+                  onChange={(v: number) => updateNatureSettings({ volume: v })}
+                  color="green-500"
                 />
               </div>
             </Section>
@@ -719,30 +735,32 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
             <Section
               id="noise"
               title="Noise Colors"
-              subtitle="Synthetic Masking"
+              subtitle="Focus Masking"
               icon={Wind}
               color="bg-orange-500/10 text-orange-600"
               isEnabled={settings.noise.isEnabled}
               onToggle={(val: boolean) => updateNoiseSettings({ isEnabled: val })}
             >
               <div className="flex flex-col gap-6">
-                <div className="grid grid-cols-3 gap-2">
-                  {['white', 'pink', 'brown'].map(type => (
-                    <button 
-                      key={type}
-                      onClick={() => updateNoiseSettings({ type: type as any })}
-                      className={`p-3 rounded-xl border capitalize text-[10px] font-bold tracking-wide transition-all ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-secondary-system-background'}`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-2.5">
+                  <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10 shadow-inner">
+                    {['white', 'pink', 'brown'].map(type => (
+                      <button 
+                        key={type}
+                        onClick={() => updateNoiseSettings({ type: type as any })}
+                        className={`flex-1 h-full text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${settings.noise.type === type ? 'bg-system-background shadow-sm text-orange-600' : 'text-system-secondary-label'}`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <VolumeSlider 
-                   label="Masking Level"
-                   value={settings.noise.volume}
-                   onChange={(v: number) => updateNoiseSettings({ volume: v })}
-                   max={0.5}
-                   color="orange-500"
+                  label="Masking Strength"
+                  value={settings.noise.volume}
+                  onChange={(v: number) => updateNoiseSettings({ volume: v })}
+                  max={0.5}
+                  color="orange-500"
                 />
               </div>
             </Section>
@@ -750,7 +768,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
             <Section
               id="didgeridoo"
               title="Didgeridoo"
-              subtitle="Deep Drone Layer"
+              subtitle="Vibrational Drone"
               icon={Music}
               color="bg-amber-700/10 text-amber-800"
               isEnabled={settings.didgeridoo.isEnabled}
@@ -759,14 +777,14 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-8">
                   <VolumeSlider 
-                    label="Didgeridoo Volume"
+                    label="Drone Volume"
                     value={settings.didgeridoo.volume}
                     onChange={(v: number) => updateDidgeridooSettings({ volume: v })}
                     max={1.0}
                     color="amber-700"
                   />
                   <DbSlider 
-                    label="Output Gain (dB)"
+                    label="Output Level"
                     value={settings.didgeridoo.gainDb}
                     onChange={(v: number) => updateDidgeridooSettings({ gainDb: v })}
                     min={-60}
@@ -774,39 +792,41 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   />
                 </div>
 
-                <div className="h-px bg-apple-border/50" />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[13px] font-bold text-system-label">Loop Drone</p>
-                    <p className="text-[10px] text-system-secondary-label font-bold uppercase tracking-widest mt-1">Seamless Meditation Cycle</p>
-                  </div>
-                  <button 
-                    onClick={() => updateDidgeridooSettings({ isLooping: !settings.didgeridoo.isLooping })}
-                    className={`w-11 h-6 rounded-full relative transition-colors duration-300 ${settings.didgeridoo.isLooping ? 'bg-amber-800' : 'bg-system-tertiary-label'}`}
-                  >
-                    <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.didgeridoo.isLooping ? 20 : 0 }} />
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-3 pt-2">
-                  <div className="flex justify-between items-end px-1">
-                    <p className="text-[10px] font-black text-system-secondary-label uppercase tracking-widest">Base Frequency (Speed)</p>
-                    <span className="text-xs font-black text-amber-800 tabular-nums">{Math.round(65 * settings.didgeridoo.playbackRate)}Hz</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <input 
-                      type="range" min={0.5} max={2.0} step={0.1} 
-                      value={settings.didgeridoo.playbackRate} 
-                      onChange={(e) => updateDidgeridooSettings({ playbackRate: parseFloat(e.target.value) })}
-                      className="flex-1 h-1.5 bg-secondary-system-background rounded-full appearance-none accent-amber-800 border border-apple-border"
-                    />
+                <div className="flex flex-col gap-5 bg-secondary-system-background/30 p-5 rounded-2xl border border-apple-border mt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] font-bold text-system-label">Loop Mode</p>
+                      <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Continuous oscillation</p>
+                    </div>
                     <button 
-                      onClick={() => updateDidgeridooSettings({ playbackRate: 1.0 })}
-                      className="text-[10px] font-bold text-amber-800 uppercase tracking-widest hover:bg-amber-800/10 px-2 py-1 rounded-lg transition-colors"
+                      onClick={() => updateDidgeridooSettings({ isLooping: !settings.didgeridoo.isLooping })}
+                      className={`w-10 h-6 rounded-full relative transition-colors ${settings.didgeridoo.isLooping ? 'bg-amber-800' : 'bg-system-tertiary-label'}`}
                     >
-                      Reset
+                      <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.didgeridoo.isLooping ? 16 : 0 }} />
                     </button>
+                  </div>
+
+                  <div className="h-px bg-apple-border/30" />
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-baseline px-1">
+                      <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Base Frequency</label>
+                      <span className="text-[12px] font-black text-amber-800 tabular-nums">{Math.round(65 * settings.didgeridoo.playbackRate)}Hz</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <input 
+                        type="range" min={0.5} max={2.0} step={0.1} 
+                        value={settings.didgeridoo.playbackRate} 
+                        onChange={(e) => updateDidgeridooSettings({ playbackRate: parseFloat(e.target.value) })}
+                        className="flex-1 h-1.5 bg-system-background rounded-full appearance-none accent-amber-800 border border-apple-border cursor-pointer"
+                      />
+                      <button 
+                        onClick={() => updateDidgeridooSettings({ playbackRate: 1.0 })}
+                        className="text-[9px] font-black text-amber-800 uppercase tracking-widest hover:bg-amber-800/10 px-2 py-1 rounded-lg transition-colors border border-amber-800/20"
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

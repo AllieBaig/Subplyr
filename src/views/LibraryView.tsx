@@ -856,12 +856,12 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
 
   return (
     <div className={`group flex flex-col transition-all duration-200 ${track.isMissing ? 'opacity-40' : ''}`}>
-      <div className={`flex items-center gap-3 py-3 px-1 leading-tight`}>
+      <div className={`flex items-center gap-4 px-4 min-h-[56px] leading-tight`}>
         {isSelectMode && (
           <button 
             onClick={onSelect}
             disabled={track.isMissing}
-            className={`flex-shrink-0 transition-transform duration-200 ${isSelected ? 'scale-110 text-apple-blue' : 'scale-100 text-gray-200'}`}
+            className={`flex-shrink-0 transition-transform duration-200 ${isSelected ? 'scale-110 text-apple-blue' : 'scale-100 text-system-tertiary-label'}`}
           >
             {isSelected ? <CheckCircle2 size={22} fill="currentColor" stroke="white" /> : <Circle size={22} />}
           </button>
@@ -869,17 +869,17 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
         
         <button 
           onClick={() => !track.isMissing && onPlay()} 
-          className="flex-1 flex items-center gap-3 text-left min-w-0"
+          className="flex-1 flex items-center gap-4 text-left min-w-0 h-full py-3"
         >
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden relative">
-             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-200" size={16} />}
-             {isActive && <div className="absolute inset-0 bg-apple-blue/10 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-apple-blue shadow-[0_0_8px_rgba(0,122,255,0.4)]" /></div>}
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-secondary-system-background flex items-center justify-center overflow-hidden relative shadow-sm border border-apple-border/50">
+             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-system-tertiary-label" size={16} />}
+             {isActive && <div className="absolute inset-0 bg-apple-blue/10 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-apple-blue shadow-[0_0_8px_rgba(0,122,255,0.6)]" /></div>}
           </div>
           <div className="flex-1 min-w-0">
             <h4 className={`font-bold truncate text-[14px] ${isActive ? 'text-apple-blue' : 'text-system-label'}`}>
               <HighlightText text={track.name} highlight={searchQuery} />
             </h4>
-            <p className="text-[12px] text-system-secondary-label font-medium truncate mt-0.5">
+            <p className="text-[12px] text-system-secondary-label font-bold uppercase tracking-widest truncate mt-0.5">
               <HighlightText text={track.artist || 'Unknown Artist'} highlight={searchQuery} />
             </p>
           </div>
@@ -896,7 +896,7 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
           )}
         </div>
       </div>
-      <div className="h-[0.5px] bg-black/[0.04] ml-[52px]" />
+      <div className="h-[0.5px] bg-apple-border/30 ml-[72px]" />
 
       <AnimatePresence>
         {showActions && !isSelectMode && (

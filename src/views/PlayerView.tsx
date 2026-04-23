@@ -38,6 +38,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     updateBinauralSettings,
     updateNatureSettings,
     updateNoiseSettings,
+    updateDidgeridooSettings,
     updateSettings,
     updateAudioTools,
     updateSleepTimer,
@@ -70,7 +71,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       settings.subliminal.isEnabled && "Subliminal",
       settings.binaural.isEnabled && "Binaural",
       settings.nature.isEnabled && settings.nature.type,
-      settings.noise.isEnabled && `${settings.noise.type} Noise`
+      settings.noise.isEnabled && `${settings.noise.type} Noise`,
+      settings.didgeridoo.isEnabled && "Didgeridoo"
     ].filter(Boolean) as string[];
     
     if (layers.length === 0) return "Standard Audio";
@@ -181,6 +183,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               {settings.binaural.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
               {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
               {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+              {settings.didgeridoo.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-800" />}
             </div>
             <span className={`font-bold uppercase tracking-[0.1em] text-system-secondary-label ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{activeLayersLabel}</span>
           </button>
@@ -391,6 +394,38 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                                       </button>
                                     ))}
                                   </div>
+                              </LayerOption>
+
+                              <LayerOption 
+                                icon={MusicIcon} 
+                                label="Didgeridoo" 
+                                isEnabled={settings.didgeridoo.isEnabled} 
+                                onToggle={(v) => updateDidgeridooSettings({ isEnabled: v })}
+                                vol={settings.didgeridoo.volume}
+                                setVol={(v) => updateDidgeridooSettings({ volume: v })}
+                                color="text-amber-800"
+                                subtitle="Drone oscillation"
+                              >
+                                <div className="flex flex-col gap-3 pt-2">
+                                  <div className="flex justify-between items-end px-1">
+                                    <p className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest">Base Freq</p>
+                                    <span className="text-[10px] font-black text-amber-800 tabular-nums">{Math.round(65 * settings.didgeridoo.playbackRate)}Hz</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <input 
+                                      type="range" min={0.5} max={2.0} step={0.1} 
+                                      value={settings.didgeridoo.playbackRate} 
+                                      onChange={(e) => updateDidgeridooSettings({ playbackRate: parseFloat(e.target.value) })}
+                                      className="flex-1 h-1 bg-secondary-system-background rounded-full appearance-none accent-amber-800 border border-apple-border"
+                                    />
+                                    <button 
+                                      onClick={() => updateDidgeridooSettings({ playbackRate: 1.0 })}
+                                      className="text-[9px] font-bold text-amber-800 uppercase px-1.5 py-0.5 rounded-lg border border-amber-800/20 active:opacity-50"
+                                    >
+                                      Reset
+                                    </button>
+                                  </div>
+                                </div>
                               </LayerOption>
                             </div>
                           </motion.div>
