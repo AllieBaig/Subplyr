@@ -486,17 +486,17 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
       <div className="h-px bg-apple-border/50 my-6" />
 
       {/* Audio Layers Group */}
-      {settings.visibility.audioLayers && (
-        <Group 
-          title="Audio Layers" 
-          icon={Ear} 
-          color="bg-apple-blue/10 text-apple-blue"
-          isExpanded={expandedGroups.has('audio')}
-          onToggle={() => toggleGroup('audio')}
-        >
-          <div className="flex flex-col gap-2">
-            <Section 
-              id="subliminal"
+      <Group 
+        title="Audio Layers" 
+        icon={Ear} 
+        color="bg-apple-blue/10 text-apple-blue"
+        isExpanded={expandedGroups.has('audio')}
+        onToggle={() => toggleGroup('audio')}
+      >
+        <div className="flex flex-col gap-2">
+          {/* Subliminal Audio is ALWAYS visible inside this group */}
+          <Section 
+            id="subliminal"
               title="Subliminal Audio"
               subtitle="Secondary Layer"
               icon={Ear}
@@ -694,8 +694,11 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               </div>
             </Section>
 
-            <Section
-              id="binaural"
+            {/* Other audio layers are conditional */}
+            {settings.visibility.audioLayers && (
+              <>
+                <Section
+                  id="binaural"
               title="Binaural Beats"
               subtitle="Stereo Frequency"
               icon={Activity}
@@ -802,17 +805,18 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 />
               </div>
             </Section>
-          </div>
-        </Group>
-      )}
+          </>
+        )}
+      </div>
+    </Group>
 
-      {/* Playback & Control Group */}
+    {/* Playback Group (Independent) */}
       <Group
-        title="Playback & Control"
-        icon={SettingsIcon}
-        color="bg-gray-700/10 text-gray-700"
-        isExpanded={expandedGroups.has('control')}
-        onToggle={() => toggleGroup('control')}
+        title="Playback"
+        icon={Timer}
+        color="bg-blue-500/10 text-blue-600"
+        isExpanded={expandedGroups.has('playback')}
+        onToggle={() => toggleGroup('playback')}
       >
         <div className="flex flex-col gap-2">
           <Section
@@ -917,23 +921,39 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               </div>
             </div>
           </Section>
+        </div>
+      </Group>
 
+      {/* App Control Group (Independent) */}
+      <Group
+        title="App Control"
+        icon={SettingsIcon}
+        color="bg-gray-700/10 text-gray-700"
+        isExpanded={expandedGroups.has('control')}
+        onToggle={() => toggleGroup('control')}
+      >
+        <div className="flex flex-col gap-2">
           <AppManagement />
-          <AppMaintenance />
           
-          {swSupported && (
-            <Section
-              id="advanced"
-              title="Advanced System"
-              subtitle="Recovery Tools"
-              icon={Terminal}
-              color="bg-red-500/10 text-red-600"
-            >
-              <div className="flex flex-col gap-3">
-                <button onClick={resetServiceWorker} className="w-full p-4 border border-apple-border rounded-xl text-xs font-bold uppercase hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
-                <button onClick={fullAppReset} className="w-full p-4 bg-red-500 text-white font-bold text-xs uppercase rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
-              </div>
-            </Section>
+          {settings.visibility.appControl && (
+            <>
+              <AppMaintenance />
+              
+              {swSupported && (
+                <Section
+                  id="advanced"
+                  title="Advanced System"
+                  subtitle="Recovery Tools"
+                  icon={Terminal}
+                  color="bg-red-500/10 text-red-600"
+                >
+                  <div className="flex flex-col gap-3">
+                    <button onClick={resetServiceWorker} className="w-full p-4 border border-apple-border rounded-xl text-xs font-bold uppercase hover:bg-secondary-system-background text-system-label active:scale-[0.98] transition-all">Unregister SW</button>
+                    <button onClick={fullAppReset} className="w-full p-4 bg-red-500 text-white font-bold text-xs uppercase rounded-xl hover:bg-red-600 active:scale-[0.98] transition-all">Full Factory Reset</button>
+                  </div>
+                </Section>
+              )}
+            </>
           )}
         </div>
       </Group>
