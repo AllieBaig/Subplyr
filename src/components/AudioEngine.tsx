@@ -18,7 +18,8 @@ export default function AudioEngine() {
     seekTo,
     currentPlaybackList,
     playingPlaylistId,
-    isLoading
+    isLoading,
+    showToast
   } = useAudio();
 
   const { currentTime, setCurrentTime, setDuration } = usePlayback();
@@ -70,11 +71,19 @@ export default function AudioEngine() {
 
   // iOS Background Audio & Media Session Setup
   useEffect(() => {
+    // Helper to ensure AudioContext is ready on any media session action
+    const withResume = (fn: () => void) => {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+      fn();
+    };
+
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
+      navigator.mediaSession.setActionHandler('play', () => withResume(() => setIsPlaying(true)));
       navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
-      navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
-      navigator.mediaSession.setActionHandler('previoustrack', () => playPrevious());
+      navigator.mediaSession.setActionHandler('nexttrack', () => withResume(() => playNext()));
+      navigator.mediaSession.setActionHandler('previoustrack', () => withResume(() => playPrevious()));
       navigator.mediaSession.setActionHandler('seekto', (details) => {
         if (details.seekTime !== undefined) seekTo(details.seekTime);
       });
@@ -140,17 +149,48 @@ export default function AudioEngine() {
     (natureAudioRef.current as any).playsInline = true;
     (natureAudioRef.current as any).webkitPlaysInline = true;
 
-    // iOS Safari Audio Unlock Helper
-    const unlockAudio = () => {
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().catch(() => {});
+    // iOS Safari Audio Unlock Helper & Context Initialization
+    const initCtx = () => {
+      if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtxRef.current = new AudioContextClass();
+        }
       }
-      // Remove after first interaction
+      return audioCtxRef.current;
+    };
+
+    const unlockAudio = () => {
+      const ctx = initCtx();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().then(() => {
+          console.log('[AudioEngine] Context resumed via interaction');
+          // Play silent buffer to keep context alive
+          const buffer = ctx.createBuffer(1, 1, 22050);
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          source.start(0);
+        }).catch(err => console.warn('[AudioEngine] Resume failed:', err));
+      }
+      
+      // Also unlock the HTML Audio elements
+      if (mainAudioRef.current) {
+        mainAudioRef.current.play().then(() => mainAudioRef.current?.pause()).catch(() => {});
+      }
+      if (subAudioRef.current) {
+        subAudioRef.current.play().then(() => subAudioRef.current?.pause()).catch(() => {});
+      }
+      if (natureAudioRef.current) {
+        natureAudioRef.current.play().then(() => natureAudioRef.current?.pause()).catch(() => {});
+      }
+
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
     };
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
+
+    window.addEventListener('click', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
 
     return () => {
       window.removeEventListener('click', unlockAudio);
@@ -211,10 +251,9 @@ export default function AudioEngine() {
 
   const setupNoise = () => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-
       if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) return;
         audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
@@ -241,10 +280,9 @@ export default function AudioEngine() {
 
   const setupBinaural = () => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-
       if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) return;
         audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
@@ -499,7 +537,10 @@ export default function AudioEngine() {
       if (settings.loop === 'one') {
         if (mainAudioRef.current) {
           mainAudioRef.current.currentTime = 0;
-          mainAudioRef.current.play().catch(console.error);
+          mainAudioRef.current.play().catch(err => {
+            console.warn("Loop one play failed:", err);
+            setIsPlaying(false);
+          });
         }
       } else {
         playNext(true);
@@ -508,8 +549,16 @@ export default function AudioEngine() {
 
     let errorCount = 0;
     const onError = (e: any) => {
-      console.warn("Main Engine: Audio resource stall or error detected.", e);
+      const error = mainAudioRef.current?.error;
+      console.warn("Main Engine: Audio resource stall or error detected.", error || e);
+      
       if (isPlaying) {
+        // If it's a critical error (like src not found), skip immediately
+        if (error?.code === 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
+           playNext(true);
+           return;
+        }
+
         errorCount++;
         if (errorCount > 2) {
           console.error("Main Engine: Multiple playback errors. Skipping to next.");
@@ -695,13 +744,32 @@ export default function AudioEngine() {
     if (isPlaying) {
       if (currentTrack?.isMissing) {
         setIsPlaying(false);
+        showToast("Track file missing. Please relink.");
         return;
       }
+      
+      // Ensure context is running BEFORE starting any audio
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+
       setupAudioTools();
-      mainAudioRef.current.play().catch(e => {
-        console.error("Playback error:", e);
-        setIsPlaying(false);
-      });
+      
+      const playMain = () => {
+        if (mainAudioRef.current && mainAudioRef.current.paused) {
+          mainAudioRef.current.play().catch(e => {
+            console.error("Playback error:", e);
+            // On some mobile devices, if play() is called too soon after src change without interaction
+            if (e.name === 'NotAllowedError') {
+              showToast("Tap screen to enable audio");
+            }
+            setIsPlaying(false);
+          });
+        }
+      };
+
+      // Small delay to ensure Web Audio graph is ready
+      const timer = setTimeout(playMain, 50);
       
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
@@ -713,12 +781,16 @@ export default function AudioEngine() {
         
         delayTimeoutRef.current = window.setTimeout(() => {
           if (subAudioRef.current && isPlaying) {
-            subAudioRef.current.src = subTrack.url;
+            if (subAudioRef.current.src !== subTrack.url) {
+              subAudioRef.current.src = subTrack.url;
+            }
             subAudioRef.current.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
             subAudioRef.current.play().catch(console.error);
           }
         }, settings.subliminal.delayMs);
       }
+
+      return () => clearTimeout(timer);
     } else {
       mainAudioRef.current.pause();
       if ('mediaSession' in navigator) {
