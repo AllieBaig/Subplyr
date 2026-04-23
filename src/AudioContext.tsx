@@ -32,6 +32,7 @@ interface AudioContextType {
   updateNatureSettings: (newSettings: Partial<AppSettings['nature']>) => void;
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
   updateDidgeridooSettings: (newSettings: Partial<AppSettings['didgeridoo']>) => void;
+  updatePureHzSettings: (newSettings: Partial<AppSettings['pureHz']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   updateAppearanceSettings: (newSettings: Partial<AppSettings['appearance']>) => void;
   updateVisibilitySettings: (newSettings: Partial<AppSettings['visibility']>) => void;
@@ -292,6 +293,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       volume: 0.3,
       gainDb: -6,
       playbackRate: 1.0,
+      isLooping: true
+    },
+    pureHz: {
+      isEnabled: false,
+      frequency: 432,
+      volume: 0.05,
       isLooping: true
     },
     audioTools: {
@@ -625,6 +632,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({
       ...prev,
       didgeridoo: { ...prev.didgeridoo, ...newDid }
+    }));
+  };
+
+  const updatePureHzSettings = (newHz: Partial<AppSettings['pureHz']>) => {
+    setSettings(prev => ({
+      ...prev,
+      pureHz: { ...prev.pureHz, ...newHz }
     }));
   };
 
@@ -1106,6 +1120,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateNatureSettings,
       updateNoiseSettings,
       updateDidgeridooSettings,
+      updatePureHzSettings,
       updateLibrarySettings,
       updateAppearanceSettings,
       updateVisibilitySettings,

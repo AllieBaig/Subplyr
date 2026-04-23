@@ -18,6 +18,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     updateNatureSettings,
     updateNoiseSettings,
     updateDidgeridooSettings,
+    updatePureHzSettings,
     updateLibrarySettings,
     updateAppearanceSettings,
     updateVisibilitySettings,
@@ -828,6 +829,70 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </Section>
+
+            <Section
+              id="pureHz"
+              title="Pure Hz"
+              subtitle="Solar Frequencies"
+              icon={Activity}
+              color="bg-rose-500/10 text-rose-600"
+              isEnabled={settings.pureHz.isEnabled}
+              onToggle={(val: boolean) => updatePureHzSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2.5">
+                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Frequency (Hz)</label>
+                    <div className="flex items-center gap-3 bg-secondary-system-background p-3 rounded-2xl border border-apple-border">
+                      <input 
+                        type="number" 
+                        value={settings.pureHz.frequency} 
+                        onChange={(e) => updatePureHzSettings({ frequency: Math.min(Math.max(parseInt(e.target.value) || 0, 20), 20000) })}
+                        className="flex-1 bg-transparent text-system-label font-mono text-[15px] font-black outline-none"
+                        placeholder="Hz"
+                      />
+                      <div className="h-6 w-px bg-apple-border" />
+                      <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Pure Tone</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[174, 432, 528, 852].map(fq => (
+                      <button 
+                        key={fq}
+                        onClick={() => updatePureHzSettings({ frequency: fq })}
+                        className={`py-2 rounded-xl border text-[10px] font-black transition-all ${settings.pureHz.frequency === fq ? 'bg-rose-500 text-white border-rose-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-rose-500/5 hover:text-rose-600'}`}
+                      >
+                        {fq}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <VolumeSlider 
+                  label="Tone Intensity"
+                  value={settings.pureHz.volume}
+                  onChange={(v: number) => updatePureHzSettings({ volume: v })}
+                  max={0.2}
+                  color="rose-500"
+                />
+
+                <div className="flex items-center justify-between bg-secondary-system-background/30 p-4 rounded-xl border border-apple-border/50">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-rose-500/10 text-rose-600`}>
+                      <RotateCw size={14} className={settings.pureHz.isLooping ? 'animate-spin-slow' : ''} />
+                    </div>
+                    <span className="text-[11px] font-bold text-system-label tracking-tight">Continuous Loop</span>
+                  </div>
+                  <button 
+                    onClick={() => updatePureHzSettings({ isLooping: !settings.pureHz.isLooping })}
+                    className={`w-10 h-6 rounded-full relative transition-colors ${settings.pureHz.isLooping ? 'bg-rose-500' : 'bg-system-tertiary-label'}`}
+                  >
+                    <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.pureHz.isLooping ? 16 : 0 }} />
+                  </button>
                 </div>
               </div>
             </Section>

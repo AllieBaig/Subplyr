@@ -39,6 +39,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     updateNatureSettings,
     updateNoiseSettings,
     updateDidgeridooSettings,
+    updatePureHzSettings,
     updateSettings,
     updateAudioTools,
     updateSleepTimer,
@@ -72,7 +73,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       settings.binaural.isEnabled && "Binaural",
       settings.nature.isEnabled && settings.nature.type,
       settings.noise.isEnabled && `${settings.noise.type} Noise`,
-      settings.didgeridoo.isEnabled && "Didgeridoo"
+      settings.didgeridoo.isEnabled && "Didgeridoo",
+      settings.pureHz.isEnabled && "Pure Hz"
     ].filter(Boolean) as string[];
     
     if (layers.length === 0) return "Standard Audio";
@@ -184,6 +186,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
               {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
               {settings.didgeridoo.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-800" />}
+              {settings.pureHz.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />}
             </div>
             <span className={`font-bold uppercase tracking-[0.1em] text-system-secondary-label ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{activeLayersLabel}</span>
           </button>
@@ -424,6 +427,40 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                                     >
                                       Reset
                                     </button>
+                                  </div>
+                                </div>
+                              </LayerOption>
+
+                              <LayerOption 
+                                icon={Activity} 
+                                label="Pure Hz" 
+                                isEnabled={settings.pureHz.isEnabled} 
+                                onToggle={(v) => updatePureHzSettings({ isEnabled: v })}
+                                vol={settings.pureHz.volume}
+                                setVol={(v) => updatePureHzSettings({ volume: v })}
+                                color="text-rose-600"
+                                subtitle={`${settings.pureHz.frequency}Hz`}
+                              >
+                                <div className="flex flex-col gap-3 pt-2">
+                                  <div className="flex items-center gap-3 bg-secondary-system-background p-2 rounded-xl border border-apple-border/50">
+                                    <input 
+                                      type="number" 
+                                      value={settings.pureHz.frequency} 
+                                      onChange={(e) => updatePureHzSettings({ frequency: Math.min(Math.max(parseInt(e.target.value) || 0, 20), 20000) })}
+                                      className="flex-1 bg-transparent text-system-label font-mono text-xs font-black outline-none px-1"
+                                    />
+                                    <span className="text-[9px] font-black text-system-tertiary-label uppercase">Hz</span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-1">
+                                    {[174, 432, 528, 852].map(fq => (
+                                      <button 
+                                        key={fq}
+                                        onClick={() => updatePureHzSettings({ frequency: fq })}
+                                        className={`py-1.5 rounded-lg border text-[8px] font-black transition-all ${settings.pureHz.frequency === fq ? 'bg-rose-500 text-white border-rose-500' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                                      >
+                                        {fq}
+                                      </button>
+                                    ))}
                                   </div>
                                 </div>
                               </LayerOption>

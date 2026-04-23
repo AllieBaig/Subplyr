@@ -54,6 +54,10 @@ export default function AudioEngine() {
   const didgGainRef = useRef<GainNode | null>(null);
   const didgLfoRef = useRef<OscillatorNode | null>(null);
 
+  // Pure Hz Refs
+  const pureHzOscRef = useRef<OscillatorNode | null>(null);
+  const pureHzGainRef = useRef<GainNode | null>(null);
+
   // iOS Background Audio & Media Session Setup
   useEffect(() => {
     if ('mediaSession' in navigator) {
@@ -325,6 +329,39 @@ export default function AudioEngine() {
       }
     } catch (err) {
       console.error("Didgeridoo setup failed:", err);
+    }
+  };
+
+  const setupPureHz = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      if (!pureHzOscRef.current) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine'; // Always sine for pure tones
+        osc.frequency.setValueAtTime(settings.pureHz.frequency, ctx.currentTime);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        osc.start();
+
+        pureHzOscRef.current = osc;
+        pureHzGainRef.current = gain;
+      }
+    } catch (err) {
+      console.error("Pure Hz setup failed:", err);
     }
   };
 
@@ -718,6 +755,36 @@ export default function AudioEngine() {
       }
     }
   }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb]);
+
+  // Handle Pure Hz Layer
+  useEffect(() => {
+    if (isPlaying && settings.pureHz.isEnabled && settings.pureHz.isLooping) {
+      setupPureHz();
+      if (pureHzGainRef.current && pureHzOscRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4; // Slightly slower fade for pure Hz to avoid clicks
+        
+        pureHzOscRef.current.frequency.setTargetAtTime(settings.pureHz.frequency, ctx.currentTime, 0.1);
+        pureHzGainRef.current.gain.setTargetAtTime(settings.pureHz.volume, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (pureHzGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
+        pureHzGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+        
+        // Potential cleanup of oscillator to save resources if disabled
+        const timer = setTimeout(() => {
+          if (!settings.pureHz.isEnabled && pureHzOscRef.current) {
+            pureHzOscRef.current.stop();
+            pureHzOscRef.current = null;
+            pureHzGainRef.current = null;
+          }
+        }, fadeTime * 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency]);
 
   // Handle Didgeridoo Real-time Updates (Rate)
   useEffect(() => {

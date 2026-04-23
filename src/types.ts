@@ -58,6 +58,13 @@ export interface DidgeridooSettings {
   isLooping: boolean;
 }
 
+export interface PureHzSettings {
+  isEnabled: boolean;
+  frequency: number;
+  volume: number;
+  isLooping: boolean;
+}
+
 export interface AudioTools {
   gainDb: number;
   normalizeTargetDb: number | null;
@@ -88,6 +95,7 @@ export interface AppSettings {
   nature: NatureSettings;
   noise: NoiseSettings;
   didgeridoo: DidgeridooSettings;
+  pureHz: PureHzSettings;
   audioTools: AudioTools;
   mainVolume: number;
   playbackRate: number;
