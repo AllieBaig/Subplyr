@@ -786,6 +786,42 @@ export default function AudioEngine() {
     }
   }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency]);
 
+  // Handle Display Always On (WakeLock)
+  useEffect(() => {
+    let wakeLock: any = null;
+
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator && settings.displayAlwaysOn && isPlaying) {
+        try {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+          console.log('Wake Lock is active');
+        } catch (err) {
+          console.warn(`${err.name}, ${err.message}`);
+        }
+      }
+    };
+
+    requestWakeLock();
+
+    const handleVisibilityChange = () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock !== null) {
+        wakeLock.release().then(() => {
+          wakeLock = null;
+          console.log('Wake Lock released');
+        });
+      }
+    };
+  }, [settings.displayAlwaysOn, isPlaying]);
+
   // Handle Didgeridoo Real-time Updates (Rate)
   useEffect(() => {
     if (didgOscRef.current && didgSubOscRef.current && audioCtxRef.current) {

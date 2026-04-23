@@ -347,6 +347,44 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     </Section>
   );
 
+  const AudioTools = () => (
+    <Section
+      id="audio-tools"
+      title="Audio Foundation"
+      subtitle="Gain & Normalization"
+      icon={Sliders}
+      color="bg-indigo-100 text-indigo-600"
+    >
+      <div className="flex flex-col gap-8">
+        <DbSlider 
+          label="Master Gain"
+          value={settings.audioTools.gainDb}
+          onChange={(v: number) => updateAudioTools({ gainDb: v })}
+          min={-60}
+          max={12}
+        />
+        
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-baseline px-1">
+            <label className="text-[11px] font-bold uppercase tracking-widest text-system-secondary-label">Normalization Target</label>
+            <span className="text-[12px] font-black text-system-label">{settings.audioTools.normalizeTargetDb !== null ? `${settings.audioTools.normalizeTargetDb}dB` : 'OFF'}</span>
+          </div>
+          <div className="grid grid-cols-5 gap-1">
+            {[null, -1.0, -3.0, -6.0, -12.0].map(dbValue => (
+              <button
+                key={String(dbValue)}
+                onClick={() => updateAudioTools({ normalizeTargetDb: dbValue })}
+                className={`py-2 rounded-xl border text-[10px] font-black transition-all ${settings.audioTools.normalizeTargetDb === dbValue ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+              >
+                {dbValue === null ? 'OFF' : `${dbValue}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+
   const VersionHistory = () => {
     const isExpanded = expandedSection === 'history';
     return (
@@ -1010,6 +1048,37 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.displayAlwaysOn ? 12 : 0 }} />
                 </button>
               </div>
+
+              <div className="h-px bg-apple-border/50" />
+
+              {/* Fading & Sync */}
+              <div className="flex flex-col gap-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-system-label">Smooth Fading</p>
+                    <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Transition between tracks</p>
+                  </div>
+                  <button 
+                    onClick={() => updateSettings({ fadeInOut: !settings.fadeInOut })}
+                    className={`w-8 h-5 rounded-full relative transition-colors ${settings.fadeInOut ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                  >
+                    <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.fadeInOut ? 12 : 0 }} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-system-label">Synced Subliminal</p>
+                    <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Align layer with music</p>
+                  </div>
+                  <button 
+                    onClick={() => updateSettings({ syncPlayback: !settings.syncPlayback })}
+                    className={`w-8 h-5 rounded-full relative transition-colors ${settings.syncPlayback ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                  >
+                    <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.syncPlayback ? 12 : 0 }} />
+                  </button>
+                </div>
+              </div>
             </div>
           </Section>
         </div>
@@ -1109,6 +1178,166 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               >
                 Soft Blue
               </button>
+            </div>
+          </div>
+
+          <div className="h-px bg-apple-border/50 my-2" />
+
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Transition Animation</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {['off', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'random'].map(style => (
+                  <button
+                    key={style}
+                    onClick={() => updateSettings({ animationStyle: style as any })}
+                    className={`py-2 rounded-xl border text-[9px] font-black uppercase transition-all ${settings.animationStyle === style ? 'bg-pink-500 text-white border-pink-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-pink-500/5'}`}
+                  >
+                    {style.replace('-', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 bg-secondary-system-background/30 p-5 rounded-3xl border border-apple-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-extrabold text-system-label">Menu Position</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Top or Bottom TabBar</p>
+                </div>
+                <div className="flex bg-system-background rounded-2xl p-1 shadow-inner border border-apple-border/30">
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'top' })}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.menuPosition === 'top' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'bottom' })}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.menuPosition === 'bottom' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-apple-border/30" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-extrabold text-system-label">Big Touch Mode</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Larger interactive targets</p>
+                </div>
+                <button 
+                  onClick={() => updateSettings({ bigTouchMode: !settings.bigTouchMode })}
+                  className={`w-10 h-6 rounded-full relative transition-colors ${settings.bigTouchMode ? 'bg-pink-500' : 'bg-system-tertiary-label'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.bigTouchMode ? 16 : 0 }} />
+                </button>
+              </div>
+              
+              <div className="h-px bg-apple-border/30" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-extrabold text-system-label">Layer Sheet Entry</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Direction of panel slide</p>
+                </div>
+                <div className="flex bg-system-background rounded-2xl p-1 shadow-inner border border-apple-border/30">
+                  <button 
+                    onClick={() => updateSettings({ hiddenLayersPosition: 'top' })}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hiddenLayersPosition === 'top' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ hiddenLayersPosition: 'bottom' })}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hiddenLayersPosition === 'bottom' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-apple-border/50" />
+
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Transition Animation</label>
+              <div className="grid grid-cols-3 gap-1">
+                {['off', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'random'].map(style => (
+                  <button
+                    key={style}
+                    onClick={() => updateSettings({ animationStyle: style as any })}
+                    className={`py-2 rounded-xl border text-[9px] font-black uppercase transition-all ${settings.animationStyle === style ? 'bg-pink-500 text-white border-pink-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                  >
+                    {style.replace('-', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 bg-secondary-system-background/30 p-4 rounded-2xl border border-apple-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Menu Position</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Top or Bottom TabBar</p>
+                </div>
+                <div className="flex bg-system-background rounded-lg p-1 border border-apple-border">
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'top' })}
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.menuPosition === 'top' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'bottom' })}
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.menuPosition === 'bottom' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-apple-border/30" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Big Touch Mode</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Larger interactive targets</p>
+                </div>
+                <button 
+                  onClick={() => updateSettings({ bigTouchMode: !settings.bigTouchMode })}
+                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.bigTouchMode ? 'bg-pink-500' : 'bg-system-tertiary-label'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.bigTouchMode ? 12 : 0 }} />
+                </button>
+              </div>
+              
+              <div className="h-px bg-apple-border/30" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Drawer Position</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Layer panel entry side</p>
+                </div>
+                <div className="flex bg-system-background rounded-lg p-1 border border-apple-border">
+                  <button 
+                    onClick={() => updateSettings({ hiddenLayersPosition: 'top' })}
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.hiddenLayersPosition === 'top' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ hiddenLayersPosition: 'bottom' })}
+                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.hiddenLayersPosition === 'bottom' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

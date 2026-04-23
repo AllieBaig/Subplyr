@@ -118,7 +118,18 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     }
   };
 
+  const getPanelAnimationProps = () => {
+    if (settings.animationStyle === 'off') return { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } };
+    
+    // Panel always slides from top or bottom based on setting
+    if (settings.hiddenLayersPosition === 'top') {
+      return { initial: { y: '-100%' }, animate: { y: 0 }, exit: { y: '-100%' } };
+    }
+    return { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' } };
+  };
+
   const animationProps = useMemo(() => getAnimationProps(settings.animationStyle), [settings.animationStyle]);
+  const panelAnimationProps = useMemo(() => getPanelAnimationProps(), [settings.hiddenLayersPosition, settings.animationStyle]);
 
   if (!currentTrack) {
 // ... rest of the check ...
@@ -236,11 +247,11 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
             {/* Panel Content - Respects animationStyle */}
             <motion.div 
               key="layer-panel"
-              {...animationProps}
+              {...panelAnimationProps}
               transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-              className="absolute bottom-0 left-0 right-0 max-w-2xl mx-auto bg-system-background rounded-t-[3rem] shadow-[0_-8px_40px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col max-h-[85vh] z-[210]"
+              className={`absolute left-0 right-0 max-w-2xl mx-auto bg-system-background shadow-[0_-8px_40px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col max-h-[85vh] z-[210] ${settings.hiddenLayersPosition === 'top' ? 'top-0 rounded-b-[3rem]' : 'bottom-0 rounded-t-[3rem]'}`}
             >
-              <div className="w-12 h-1 bg-secondary-system-background rounded-full mx-auto mt-3 mb-1" />
+              <div className={`w-12 h-1 bg-secondary-system-background rounded-full mx-auto ${settings.hiddenLayersPosition === 'top' ? 'mt-6 mb-1' : 'mt-3 mb-1'}`} />
               
               <div className={`px-8 border-b border-apple-border flex items-center justify-between ${settings.bigTouchMode ? 'py-6' : 'py-4'}`}>
                 <h3 className={`font-bold tracking-tight text-system-label ${settings.bigTouchMode ? 'text-2xl' : 'text-xl'}`}>Audio Layers</h3>
