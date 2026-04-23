@@ -158,6 +158,93 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     );
   };
 
+  const LayerAudioTools = ({ settings: layerSettings, updateFn }: any) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const applyPreset = (preset: string) => {
+      switch (preset) {
+        case 'soft':
+          updateFn({ gainDb: -12, normalize: true, volume: (layerSettings.volume || 0.1) * 0.8 });
+          break;
+        case 'night':
+          updateFn({ gainDb: -24, normalize: true, volume: (layerSettings.volume || 0.1) * 0.5 });
+          break;
+        case 'focus':
+          updateFn({ gainDb: -6, normalize: false, volume: (layerSettings.volume || 0.1) * 1.2 });
+          break;
+      }
+    };
+
+    return (
+      <div className="mt-4 pt-4 border-t border-apple-border/50">
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-system-secondary-label hover:text-apple-blue transition-colors px-1 w-full"
+        >
+          <Sliders size={12} className={isOpen ? 'text-apple-blue' : ''} />
+          Audio Tools
+          <ChevronDown size={12} className={`transition-transform duration-300 ml-auto ${isOpen ? 'rotate-180 text-apple-blue' : ''}`} />
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-6 py-4 px-1">
+                <DbSlider 
+                  label="Gain (dB)" 
+                  value={layerSettings.gainDb || 0} 
+                  onChange={(val: number) => updateFn({ gainDb: val })} 
+                  min={-60} max={0} 
+                />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-system-secondary-label">Normalize Lower Volume</p>
+                    <p className="text-[9px] text-system-tertiary-label font-bold uppercase tracking-widest mt-0.5">Dynamics Control</p>
+                  </div>
+                  <button 
+                    onClick={() => updateFn({ normalize: !layerSettings.normalize })}
+                    className={`w-8 h-4.5 rounded-full relative transition-colors ${layerSettings.normalize ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                  >
+                    <motion.div 
+                      className="absolute top-0.75 left-1 bg-white w-3 h-3 rounded-full shadow-sm" 
+                      animate={{ x: layerSettings.normalize ? 12 : 0 }} 
+                    />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-system-tertiary-label">Presets</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'soft', label: 'Soft Safe', icon: ShieldCheck },
+                      { id: 'night', label: 'Night', icon: Moon },
+                      { id: 'focus', label: 'Focus', icon: Activity }
+                    ].map(preset => (
+                      <button
+                        key={preset.id}
+                        onClick={() => applyPreset(preset.id)}
+                        className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl bg-secondary-system-background border border-apple-border hover:border-apple-blue/30 transition-colors"
+                      >
+                        <preset.icon size={14} className="text-apple-blue opacity-80" />
+                        <span className="text-[8px] font-black uppercase tracking-widest text-system-secondary-label">{preset.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   const Section = ({ id, title, subtitle, icon: Icon, color, children, isEnabled, onToggle }: any) => {
     const isExpanded = isSectionExpanded(id);
     return (
@@ -668,6 +755,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   </div>
                 </div>
               </div>
+
+              <LayerAudioTools settings={settings.subliminal} updateFn={updateSubliminalSettings} />
             </div>
           </Section>
 
@@ -732,6 +821,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                     color="purple-500"
                   />
                 </div>
+
+                <LayerAudioTools settings={settings.binaural} updateFn={updateBinauralSettings} />
               </Section>
 
             <Section
@@ -769,6 +860,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   color="green-500"
                 />
               </div>
+
+              <LayerAudioTools settings={settings.nature} updateFn={updateNatureSettings} />
             </Section>
 
             <Section
@@ -802,6 +895,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   color="orange-500"
                 />
               </div>
+
+              <LayerAudioTools settings={settings.noise} updateFn={updateNoiseSettings} />
             </Section>
 
             <Section
@@ -868,6 +963,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                     </div>
                   </div>
                 </div>
+                <LayerAudioTools settings={settings.didgeridoo} updateFn={updateDidgeridooSettings} />
               </div>
             </Section>
 
@@ -1079,6 +1175,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   </button>
                 </div>
               </div>
+
+              <LayerAudioTools settings={settings.pureHz} updateFn={updatePureHzSettings} />
             </div>
           </Section>
         </div>

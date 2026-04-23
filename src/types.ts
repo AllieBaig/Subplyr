@@ -29,6 +29,7 @@ export interface SubliminalSettings {
   isPlaylistMode: boolean;
   sourcePlaylistId: string | null;
   gainDb: number;
+  normalize: boolean;
 }
 
 export interface BinauralSettings {
@@ -36,18 +37,24 @@ export interface BinauralSettings {
   leftFreq: number;
   rightFreq: number;
   volume: number;
+  gainDb: number;
+  normalize: boolean;
 }
 
 export interface NatureSettings {
   isEnabled: boolean;
   type: 'rain' | 'ocean' | 'forest' | 'wind' | 'fire' | 'stream';
   volume: number;
+  gainDb: number;
+  normalize: boolean;
 }
 
 export interface NoiseSettings {
   isEnabled: boolean;
   type: 'white' | 'pink' | 'brown';
   volume: number;
+  gainDb: number;
+  normalize: boolean;
 }
 
 export interface DidgeridooSettings {
@@ -56,6 +63,7 @@ export interface DidgeridooSettings {
   gainDb: number;
   playbackRate: number;
   isLooping: boolean;
+  normalize: boolean;
 }
 
 export interface PureHzSettings {
@@ -63,6 +71,8 @@ export interface PureHzSettings {
   frequency: number;
   volume: number;
   isLooping: boolean;
+  gainDb: number;
+  normalize: boolean;
 }
 
 export interface AudioTools {

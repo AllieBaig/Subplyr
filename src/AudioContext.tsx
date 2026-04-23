@@ -271,35 +271,45 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       isPlaylistMode: false,
       sourcePlaylistId: null,
       gainDb: 0,
+      normalize: false,
     },
     binaural: {
       isEnabled: false,
       leftFreq: 200,
       rightFreq: 210,
       volume: 0.05,
+      gainDb: 0,
+      normalize: false,
     },
     nature: {
       isEnabled: false,
       type: 'rain',
       volume: 0.5,
+      gainDb: 0,
+      normalize: false,
     },
     noise: {
       isEnabled: false,
       type: 'white',
       volume: 0.2,
+      gainDb: 0,
+      normalize: false,
     },
     didgeridoo: {
       isEnabled: false,
       volume: 0.3,
       gainDb: -6,
       playbackRate: 1.0,
-      isLooping: true
+      isLooping: true,
+      normalize: false,
     },
     pureHz: {
       isEnabled: false,
       frequency: 432,
       volume: 0.05,
-      isLooping: true
+      isLooping: true,
+      gainDb: 0,
+      normalize: false,
     },
     audioTools: {
       gainDb: 0,

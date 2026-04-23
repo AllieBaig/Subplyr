@@ -46,6 +46,16 @@ export default function AudioEngine() {
   const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const noiseGainRef = useRef<GainNode | null>(null);
   const natureAudioRef = useRef<HTMLAudioElement | null>(null);
+  const natureSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const natureGainRef = useRef<GainNode | null>(null);
+  const natureCompRef = useRef<DynamicsCompressorNode | null>(null);
+
+  // Per-layer Compressor Refs for Normalization
+  const subCompRef = useRef<DynamicsCompressorNode | null>(null);
+  const binCompRef = useRef<DynamicsCompressorNode | null>(null);
+  const noiseCompRef = useRef<DynamicsCompressorNode | null>(null);
+  const didgCompRef = useRef<DynamicsCompressorNode | null>(null);
+  const pureHzCompRef = useRef<DynamicsCompressorNode | null>(null);
 
   // Didgeridoo Refs
   const didgOscRef = useRef<OscillatorNode | null>(null);
@@ -212,9 +222,17 @@ export default function AudioEngine() {
       
       if (!noiseGainRef.current) {
         const gain = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+        
+        comp.threshold.setValueAtTime(-24, ctx.currentTime);
+        comp.ratio.setValueAtTime(12, ctx.currentTime);
+        
         gain.gain.setValueAtTime(0, ctx.currentTime);
+        comp.connect(gain);
         gain.connect(ctx.destination);
+        
         noiseGainRef.current = gain;
+        noiseCompRef.current = comp;
       }
     } catch (err) {
       console.error("Failed to setup noise context:", err);
@@ -241,6 +259,10 @@ export default function AudioEngine() {
         const rightOsc = ctx.createOscillator();
         const merger = ctx.createChannelMerger(2);
         const gainNode = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+
+        comp.threshold.setValueAtTime(-24, ctx.currentTime);
+        comp.ratio.setValueAtTime(12, ctx.currentTime);
 
         leftOsc.type = 'sine';
         rightOsc.type = 'sine';
@@ -253,7 +275,8 @@ export default function AudioEngine() {
         leftOsc.connect(merger, 0, 0);
         rightOsc.connect(merger, 0, 1);
 
-        merger.connect(gainNode);
+        merger.connect(comp);
+        comp.connect(gainNode);
         gainNode.connect(ctx.destination);
 
         gainNode.gain.setValueAtTime(0, ctx.currentTime);
@@ -264,6 +287,7 @@ export default function AudioEngine() {
         leftOscRef.current = leftOsc;
         rightOscRef.current = rightOsc;
         binauralGainRef.current = gainNode;
+        binCompRef.current = comp;
       }
     } catch (err) {
       console.error("Binaural setup failed:", err);
@@ -289,6 +313,10 @@ export default function AudioEngine() {
         const lfo = ctx.createOscillator();
         const lfoGain = ctx.createGain();
         const gain = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+
+        comp.threshold.setValueAtTime(-24, ctx.currentTime);
+        comp.ratio.setValueAtTime(12, ctx.currentTime);
 
         // Deep drone fundamental (around 65Hz)
         osc.type = 'sawtooth';
@@ -312,7 +340,8 @@ export default function AudioEngine() {
 
         osc.connect(filter);
         subOsc.connect(filter);
-        filter.connect(gain);
+        filter.connect(comp);
+        comp.connect(gain);
         gain.connect(ctx.destination);
 
         gain.gain.setValueAtTime(0, ctx.currentTime);
@@ -347,11 +376,16 @@ export default function AudioEngine() {
       if (!pureHzOscRef.current) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+
+        comp.threshold.setValueAtTime(-24, ctx.currentTime);
+        comp.ratio.setValueAtTime(12, ctx.currentTime);
 
         osc.type = 'sine'; // Always sine for pure tones
         osc.frequency.setValueAtTime(settings.pureHz.frequency, ctx.currentTime);
 
-        osc.connect(gain);
+        osc.connect(comp);
+        comp.connect(gain);
         gain.connect(ctx.destination);
 
         gain.gain.setValueAtTime(0, ctx.currentTime);
@@ -359,9 +393,38 @@ export default function AudioEngine() {
 
         pureHzOscRef.current = osc;
         pureHzGainRef.current = gain;
+        pureHzCompRef.current = comp;
       }
     } catch (err) {
       console.error("Pure Hz setup failed:", err);
+    }
+  };
+
+  const setupNature = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      if (natureAudioRef.current && !natureSourceRef.current) {
+        natureSourceRef.current = ctx.createMediaElementSource(natureAudioRef.current);
+        natureGainRef.current = ctx.createGain();
+        natureCompRef.current = ctx.createDynamicsCompressor();
+        
+        natureCompRef.current.threshold.setValueAtTime(-24, ctx.currentTime);
+        natureCompRef.current.ratio.setValueAtTime(12, ctx.currentTime);
+        
+        natureSourceRef.current.connect(natureCompRef.current);
+        natureCompRef.current.connect(natureGainRef.current);
+        natureGainRef.current.connect(ctx.destination);
+      }
+    } catch (err) {
+      console.error("Nature setup failed:", err);
     }
   };
 
@@ -557,12 +620,18 @@ export default function AudioEngine() {
       if (subAudioRef.current && !subSourceRef.current) {
         subSourceRef.current = ctx.createMediaElementSource(subAudioRef.current);
         
-        // Create Subliminal-specific gain node
+        // Create Subliminal-specific gain node and compressor
         if (!subSpecificGainRef.current) {
           subSpecificGainRef.current = ctx.createGain();
         }
+        if (!subCompRef.current) {
+          subCompRef.current = ctx.createDynamicsCompressor();
+          subCompRef.current.threshold.setValueAtTime(-24, ctx.currentTime);
+          subCompRef.current.ratio.setValueAtTime(12, ctx.currentTime);
+        }
         
-        subSourceRef.current.connect(subSpecificGainRef.current);
+        subSourceRef.current.connect(subCompRef.current);
+        subCompRef.current.connect(subSpecificGainRef.current);
         subSpecificGainRef.current.connect(toolGainRef.current);
       }
     } catch (err) {
@@ -581,13 +650,17 @@ export default function AudioEngine() {
         toolGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
       }
       
-      // Update Subliminal Specific Gain
+      // Update Subliminal Specific Gain & Normalize
       if (subSpecificGainRef.current) {
         const subGainValue = Math.pow(10, settings.subliminal.gainDb / 20);
         subSpecificGainRef.current.gain.setTargetAtTime(subGainValue, ctx.currentTime, 0.1);
       }
+      if (subCompRef.current) {
+        const threshold = settings.subliminal.normalize ? -24 : 0;
+        subCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
+      }
       
-      // Update Normalization Compressor
+      // Update Normalization Compressor (Master)
       if (toolCompressorRef.current) {
         const targetDb = settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0;
         toolCompressorRef.current.threshold.setTargetAtTime(targetDb, ctx.currentTime, 0.1);
@@ -663,7 +736,11 @@ export default function AudioEngine() {
       if (binauralGainRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
         const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        binauralGainRef.current.gain.setTargetAtTime(settings.binaural.volume, ctx.currentTime, fadeTime / 2);
+        const gainValue = settings.binaural.volume * Math.pow(10, settings.binaural.gainDb / 20);
+        const threshold = settings.binaural.normalize ? -24 : 0;
+        
+        if (binCompRef.current) binCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
+        binauralGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
       }
     } else {
       if (binauralGainRef.current && audioCtxRef.current) {
@@ -693,9 +770,13 @@ export default function AudioEngine() {
     
     if (binauralGainRef.current && audioCtxRef.current && isPlaying && settings.binaural.isEnabled) {
       const ctx = audioCtxRef.current;
-      binauralGainRef.current.gain.setTargetAtTime(settings.binaural.volume, ctx.currentTime, 0.1);
+      const gainValue = settings.binaural.volume * Math.pow(10, settings.binaural.gainDb / 20);
+      const threshold = settings.binaural.normalize ? -24 : 0;
+      
+      if (binCompRef.current) binCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
+      binauralGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
     }
-  }, [settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume]);
+  }, [settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume, settings.binaural.gainDb, settings.binaural.normalize]);
 
   // Handle Noise Layer
   useEffect(() => {
@@ -713,12 +794,16 @@ export default function AudioEngine() {
       const source = ctx.createBufferSource();
       source.buffer = buffer!;
       source.loop = true;
-      source.connect(noiseGainRef.current!);
+      source.connect(noiseCompRef.current!);
       source.start();
       noiseNodeRef.current = source;
 
       const fadeTime = settings.fadeInOut ? 3 : 0.1;
-      noiseGainRef.current!.gain.setTargetAtTime(settings.noise.volume, ctx.currentTime, fadeTime / 2);
+      const gainValue = settings.noise.volume * Math.pow(10, settings.noise.gainDb / 20);
+      const threshold = settings.noise.normalize ? -24 : 0;
+      
+      if (noiseCompRef.current) noiseCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
+      noiseGainRef.current!.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
     } else {
       if (noiseGainRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
@@ -734,7 +819,7 @@ export default function AudioEngine() {
         return () => clearTimeout(timer);
       }
     }
-  }, [isPlaying, settings.noise.isEnabled, settings.noise.type]);
+  }, [isPlaying, settings.noise.isEnabled, settings.noise.type, settings.noise.volume, settings.noise.gainDb, settings.noise.normalize]);
 
   // Handle Didgeridoo Layer
   useEffect(() => {
@@ -745,6 +830,9 @@ export default function AudioEngine() {
         const fadeTime = settings.fadeInOut ? 3 : 0.1;
         // Apply both volume and gainDb for precision control
         const gainValue = settings.didgeridoo.volume * Math.pow(10, settings.didgeridoo.gainDb / 20);
+        const threshold = settings.didgeridoo.normalize ? -24 : 0;
+        
+        if (didgCompRef.current) didgCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
         didgGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
       }
     } else {
@@ -754,7 +842,7 @@ export default function AudioEngine() {
         didgGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
       }
     }
-  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb]);
+  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize]);
 
   // Handle Pure Hz Layer
   useEffect(() => {
@@ -764,8 +852,12 @@ export default function AudioEngine() {
         const ctx = audioCtxRef.current;
         const fadeTime = settings.fadeInOut ? 3 : 0.4; // Slightly slower fade for pure Hz to avoid clicks
         
+        const gainValue = settings.pureHz.volume * Math.pow(10, settings.pureHz.gainDb / 20);
+        const threshold = settings.pureHz.normalize ? -24 : 0;
+        
+        if (pureHzCompRef.current) pureHzCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
         pureHzOscRef.current.frequency.setTargetAtTime(settings.pureHz.frequency, ctx.currentTime, 0.1);
-        pureHzGainRef.current.gain.setTargetAtTime(settings.pureHz.volume, ctx.currentTime, fadeTime / 2);
+        pureHzGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
       }
     } else {
       if (pureHzGainRef.current && audioCtxRef.current) {
@@ -784,7 +876,7 @@ export default function AudioEngine() {
         return () => clearTimeout(timer);
       }
     }
-  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency]);
+  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb, settings.pureHz.normalize]);
 
   // Handle Display Always On (WakeLock)
   useEffect(() => {
@@ -835,25 +927,40 @@ export default function AudioEngine() {
   // Handle Nature Layer
   useEffect(() => {
     if (isPlaying && settings.nature.isEnabled && natureAudioRef.current) {
+      setupNature();
       const audio = natureAudioRef.current;
       const sound = NATURE_SOUNDS.find(s => s.id === settings.nature.type);
       if (sound) {
-        audio.src = sound.url;
-        audio.volume = settings.nature.volume;
-        audio.play().catch(console.error);
+        if (audio.src !== sound.url) {
+          audio.src = sound.url;
+          audio.play().catch(console.error);
+        } else if (audio.paused) {
+          audio.play().catch(console.error);
+        }
+        
+        if (natureGainRef.current && audioCtxRef.current) {
+          const ctx = audioCtxRef.current;
+          const fadeTime = settings.fadeInOut ? 3 : 0.1;
+          const gainValue = settings.nature.volume * Math.pow(10, settings.nature.gainDb / 20);
+          const threshold = settings.nature.normalize ? -24 : 0;
+          
+          if (natureCompRef.current) natureCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
+          natureGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+        }
       }
     } else {
-      if (natureAudioRef.current) {
+      if (natureGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        natureGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+        setTimeout(() => {
+           if (!settings.nature.isEnabled && natureAudioRef.current) natureAudioRef.current.pause();
+        }, fadeTime * 1000);
+      } else if (natureAudioRef.current) {
         natureAudioRef.current.pause();
       }
     }
-  }, [isPlaying, settings.nature.isEnabled, settings.nature.type]);
-
-  useEffect(() => {
-    if (natureAudioRef.current) {
-      natureAudioRef.current.volume = settings.nature.volume;
-    }
-  }, [settings.nature.volume]);
+  }, [isPlaying, settings.nature.isEnabled, settings.nature.type, settings.nature.volume, settings.nature.gainDb, settings.nature.normalize, settings.fadeInOut]);
 
   // Handle Volume Balance
   useEffect(() => {
