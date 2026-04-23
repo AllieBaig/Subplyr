@@ -5,6 +5,7 @@ export interface Track {
   artist?: string;
   artwork?: string;
   createdAt: number;
+  lastPlayedAt?: number;
   isMissing?: boolean;
 }
 

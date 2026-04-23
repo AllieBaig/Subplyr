@@ -36,7 +36,8 @@ export default function LibraryView() {
     playingPlaylistId,
     setPlayingPlaylistId,
     resumePlaylist,
-    isPlaying
+    isPlaying,
+    navigateTo
   } = useAudio();
 
   const [view, setView] = useState<'tracks' | 'playlists' | 'playlist_detail'>('tracks');
@@ -163,16 +164,19 @@ export default function LibraryView() {
       let label = 'Other';
       const diff = now - (track.createdAt || 0);
       const diffMins = Math.floor(diff / minMs);
+      
+      // Check if it's recently played (last 24h)
+      const isRecentlyPlayed = track.lastPlayedAt && (now - track.lastPlayedAt < dayMs);
 
-      // Priority: Group by Minutes if enabled and within 20 mins OR if group is specifically set to minutes
-      if ((groupByMinutes && diffMins < 20) || group === 'minutes') {
+      if (isRecentlyPlayed) {
+        label = 'Recently Played';
+      } else if ((groupByMinutes && diffMins < 20) || group === 'minutes') {
         if (diffMins < 5) label = 'Last 5 mins';
         else if (diffMins < 10) label = 'Last 10 mins';
         else if (diffMins < 15) label = 'Last 15 mins';
         else if (diffMins < 20) label = 'Last 20 mins';
         else if (group === 'minutes') label = 'Earlier';
         else {
-          // If groupByMinutes is ON but it's > 20 mins, use the normal grouping logic below
           applyNormalGrouping();
         }
       } else {
@@ -208,7 +212,7 @@ export default function LibraryView() {
     });
 
     const entries = Object.entries(groups);
-    const timeLabels = ['Last 5 mins', 'Last 10 mins', 'Last 15 mins', 'Last 20 mins'];
+    const timeLabels = ['Recently Played', 'Last 5 mins', 'Last 10 mins', 'Last 15 mins', 'Last 20 mins'];
     
     entries.sort(([a], [b]) => {
       // Time labels always first
@@ -417,7 +421,8 @@ export default function LibraryView() {
       )}
 
       {view === 'playlist_detail' && activePlaylistId ? (
-         <PlaylistDetailView 
+        <div className="fixed inset-0 z-[120] bg-system-background flex flex-col animate-in fade-in slide-in-from-right duration-500 overflow-y-auto no-scrollbar pb-32">
+           <PlaylistDetailView 
             playlist={playlists.find(p => p.id === activePlaylistId)!}
             tracks={tracks}
             onBack={() => {
@@ -434,6 +439,7 @@ export default function LibraryView() {
                   setPlayingPlaylistId(activePlaylistId);
                   setCurrentTrackIndex(idx);
                   setIsPlaying(true);
+                  navigateTo('player');
                 }
               }
             }}
@@ -458,7 +464,8 @@ export default function LibraryView() {
             playingPlaylistId={playingPlaylistId}
             currentTrackIndex={currentTrackIndex}
             isPlaying={isPlaying}
-         />
+          />
+        </div>
       ) : view === 'tracks' ? (
         tracks.length === 0 ? (
           <EmptyState onFileUpload={handleFileUpload} />
@@ -516,6 +523,7 @@ export default function LibraryView() {
                           setPlayingPlaylistId(null);
                           setCurrentTrackIndex(trueIndex);
                           setIsPlaying(true);
+                          navigateTo('player');
                         }
                       }}
                       onRemove={() => removeTrack(track.id)}
@@ -553,6 +561,7 @@ export default function LibraryView() {
               setPlayingPlaylistId(null);
               setCurrentTrackIndex(idx);
               setIsPlaying(true);
+              navigateTo('player');
             }
           }}
           onOpen={(id) => {

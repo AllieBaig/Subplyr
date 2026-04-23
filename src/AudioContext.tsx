@@ -67,6 +67,9 @@ interface AudioContextType {
   resetUISettings: () => void;
   clearAppCache: () => void;
   updateSleepTimer: (newSettings: Partial<AppSettings['sleepTimer']>) => void;
+  activeTabRequest: string | null;
+  clearTabRequest: () => void;
+  navigateTo: (tab: string) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -85,6 +88,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [activeTabRequest, setActiveTabRequest] = useState<string | null>(null);
+
+  const navigateTo = (tab: string) => setActiveTabRequest(tab);
+  const clearTabRequest = () => setActiveTabRequest(null);
 
   const currentPlaybackList = useMemo(() => {
     if (playingPlaylistId) {
@@ -95,6 +102,35 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
     return tracks;
   }, [playingPlaylistId, playlists, tracks]);
+
+  const currentTrack = useMemo(() => {
+    if (currentTrackIndex === null) return null;
+    return currentPlaybackList[currentTrackIndex] || null;
+  }, [currentTrackIndex, currentPlaybackList]);
+
+  // Auto-track last played
+  const lastUpdateRef = useRef<{ id: string, time: number } | null>(null);
+
+  useEffect(() => {
+    if (currentTrack?.id && isPlaying) {
+      const now = Date.now();
+      const lastUpdate = lastUpdateRef.current;
+      
+      // Only update if it's a new track OR if more than 5 minutes have passed (for long loops)
+      if (!lastUpdate || lastUpdate.id !== currentTrack.id || (now - lastUpdate.time > 5 * 60 * 1000)) {
+        lastUpdateRef.current = { id: currentTrack.id, time: now };
+        
+        setTracks(prev => {
+          const updated = prev.map(t => t.id === currentTrack.id ? { ...t, lastPlayedAt: now } : t);
+          const target = updated.find(t => t.id === currentTrack.id);
+          if (target) {
+            db.saveTrack(target as db.DBTrack, false);
+          }
+          return updated;
+        });
+      }
+    }
+  }, [currentTrack?.id, isPlaying]);
 
   const [swStatus, setSwStatus] = useState<'active' | 'waiting' | 'installing' | 'none'>('none');
   const swSupported = 'serviceWorker' in navigator;
@@ -1090,7 +1126,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       showToast,
       resetUISettings,
       clearAppCache,
-      updateSleepTimer
+      updateSleepTimer,
+      activeTabRequest,
+      clearTabRequest,
+      navigateTo
     }}>
       {children}
     </AudioContext.Provider>

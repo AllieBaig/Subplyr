@@ -17,7 +17,14 @@ export type TabType = 'library' | 'player' | 'settings';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('library');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const { isLoading, initError, toast, settings, swStatus, showToast } = useAudio();
+  const { isLoading, initError, toast, settings, swStatus, showToast, activeTabRequest, clearTabRequest } = useAudio();
+  
+  useEffect(() => {
+    if (activeTabRequest) {
+      setActiveTab(activeTabRequest as TabType);
+      clearTabRequest();
+    }
+  }, [activeTabRequest, clearTabRequest]);
 
   useEffect(() => {
     const handleOnline = () => {
