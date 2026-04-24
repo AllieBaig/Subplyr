@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { useAudio } from '../AudioContext';
 import { usePlayback } from '../PlaybackContext';
 import { NATURE_SOUNDS } from '../constants';
@@ -19,11 +19,18 @@ export default function AudioEngine() {
     currentPlaybackList,
     playingPlaylistId,
     isLoading,
-    showToast
+    showToast,
+    getTrackUrl,
+    activeTabRequest,
+    clearTabRequest,
+    navigateTo,
+    isOffline
   } = useAudio();
 
   const { currentTime, setCurrentTime, setDuration } = usePlayback();
-  
+  const [preparedUrl, setPreparedUrl] = useState<string | null>(null);
+  const [preparedSubUrl, setPreparedSubUrl] = useState<string | null>(null);
+
   const { seekRequest, clearSeekRequest } = useAudio();
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
   const subAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -495,6 +502,18 @@ export default function AudioEngine() {
   }, [seekRequest]);
 
   const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
+
+  // Resolve Main URL
+  useEffect(() => {
+    if (currentTrack && !currentTrack.isMissing) {
+      getTrackUrl(currentTrack.id).then(url => {
+        setPreparedUrl(url);
+      });
+    } else {
+      setPreparedUrl(null);
+    }
+  }, [currentTrack?.id, getTrackUrl]);
+
   // Unified sourcing: Check both lists for the subliminal track
   const subTrack = useMemo(() => {
     // If playlist mode is on, we derive track from the selected playlist and our internal index
@@ -510,6 +529,17 @@ export default function AudioEngine() {
     return subliminalTracks.find(t => t.id === settings.subliminal.selectedTrackId) || 
            tracks.find(t => t.id === settings.subliminal.selectedTrackId);
   }, [subliminalTracks, tracks, settings.subliminal.selectedTrackId, settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId, playlists]);
+
+  // Resolve Sub URL
+  useEffect(() => {
+    if (subTrack && !subTrack.isMissing) {
+      getTrackUrl(subTrack.id).then(url => {
+        setPreparedSubUrl(url);
+      });
+    } else {
+      setPreparedSubUrl(null);
+    }
+  }, [subTrack?.id, getTrackUrl]);
 
   // Reset Subliminal Index on mode/playlist change
   useEffect(() => {
@@ -683,13 +713,13 @@ export default function AudioEngine() {
 
   // Handle Subliminal Source Sync
   useEffect(() => {
-    if (subAudioRef.current && subTrack && !subTrack.isMissing) {
-      if (subAudioRef.current.src !== subTrack.url) {
-        subAudioRef.current.src = subTrack.url;
+    if (subAudioRef.current && subTrack && preparedSubUrl) {
+      if (subAudioRef.current.src !== preparedSubUrl) {
+        subAudioRef.current.src = preparedSubUrl;
         subAudioRef.current.load();
       }
     }
-  }, [subTrack]);
+  }, [subTrack, preparedSubUrl]);
 
   const setupAudioTools = () => {
     try {
@@ -775,18 +805,12 @@ export default function AudioEngine() {
 
   // Handle Main Track Source Change
   useEffect(() => {
-    if (mainAudioRef.current && currentTrack) {
-      if (currentTrack.isMissing) {
-        mainAudioRef.current.pause();
-        mainAudioRef.current.src = "";
-        setIsPlaying(false);
-        return;
-      }
+    if (mainAudioRef.current && currentTrack && preparedUrl) {
       const wasPlaying = isPlaying;
       
       // iOS stability: only update src if different
-      if (mainAudioRef.current.src !== currentTrack.url) {
-        mainAudioRef.current.src = currentTrack.url;
+      if (mainAudioRef.current.src !== preparedUrl) {
+        mainAudioRef.current.src = preparedUrl;
         mainAudioRef.current.load(); // Required for iOS stability on src change
       }
 
@@ -797,7 +821,7 @@ export default function AudioEngine() {
       mainAudioRef.current.pause();
       mainAudioRef.current.src = "";
     }
-  }, [currentTrack]);
+  }, [currentTrack, preparedUrl]);
 
   // Handle Play/Pause and MediaSession State
   useEffect(() => {

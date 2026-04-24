@@ -40,6 +40,7 @@ interface AudioContextType {
   exportAppData: () => Promise<void>;
   importAppData: (file: File) => Promise<void>;
   relinkTrack: (trackId: string, file: File, isSubliminal: boolean) => Promise<void>;
+  getTrackUrl: (id: string) => Promise<string | null>;
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
@@ -93,6 +94,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<string | null>(null);
   const [activeTabRequest, setActiveTabRequest] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const trackUrlCache = useRef<Record<string, string>>({});
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -458,24 +460,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
         const savedTracks = await db.getTracks(false);
         if (isMounted) {
-          const tracksWithUrls = (savedTracks || []).map(t => {
-            if (t.blob) {
-              return { ...t, url: URL.createObjectURL(t.blob), isMissing: false };
-            }
-            return { ...t, url: '', isMissing: true };
-          });
-          setTracks(tracksWithUrls);
+          setTracks(savedTracks || []);
         }
 
         const savedSubTracks = await db.getTracks(true);
         if (isMounted) {
-          const subTracksWithUrls = (savedSubTracks || []).map(t => {
-            if (t.blob) {
-              return { ...t, url: URL.createObjectURL(t.blob), isMissing: false };
-            }
-            return { ...t, url: '', isMissing: true };
-          });
-          setSubliminalTracks(subTracksWithUrls);
+          setSubliminalTracks(savedSubTracks || []);
         }
 
         const savedPlaylists = await db.getPlaylists();
@@ -521,9 +511,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     return () => { 
       isMounted = false; 
       clearTimeout(startupGuard); 
-      // Memory Safety: Revoke all object URLs on cleanup
-      tracks.forEach(t => { if (t.url.startsWith('blob:')) URL.revokeObjectURL(t.url); });
-      subliminalTracks.forEach(t => { if (t.url.startsWith('blob:')) URL.revokeObjectURL(t.url); });
+      // Memory Safety: Revoke all cached object URLs
+      Object.values(trackUrlCache.current).forEach(url => URL.revokeObjectURL(url));
     };
   }, []);
 
@@ -560,6 +549,18 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.appearance]);
 
+  const getTrackUrl = useCallback(async (id: string) => {
+    if (trackUrlCache.current[id]) return trackUrlCache.current[id];
+    
+    const blob = await db.getTrackBlob(id);
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      trackUrlCache.current[id] = url;
+      return url;
+    }
+    return null;
+  }, []);
+
   const addTrack = async (file: File, targetPlaylistId?: string) => {
     const isValid = await validateAudioFile(file);
     if (!isValid) {
@@ -571,14 +572,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const newTrack: db.DBTrack = {
       id,
       name: file.name.replace(/\.[^/.]+$/, ""),
-      url: URL.createObjectURL(file), // temporary URL
+      url: '', 
       artist: 'Unknown Artist',
       blob: file,
       createdAt: Date.now()
     };
     
     await db.saveTrack(newTrack, false);
-    setTracks(prev => [...prev, newTrack]);
+    
+    // For local UI state, we don't store blob
+    const { blob, ...metadata } = newTrack;
+    setTracks(prev => [...prev, metadata]);
     
     if (targetPlaylistId) {
       await addTrackToPlaylist(id, targetPlaylistId);
@@ -599,13 +603,15 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const newTrack: db.DBTrack = {
       id,
       name: file.name.replace(/\.[^/.]+$/, ""),
-      url: URL.createObjectURL(file), // temporary URL
+      url: '',
       blob: file,
       createdAt: Date.now()
     };
     
     await db.saveTrack(newTrack, true);
-    setSubliminalTracks(prev => [...prev, newTrack]);
+    
+    const { blob, ...metadata } = newTrack;
+    setSubliminalTracks(prev => [...prev, metadata]);
     if (!settings.subliminal.selectedTrackId) {
        updateSubliminalSettings({ selectedTrackId: newTrack.id });
     }
@@ -845,24 +851,25 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       const existingSubTracks = await db.getTracks(true);
 
       const importedTracks = await Promise.all(data.tracks.map(async (t: any) => {
-        const existing = existingTracks.find(et => et.id === t.id);
-        const trackToSave = { ...t, blob: existing?.blob || null };
+        // Blob is physically in Blobs store, we just need to preserve it during meta transformation
+        const existingBlob = await db.getTrackBlob(t.id);
+        const trackToSave = { ...t, blob: existingBlob || null };
         await db.saveTrack(trackToSave as any, false);
         return { 
           ...t, 
-          url: existing?.blob ? URL.createObjectURL(existing.blob) : '', 
-          isMissing: !existing?.blob 
+          url: '', 
+          isMissing: !existingBlob 
         };
       }));
 
       const importedSubTracks = await Promise.all((data.subliminalTracks || []).map(async (t: any) => {
-        const existing = existingSubTracks.find(et => et.id === t.id);
-        const trackToSave = { ...t, blob: existing?.blob || null };
+        const existingBlob = await db.getTrackBlob(t.id);
+        const trackToSave = { ...t, blob: existingBlob || null };
         await db.saveTrack(trackToSave as any, true);
         return { 
           ...t, 
-          url: existing?.blob ? URL.createObjectURL(existing.blob) : '', 
-          isMissing: !existing?.blob 
+          url: '', 
+          isMissing: !existingBlob 
         };
       }));
 
@@ -895,9 +902,15 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       const track = list.find(t => t.id === trackId);
       if (!track) return;
 
-      const updatedTrack = { ...track, blob: file, isMissing: false, url: URL.createObjectURL(file) };
-      await db.saveTrack(updatedTrack as any, isSubliminal);
+      const updatedTrack = { ...track, isMissing: false, url: '' };
+      await db.saveTrack({ ...updatedTrack, blob: file }, isSubliminal);
       
+      // Memory Safety: If it was cached, revoke and clear
+      if (trackUrlCache.current[trackId]) {
+        URL.revokeObjectURL(trackUrlCache.current[trackId]);
+        delete trackUrlCache.current[trackId];
+      }
+
       if (isSubliminal) {
         setSubliminalTracks(prev => prev.map(t => t.id === trackId ? updatedTrack : t));
       } else {
@@ -1153,6 +1166,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       exportAppData,
       importAppData,
       relinkTrack,
+      getTrackUrl,
       removeTracksFromPlaylist,
       renamePlaylist,
       playingPlaylistId,
@@ -1185,7 +1199,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateSleepTimer,
       activeTabRequest,
       clearTabRequest,
-      navigateTo
+      navigateTo,
+      isOffline
     }}>
       {children}
     </AudioContext.Provider>
