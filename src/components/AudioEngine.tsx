@@ -76,6 +76,18 @@ export default function AudioEngine() {
   const pureHzOscRef = useRef<OscillatorNode | null>(null);
   const pureHzGainRef = useRef<GainNode | null>(null);
 
+  // Isochronic Refs
+  const isoOscRef = useRef<OscillatorNode | null>(null);
+  const isoGainRef = useRef<GainNode | null>(null);
+  const isoLfoRef = useRef<OscillatorNode | null>(null);
+  const isoLfoGainRef = useRef<GainNode | null>(null);
+  const isoCompRef = useRef<DynamicsCompressorNode | null>(null);
+
+  // Solfeggio Refs
+  const solOscRef = useRef<OscillatorNode | null>(null);
+  const solGainRef = useRef<GainNode | null>(null);
+  const solCompRef = useRef<DynamicsCompressorNode | null>(null);
+
   // iOS Background Audio & Media Session Setup
   useEffect(() => {
     // Helper to ensure AudioContext is ready on any media session action
@@ -392,13 +404,13 @@ export default function AudioEngine() {
 
         // Vocalizing filter
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(180, ctx.currentTime);
+        filter.frequency.setValueAtTime(180 * (1 + settings.didgeridoo.depth), ctx.currentTime);
         filter.Q.setValueAtTime(15, ctx.currentTime);
 
         // Slow modulation for "breath"
         lfo.type = 'sine';
         lfo.frequency.setValueAtTime(0.15, ctx.currentTime);
-        lfoGain.gain.setValueAtTime(60, ctx.currentTime);
+        lfoGain.gain.setValueAtTime(60 * settings.didgeridoo.depth, ctx.currentTime);
 
         lfo.connect(lfoGain);
         lfoGain.connect(filter.frequency);
@@ -462,6 +474,103 @@ export default function AudioEngine() {
       }
     } catch (err) {
       console.error("Pure Hz setup failed:", err);
+    }
+  };
+
+  const setupIsochronic = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      if (!isoOscRef.current) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+
+        comp.threshold.setValueAtTime(-24, ctx.currentTime);
+        comp.ratio.setValueAtTime(12, ctx.currentTime);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(settings.isochronic.frequency, ctx.currentTime);
+
+        // Isochronic pulse (square wave LFO on gain)
+        lfo.type = 'square';
+        lfo.frequency.setValueAtTime(settings.isochronic.pulseRate, ctx.currentTime);
+        
+        // Connect LFO to Gain.gain via an offset
+        // In Web Audio, LFO on gain usually goes 0 to 1
+        lfoGain.gain.setValueAtTime(0.5, ctx.currentTime);
+        const constantSource = ctx.createConstantSource();
+        constantSource.offset.setValueAtTime(0.5, ctx.currentTime);
+        constantSource.start();
+        
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        constantSource.connect(gain.gain);
+
+        osc.connect(comp);
+        comp.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        lfo.start();
+
+        isoOscRef.current = osc;
+        isoGainRef.current = gain;
+        isoLfoRef.current = lfo;
+        isoLfoGainRef.current = lfoGain;
+        isoCompRef.current = comp;
+      }
+    } catch (err) {
+      console.error("Isochronic setup failed:", err);
+    }
+  };
+
+  const setupSolfeggio = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      if (!solOscRef.current) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+
+        comp.threshold.setValueAtTime(-24, ctx.currentTime);
+        comp.ratio.setValueAtTime(12, ctx.currentTime);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(settings.solfeggio.frequency, ctx.currentTime);
+
+        osc.connect(comp);
+        comp.connect(gain);
+        gain.connect(ctx.destination);
+
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        osc.start();
+
+        solOscRef.current = osc;
+        solGainRef.current = gain;
+        solCompRef.current = comp;
+      }
+    } catch (err) {
+      console.error("Solfeggio setup failed:", err);
     }
   };
 
@@ -1057,12 +1166,8 @@ export default function AudioEngine() {
       setupPureHz();
       if (pureHzGainRef.current && pureHzOscRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4; // Slightly slower fade for pure Hz to avoid clicks
-        
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
         const gainValue = settings.pureHz.volume * Math.pow(10, settings.pureHz.gainDb / 20);
-        const threshold = settings.pureHz.normalize ? -24 : 0;
-        
-        if (pureHzCompRef.current) pureHzCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
         pureHzOscRef.current.frequency.setTargetAtTime(settings.pureHz.frequency, ctx.currentTime, 0.1);
         pureHzGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
       }
@@ -1071,19 +1176,50 @@ export default function AudioEngine() {
         const ctx = audioCtxRef.current;
         const fadeTime = settings.fadeInOut ? 3 : 0.4;
         pureHzGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-        
-        // Potential cleanup of oscillator to save resources if disabled
-        const timer = setTimeout(() => {
-          if (!settings.pureHz.isEnabled && pureHzOscRef.current) {
-            pureHzOscRef.current.stop();
-            pureHzOscRef.current = null;
-            pureHzGainRef.current = null;
-          }
-        }, fadeTime * 1000);
-        return () => clearTimeout(timer);
       }
     }
-  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb, settings.pureHz.normalize]);
+  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb]);
+
+  // Handle Isochronic Layer
+  useEffect(() => {
+    if (isPlaying && settings.isochronic.isEnabled) {
+      setupIsochronic();
+      if (isoGainRef.current && isoOscRef.current && isoLfoRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
+        const gainValue = settings.isochronic.volume * Math.pow(10, settings.isochronic.gainDb / 20);
+        isoOscRef.current.frequency.setTargetAtTime(settings.isochronic.frequency, ctx.currentTime, 0.1);
+        isoLfoRef.current.frequency.setTargetAtTime(settings.isochronic.pulseRate, ctx.currentTime, 0.1);
+        isoGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (isoGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
+        isoGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+      }
+    }
+  }, [isPlaying, settings.isochronic.isEnabled, settings.fadeInOut, settings.isochronic.volume, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.gainDb]);
+
+  // Handle Solfeggio Layer
+  useEffect(() => {
+    if (isPlaying && settings.solfeggio.isEnabled) {
+      setupSolfeggio();
+      if (solGainRef.current && solOscRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
+        const gainValue = settings.solfeggio.volume * Math.pow(10, settings.solfeggio.gainDb / 20);
+        solOscRef.current.frequency.setTargetAtTime(settings.solfeggio.frequency, ctx.currentTime, 0.1);
+        solGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (solGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
+        solGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+      }
+    }
+  }, [isPlaying, settings.solfeggio.isEnabled, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb]);
 
   // Handle Display Always On (WakeLock)
   const wakeLockRef = useRef<any>(null);

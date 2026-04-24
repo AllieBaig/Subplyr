@@ -63,6 +63,7 @@ export interface DidgeridooSettings {
   volume: number;
   gainDb: number;
   playbackRate: number;
+  depth: number;
   isLooping: boolean;
   normalize: boolean;
 }
@@ -72,6 +73,23 @@ export interface PureHzSettings {
   frequency: number;
   volume: number;
   isLooping: boolean;
+  gainDb: number;
+  normalize: boolean;
+}
+
+export interface IsochronicSettings {
+  isEnabled: boolean;
+  frequency: number;
+  pulseRate: number;
+  volume: number;
+  gainDb: number;
+  normalize: boolean;
+}
+
+export interface SolfeggioSettings {
+  isEnabled: boolean;
+  frequency: number;
+  volume: number;
   gainDb: number;
   normalize: boolean;
 }
@@ -107,6 +125,8 @@ export interface AppSettings {
   noise: NoiseSettings;
   didgeridoo: DidgeridooSettings;
   pureHz: PureHzSettings;
+  isochronic: IsochronicSettings;
+  solfeggio: SolfeggioSettings;
   audioTools: AudioTools;
   mainVolume: number;
   playbackRate: number;

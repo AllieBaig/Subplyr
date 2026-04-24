@@ -19,6 +19,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     updateNoiseSettings,
     updateDidgeridooSettings,
     updatePureHzSettings,
+    updateIsochronicSettings,
+    updateSolfeggioSettings,
     updateLibrarySettings,
     updateAppearanceSettings,
     updateVisibilitySettings,
@@ -781,7 +783,32 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
           {/* Other audio layers are conditional */}
             {settings.visibility.audioLayers && (
               <>
-              <Section
+                <div className="px-5 mb-2 mt-2">
+                  <div className="flex items-center justify-between bg-secondary-system-background/50 p-4 rounded-2xl border border-apple-border">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-apple-blue/10 flex items-center justify-center text-apple-blue">
+                        <Sliders size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-bold text-system-label">Hz Picker Style</p>
+                        <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest leading-none">Universal selector</p>
+                      </div>
+                    </div>
+                    <div className="flex bg-system-background p-1 rounded-xl border border-apple-border shadow-sm">
+                      {['slider', 'picker'].map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => updateSettings({ hzInputMode: mode as any })}
+                          className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${settings.hzInputMode === mode ? 'bg-apple-blue text-white shadow-sm' : 'text-system-secondary-label hover:text-system-label'}`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <Section
                 id="binaural"
                 title="Binaural Beats"
                 subtitle="Brain Entrainment"
@@ -798,7 +825,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                         <button 
                           key={p.label} 
                           onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })} 
-                          className="bg-secondary-system-background text-system-label border border-apple-border rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-purple-500 hover:text-white transition-all active:scale-95 text-center"
+                          className={`py-2 rounded-xl border text-[10px] font-black transition-all ${settings.binaural.leftFreq === p.l && settings.binaural.rightFreq === p.r ? 'bg-purple-500 text-white border-purple-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-purple-500/5'}`}
                         >
                           {p.label}
                         </button>
@@ -829,18 +856,16 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                     label="Tone Intensity"
                     value={settings.binaural.volume}
                     onChange={(v: number) => updateBinauralSettings({ volume: v })}
-                    max={0.2}
                     color="purple-500"
                   />
+                  <LayerAudioTools settings={settings.binaural} updateFn={updateBinauralSettings} />
                 </div>
-
-                <LayerAudioTools settings={settings.binaural} updateFn={updateBinauralSettings} />
               </Section>
 
-            <Section
+              <Section
               id="nature"
               title="Nature Ambience"
-              subtitle="Environment Loop"
+              subtitle="Environmental Decor"
               icon={CloudRain}
               color="bg-green-500/10 text-green-600"
               isEnabled={settings.nature.isEnabled}
@@ -871,9 +896,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   onChange={(v: number) => updateNatureSettings({ volume: v })}
                   color="green-500"
                 />
+                <LayerAudioTools settings={settings.nature} updateFn={updateNatureSettings} />
               </div>
-
-              <LayerAudioTools settings={settings.nature} updateFn={updateNatureSettings} />
             </Section>
 
             <Section
@@ -886,18 +910,16 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               onToggle={(val: boolean) => updateNoiseSettings({ isEnabled: val })}
             >
               <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-2.5">
-                  <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10 shadow-inner">
-                    {['white', 'pink', 'brown'].map(type => (
-                      <button 
-                        key={type}
-                        onClick={() => updateNoiseSettings({ type: type as any })}
-                        className={`flex-1 h-full text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${settings.noise.type === type ? 'bg-system-background shadow-sm text-orange-600' : 'text-system-secondary-label'}`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
+                <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10 shadow-inner">
+                  {['white', 'pink', 'brown'].map(type => (
+                    <button 
+                      key={type}
+                      onClick={() => updateNoiseSettings({ type: type as any })}
+                      className={`flex-1 h-full text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${settings.noise.type === type ? 'bg-system-background shadow-sm text-orange-600' : 'text-system-secondary-label'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
                 </div>
                 <VolumeSlider 
                   label="Masking Strength"
@@ -906,9 +928,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   max={0.5}
                   color="orange-500"
                 />
+                <LayerAudioTools settings={settings.noise} updateFn={updateNoiseSettings} />
               </div>
-
-              <LayerAudioTools settings={settings.noise} updateFn={updateNoiseSettings} />
             </Section>
 
             <Section
@@ -921,60 +942,47 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               onToggle={(val: boolean) => updateDidgeridooSettings({ isEnabled: val })}
             >
               <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-8">
-                  <VolumeSlider 
-                    label="Drone Volume"
-                    value={settings.didgeridoo.volume}
-                    onChange={(v: number) => updateDidgeridooSettings({ volume: v })}
-                    max={1.0}
-                    color="amber-700"
-                  />
-                  <DbSlider 
-                    label="Output Level"
-                    value={settings.didgeridoo.gainDb}
-                    onChange={(v: number) => updateDidgeridooSettings({ gainDb: v })}
-                    min={-60}
-                    max={0}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-5 bg-secondary-system-background/30 p-5 rounded-2xl border border-apple-border mt-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[13px] font-bold text-system-label">Loop Mode</p>
-                      <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Continuous oscillation</p>
-                    </div>
+                <VolumeSlider 
+                  label="Drone Volume"
+                  value={settings.didgeridoo.volume}
+                  onChange={(v: number) => updateDidgeridooSettings({ volume: v })}
+                  color="amber-700"
+                />
+                
+                <div className="flex flex-col gap-3 p-4 bg-secondary-system-background/30 rounded-2xl border border-apple-border/50">
+                  <div className="flex justify-between items-baseline px-1">
+                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Base Frequency</label>
+                    <span className="text-[12px] font-black text-amber-800 tabular-nums">{Math.round(65 * settings.didgeridoo.playbackRate)}Hz</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <input 
+                      type="range" min={0.5} max={2.0} step={0.1} 
+                      value={settings.didgeridoo.playbackRate} 
+                      onChange={(e) => updateDidgeridooSettings({ playbackRate: parseFloat(e.target.value) })}
+                      className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-amber-800 cursor-pointer"
+                    />
                     <button 
-                      onClick={() => updateDidgeridooSettings({ isLooping: !settings.didgeridoo.isLooping })}
-                      className={`w-10 h-6 rounded-full relative transition-colors ${settings.didgeridoo.isLooping ? 'bg-amber-800' : 'bg-system-tertiary-label'}`}
+                      onClick={() => updateDidgeridooSettings({ playbackRate: 1.0 })}
+                      className="text-[9px] font-black text-amber-800 uppercase tracking-widest hover:bg-amber-800/10 px-2 py-1 rounded-lg transition-colors border border-amber-800/20"
                     >
-                      <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.didgeridoo.isLooping ? 16 : 0 }} />
+                      Reset
                     </button>
                   </div>
-
-                  <div className="h-px bg-apple-border/30" />
-
-                  <div className="flex flex-col gap-3">
-                    <div className="flex justify-between items-baseline px-1">
-                      <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Base Frequency</label>
-                      <span className="text-[12px] font-black text-amber-800 tabular-nums">{Math.round(65 * settings.didgeridoo.playbackRate)}Hz</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <input 
-                        type="range" min={0.5} max={2.0} step={0.1} 
-                        value={settings.didgeridoo.playbackRate} 
-                        onChange={(e) => updateDidgeridooSettings({ playbackRate: parseFloat(e.target.value) })}
-                        className="flex-1 h-1.5 bg-system-background rounded-full appearance-none accent-amber-800 border border-apple-border cursor-pointer"
-                      />
-                      <button 
-                        onClick={() => updateDidgeridooSettings({ playbackRate: 1.0 })}
-                        className="text-[9px] font-black text-amber-800 uppercase tracking-widest hover:bg-amber-800/10 px-2 py-1 rounded-lg transition-colors border border-amber-800/20"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  </div>
                 </div>
+
+                <div className="flex flex-col gap-3 p-4 bg-secondary-system-background/30 rounded-2xl border border-apple-border/50">
+                  <div className="flex justify-between items-baseline px-1">
+                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Frequency Depth</label>
+                    <span className="text-[12px] font-black text-amber-800 tabular-nums">{Math.round(settings.didgeridoo.depth * 100)}%</span>
+                  </div>
+                  <input 
+                    type="range" min={0} max={1} step={0.01} 
+                    value={settings.didgeridoo.depth} 
+                    onChange={(e) => updateDidgeridooSettings({ depth: parseFloat(e.target.value) })}
+                    className="w-full h-1 bg-apple-border rounded-full appearance-none accent-amber-800 cursor-pointer"
+                  />
+                </div>
+
                 <LayerAudioTools settings={settings.didgeridoo} updateFn={updateDidgeridooSettings} />
               </div>
             </Section>
@@ -989,53 +997,121 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
               onToggle={(val: boolean) => updatePureHzSettings({ isEnabled: val })}
             >
               <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-4">
-                    <HzControl 
-                      label="Frequency"
-                      value={settings.pureHz.frequency}
-                      onChange={(val: number) => updatePureHzSettings({ frequency: val })}
-                      min={20}
-                      max={1900}
-                      color="rose-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {[174, 432, 528, 852].map(fq => (
-                      <button 
-                        key={fq}
-                        onClick={() => updatePureHzSettings({ frequency: fq })}
-                        className={`py-2 rounded-xl border text-[10px] font-black transition-all ${settings.pureHz.frequency === fq ? 'bg-rose-500 text-white border-rose-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-rose-500/5 hover:text-rose-600'}`}
-                      >
-                        {fq}
-                      </button>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[174, 432, 528, 852].map(fq => (
+                    <button 
+                      key={fq}
+                      onClick={() => updatePureHzSettings({ frequency: fq })}
+                      className={`py-2 rounded-xl border text-[10px] font-black transition-all ${settings.pureHz.frequency === fq ? 'bg-rose-500 text-white border-rose-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-rose-500/5 hover:text-rose-600'}`}
+                    >
+                      {fq}
+                    </button>
+                  ))}
                 </div>
+
+                <HzControl 
+                  label="Frequency"
+                  value={settings.pureHz.frequency}
+                  onChange={(val: number) => updatePureHzSettings({ frequency: val })}
+                  min={20}
+                  max={1900}
+                  color="rose-500"
+                />
 
                 <VolumeSlider 
                   label="Tone Intensity"
                   value={settings.pureHz.volume}
                   onChange={(v: number) => updatePureHzSettings({ volume: v })}
-                  max={0.2}
                   color="rose-500"
                 />
+                <LayerAudioTools settings={settings.pureHz} updateFn={updatePureHzSettings} />
+              </div>
+            </Section>
 
-                <div className="flex items-center justify-between bg-secondary-system-background/30 p-4 rounded-xl border border-apple-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-rose-500/10 text-rose-600`}>
-                      <RotateCw size={14} className={settings.pureHz.isLooping ? 'animate-spin-slow' : ''} />
-                    </div>
-                    <span className="text-[11px] font-bold text-system-label tracking-tight">Continuous Loop</span>
+            <Section
+              id="isochronic"
+              title="Isochronic Tones"
+              subtitle="Pulsed Meditation"
+              icon={Activity}
+              color="bg-sky-500/10 text-sky-600"
+              isEnabled={settings.isochronic.isEnabled}
+              onToggle={(val: boolean) => updateIsochronicSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-3 p-4 bg-secondary-system-background/30 rounded-2xl border border-apple-border/50">
+                  <div className="flex justify-between items-baseline px-1">
+                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">Pulse Rate</label>
+                    <span className="text-[12px] font-black text-sky-600 tabular-nums">{settings.isochronic.pulseRate} Hz</span>
                   </div>
-                  <button 
-                    onClick={() => updatePureHzSettings({ isLooping: !settings.pureHz.isLooping })}
-                    className={`w-10 h-6 rounded-full relative transition-colors ${settings.pureHz.isLooping ? 'bg-rose-500' : 'bg-system-tertiary-label'}`}
-                  >
-                    <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.pureHz.isLooping ? 16 : 0 }} />
-                  </button>
+                  <input 
+                    type="range" min={0.1} max={30} step={0.1} 
+                    value={settings.isochronic.pulseRate} 
+                    onChange={(e) => updateIsochronicSettings({ pulseRate: parseFloat(e.target.value) })}
+                    className="w-full h-1 bg-apple-border rounded-full appearance-none accent-sky-600 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[8px] font-black uppercase text-system-tertiary-label px-1">
+                    <span>Delta</span>
+                    <span>Beta</span>
+                  </div>
                 </div>
+
+                <HzControl 
+                  label="Carrier Frequency"
+                  value={settings.isochronic.frequency}
+                  onChange={(val: number) => updateIsochronicSettings({ frequency: val })}
+                  min={20}
+                  max={1900}
+                  color="sky-600"
+                />
+
+                <VolumeSlider 
+                  label="Pulse Intensity"
+                  value={settings.isochronic.volume}
+                  onChange={(v: number) => updateIsochronicSettings({ volume: v })}
+                  color="sky-600"
+                />
+                <LayerAudioTools settings={settings.isochronic} updateFn={updateIsochronicSettings} />
+              </div>
+            </Section>
+
+            <Section
+              id="solfeggio"
+              title="Solfeggio"
+              subtitle="Healing Tones"
+              icon={Activity}
+              color="bg-emerald-500/10 text-emerald-600"
+              isEnabled={settings.solfeggio.isEnabled}
+              onToggle={(val: boolean) => updateSolfeggioSettings({ isEnabled: val })}
+            >
+              <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-3 gap-2">
+                  {[174, 285, 396, 417, 528, 639, 741, 852, 963].map(fq => (
+                    <button 
+                      key={fq}
+                      onClick={() => updateSolfeggioSettings({ frequency: fq })}
+                      className={`py-2 rounded-xl border text-[10px] font-black transition-all ${settings.solfeggio.frequency === fq ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label hover:bg-emerald-500/5 hover:text-emerald-600'}`}
+                    >
+                      {fq} Hz
+                    </button>
+                  ))}
+                </div>
+
+                <HzControl 
+                  label="Custom Frequency"
+                  value={settings.solfeggio.frequency}
+                  onChange={(val: number) => updateSolfeggioSettings({ frequency: val })}
+                  min={20}
+                  max={1900}
+                  color="emerald-600"
+                />
+
+                <VolumeSlider 
+                  label="Tone Intensity"
+                  value={settings.solfeggio.volume}
+                  onChange={(v: number) => updateSolfeggioSettings({ volume: v })}
+                  color="emerald-600"
+                />
+                <LayerAudioTools settings={settings.solfeggio} updateFn={updateSolfeggioSettings} />
               </div>
             </Section>
           </>

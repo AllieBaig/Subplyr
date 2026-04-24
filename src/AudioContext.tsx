@@ -33,6 +33,8 @@ interface AudioContextType {
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
   updateDidgeridooSettings: (newSettings: Partial<AppSettings['didgeridoo']>) => void;
   updatePureHzSettings: (newSettings: Partial<AppSettings['pureHz']>) => void;
+  updateIsochronicSettings: (newSettings: Partial<AppSettings['isochronic']>) => void;
+  updateSolfeggioSettings: (newSettings: Partial<AppSettings['solfeggio']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   updateAppearanceSettings: (newSettings: Partial<AppSettings['appearance']>) => void;
   updateVisibilitySettings: (newSettings: Partial<AppSettings['visibility']>) => void;
@@ -318,6 +320,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       volume: 0.3,
       gainDb: -6,
       playbackRate: 1.0,
+      depth: 0.5,
       isLooping: true,
       normalize: false,
     },
@@ -327,6 +330,21 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       volume: 0.05,
       isLooping: true,
       gainDb: 0,
+      normalize: false,
+    },
+    isochronic: {
+      isEnabled: false,
+      frequency: 432,
+      pulseRate: 7.83,
+      volume: 0.1,
+      gainDb: -6,
+      normalize: false,
+    },
+    solfeggio: {
+      isEnabled: false,
+      frequency: 528,
+      volume: 0.1,
+      gainDb: -6,
       normalize: false,
     },
     audioTools: {
@@ -455,6 +473,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             if (savedSettings.binaural.leftFreq > 1900) savedSettings.binaural.leftFreq = 1900;
             if (savedSettings.binaural.rightFreq > 1900) savedSettings.binaural.rightFreq = 1900;
             if (savedSettings.pureHz.frequency > 1900) savedSettings.pureHz.frequency = 1900;
+            if (savedSettings.isochronic.frequency > 1900) savedSettings.isochronic.frequency = 1900;
+            if (savedSettings.solfeggio.frequency > 1900) savedSettings.solfeggio.frequency = 1900;
 
             // Always sync history from source on load to ensure AI updates are visible
             setSettings({ 
@@ -701,6 +721,20 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({
       ...prev,
       pureHz: { ...prev.pureHz, ...newHz }
+    }));
+  };
+
+  const updateIsochronicSettings = (newIso: Partial<AppSettings['isochronic']>) => {
+    setSettings(prev => ({
+      ...prev,
+      isochronic: { ...prev.isochronic, ...newIso }
+    }));
+  };
+
+  const updateSolfeggioSettings = (newSol: Partial<AppSettings['solfeggio']>) => {
+    setSettings(prev => ({
+      ...prev,
+      solfeggio: { ...prev.solfeggio, ...newSol }
     }));
   };
 
@@ -1190,6 +1224,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       updateNoiseSettings,
       updateDidgeridooSettings,
       updatePureHzSettings,
+      updateIsochronicSettings,
+      updateSolfeggioSettings,
       updateLibrarySettings,
       updateAppearanceSettings,
       updateVisibilitySettings,
