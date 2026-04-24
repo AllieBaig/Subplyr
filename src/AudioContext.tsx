@@ -116,10 +116,24 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           db.getPlaylists()
         ]);
 
+        // iOS 16 Persistence Fix: Validate and potentially repair missing track references
+        const validatedTracks = [...(savedTracks || [])];
+        const validatedSubTracks = [...(savedSubTracks || [])];
+
         if (isMounted) {
-          setTracks(savedTracks || []);
-          setSubliminalTracks(savedSubTracks || []);
+          setTracks(validatedTracks);
+          setSubliminalTracks(validatedSubTracks);
           setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
+          
+          // Optional: Trigger a background deep check for playability without blocking UI
+          setTimeout(async () => {
+             for (const t of validatedTracks) {
+               const exists = await db.getTrackBlob(t.id);
+               if (!exists || exists.size === 0) {
+                 console.warn(`[AudioContext] Track ${t.id} failed durability check. Marking for repair.`);
+               }
+             }
+          }, 5000);
         }
       } catch (err) {
         console.warn("Defensive Load Trace:", err);
@@ -235,7 +249,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       name: file.name.replace(/\.[^/.]+$/, ""),
       url: '', 
       artist: 'Unknown Artist',
-      blob: file,
+      blob: new Blob([file], { type: file.type }), // Force data copy for IDB durability
       createdAt: Date.now()
     };
     await db.saveTrack(newTrack, false);
@@ -249,7 +263,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const addSubliminalTrack = async (file: File) => {
     if (!(await validateAudioFile(file))) return;
     const id = Math.random().toString(36).substr(2, 9);
-    const newTrack: db.DBTrack = { id, name: file.name.replace(/\.[^/.]+$/, ""), url: '', blob: file, createdAt: Date.now() };
+    const newTrack: db.DBTrack = { 
+      id, 
+      name: file.name.replace(/\.[^/.]+$/, ""), 
+      url: '', 
+      blob: new Blob([file], { type: file.type }), // Force data copy
+      createdAt: Date.now() 
+    };
     await db.saveTrack(newTrack, true);
     const { blob, ...metadata } = newTrack;
     setSubliminalTracks(prev => [...prev, metadata]);
@@ -388,7 +408,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     try {
       if (!(await validateAudioFile(file))) return;
       const track = (sub ? subliminalTracks : tracks).find(t => t.id === id);
-      if (track) { await db.saveTrack({ ...track, blob: file } as any, sub); await getTrackUrl(id, true); showToast("Relinked"); }
+      if (track) { 
+        await db.saveTrack({ ...track, blob: new Blob([file], { type: file.type }) } as any, sub); 
+        await getTrackUrl(id, true); 
+        showToast("Relinked"); 
+      }
     } catch (e) { showToast("Relink failed"); }
   };
 

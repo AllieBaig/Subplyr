@@ -1106,9 +1106,8 @@ export default function AudioEngine() {
         
         // Help Safari cleanup if old was a blob
         if (oldUrl.startsWith('blob:')) {
-           // Extract ID from URL is hard, so we rely on context's revokeTrackUrl if we knew the ID
-           // Instead, we trust the AudioContext limit implementation and explicit revokes elsewhere.
-           // However, to be extra safe, we could pass previousTrackId to this effect.
+          // Attempt to extract the track ID stored in the URL (not direct, but AudioContext handles cache limits)
+          // To be precise, we can revoke if we track the previous ID
         }
 
         // Small safety delay before assigning new source to let Safari clear previous media pipeline
@@ -1118,9 +1117,14 @@ export default function AudioEngine() {
             mainAudioRef.current.load();
             
             if (wasPlaying && isPlaying) {
-              mainAudioRef.current.play().catch(err => {
-                console.warn("[AudioEngine] Auto-play failed after source change:", err);
-              });
+              // On iOS 16, a tiny delay helps ensure the media session is ready
+              setTimeout(() => {
+                if (mainAudioRef.current && isPlaying) {
+                  mainAudioRef.current.play().catch(err => {
+                    console.warn("[AudioEngine] Auto-play failed after source change:", err);
+                  });
+                }
+              }, 50);
             }
           }
         }, 100);
@@ -1168,21 +1172,21 @@ export default function AudioEngine() {
       };
 
       // Small delay to ensure Web Audio graph is ready
-      const timer = setTimeout(playMain, 50);
+      const timer = setTimeout(playMain, 80);
       
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
       }
       
       // Start subliminal with delay
-      if (settings.subliminal.isEnabled && subTrack && subAudioRef.current && !subTrack.isMissing) {
+      if (settings.subliminal.isEnabled && subTrack && subAudioRef.current && !subTrack.isMissing && preparedSubUrl) {
         if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
         
         delayTimeoutRef.current = window.setTimeout(() => {
           if (subAudioRef.current && isPlaying) {
             resumeContext();
-            if (subAudioRef.current.src !== subTrack.url) {
-              subAudioRef.current.src = subTrack.url;
+            if (subAudioRef.current.src !== preparedSubUrl) {
+              subAudioRef.current.src = preparedSubUrl;
             }
             subAudioRef.current.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
             subAudioRef.current.play().catch(console.error);
@@ -1199,7 +1203,7 @@ export default function AudioEngine() {
       if (subAudioRef.current) subAudioRef.current.pause();
       if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
     }
-  }, [isPlaying, settings.subliminal.isEnabled, subTrack]);
+  }, [isPlaying, settings.subliminal.isEnabled, subTrack, preparedSubUrl]);
 
   // Handle Binaural Playback and Fading
   useEffect(() => {
@@ -1577,7 +1581,7 @@ export default function AudioEngine() {
             mainAudioRef.current.load();
          }
       }
-    }, 10000); // 10s is safe for background battery
+    }, 5000); // 5s is more aggressive for background stability on iOS 16
     
     return () => clearInterval(interval);
   }, [isPlaying]);
