@@ -18,6 +18,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { ArtworkImage } from '../components/ArtworkImage';
 
+import { PickerWheel } from '../components/PickerWheel';
+
 interface PlayerViewProps {
   onBack?: () => void;
 }
@@ -642,7 +644,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           subtitle={settings.subliminal.isPlaylistMode ? 'Playlist Mode' : 'Track Mode'}
                           onApplyPreset={(p: any) => applyLayerPreset('subliminal', p)}
                         >
-                          <div className="flex flex-col gap-4">
+                          <div className="flex flex-col gap-6">
                             <div className="bg-secondary-system-background p-1 rounded-xl flex items-center h-8">
                               <button 
                                 onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
@@ -657,6 +659,30 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                                 Playlist
                               </button>
                             </div>
+
+                            {!settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId && (
+                              <div className="flex flex-col gap-3">
+                                {(() => {
+                                  const sourcePlaylist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
+                                  if (!sourcePlaylist || sourcePlaylist.trackIds.length === 0) return null;
+
+                                  const pickerItems = sourcePlaylist.trackIds.map(tid => ({
+                                    id: tid,
+                                    label: tracks.find(mt => mt.id === tid)?.name || 'Unknown Track'
+                                  }));
+
+                                  return (
+                                    <PickerWheel 
+                                      items={pickerItems}
+                                      selectedValue={settings.subliminal.selectedTrackId}
+                                      onValueChange={(id) => updateSubliminalSettings({ selectedTrackId: id })}
+                                      height={140}
+                                      itemHeight={36}
+                                    />
+                                  );
+                                })()}
+                              </div>
+                            )}
                           </div>
                         </LayerAccordion>
 

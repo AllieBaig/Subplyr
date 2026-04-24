@@ -7,6 +7,8 @@ import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, Cl
 
 import { motion, AnimatePresence } from 'motion/react';
 
+import { PickerWheel } from '../components/PickerWheel';
+
 export default function SettingsView({ onBack }: { onBack?: () => void }) {
   const { 
     tracks,
@@ -703,31 +705,51 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 </div>
               </div>
 
-              {/* 3. Track List (Only in Single Track mode) */}
+              {/* 3. Track List / Picker Wheel (Only in Single Track mode) */}
               {!settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId && (
-                <div className="flex flex-col gap-3">
-                  <p className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Active Track</p>
-                  <div className="bg-system-background rounded-2xl border border-apple-border divide-y divide-apple-border/50 overflow-hidden">
-                    {playlists.find(p => p.id === settings.subliminal.sourcePlaylistId)?.trackIds.map(tid => {
-                      const t = tracks.find(mt => mt.id === tid);
-                      if (!t) return null;
-                      const isSelected = settings.subliminal.selectedTrackId === tid;
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between px-1">
+                    <p className="text-[10px] font-black text-system-secondary-label uppercase tracking-[0.2em]">Active Subliminal</p>
+                    <div className="bg-apple-blue/10 px-2 py-0.5 rounded-full">
+                      <p className="text-[8px] font-black text-apple-blue uppercase tracking-tighter">Picker Mode</p>
+                    </div>
+                  </div>
+                  
+                  {(() => {
+                    const sourcePlaylist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
+                    if (!sourcePlaylist || sourcePlaylist.trackIds.length === 0) {
                       return (
-                        <button
-                          key={tid}
-                          onClick={() => updateSubliminalSettings({ selectedTrackId: tid })}
-                          className={`w-full p-4 flex items-center justify-between transition-colors min-h-[56px] text-left ${isSelected ? 'bg-apple-blue/5 shadow-inner' : 'hover:bg-secondary-system-background'}`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-apple-blue text-white' : 'bg-secondary-system-background text-system-tertiary-label'}`}>
-                              <Music size={12} />
-                            </div>
-                            <span className={`text-[13px] font-bold truncate ${isSelected ? 'text-apple-blue' : 'text-system-label'}`}>{t.name}</span>
-                          </div>
-                          {isSelected && <Check size={14} className="text-apple-blue" />}
-                        </button>
+                        <div className="p-8 border border-dashed border-apple-border rounded-3xl flex flex-col items-center justify-center text-center gap-2 bg-secondary-system-background/20">
+                           <Music className="text-system-tertiary-label opacity-40 mb-1" size={24} />
+                           <p className="text-[10px] font-black text-system-tertiary-label uppercase tracking-widest">No tracks in playlist</p>
+                        </div>
                       );
-                    })}
+                    }
+
+                    const pickerItems = sourcePlaylist.trackIds.map(tid => {
+                      const t = tracks.find(mt => mt.id === tid);
+                      return { id: tid, label: t?.name || 'Unknown Track' };
+                    });
+
+                    return (
+                      <PickerWheel 
+                        items={pickerItems}
+                        selectedValue={settings.subliminal.selectedTrackId}
+                        onValueChange={(id) => updateSubliminalSettings({ selectedTrackId: id })}
+                        height={180}
+                      />
+                    );
+                  })()}
+                  
+                  <div className="flex items-center justify-center gap-6 mt-1">
+                     <div className="flex flex-col items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-apple-blue animate-pulse" />
+                        <span className="text-[8px] font-black text-system-tertiary-label uppercase tracking-widest">Active</span>
+                     </div>
+                     <div className="flex flex-col items-center gap-1 opacity-40">
+                        <div className="w-1.5 h-1.5 rounded-full bg-system-tertiary-label" />
+                        <span className="text-[8px] font-black text-system-tertiary-label uppercase tracking-widest">Linked</span>
+                     </div>
                   </div>
                 </div>
               )}
