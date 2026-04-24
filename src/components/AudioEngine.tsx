@@ -45,6 +45,7 @@ export default function AudioEngine() {
   
   // Audio Tools Refs
   const mainSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const mainGainRef = useRef<GainNode | null>(null);
   const subSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const subSpecificGainRef = useRef<GainNode | null>(null);
   const toolGainRef = useRef<GainNode | null>(null);
@@ -64,6 +65,10 @@ export default function AudioEngine() {
   const noiseCompRef = useRef<DynamicsCompressorNode | null>(null);
   const didgCompRef = useRef<DynamicsCompressorNode | null>(null);
   const pureHzCompRef = useRef<DynamicsCompressorNode | null>(null);
+
+  // Master Gain & Limiter for Stable Parallel Mixing
+  const masterGainRef = useRef<GainNode | null>(null);
+  const masterLimiterRef = useRef<DynamicsCompressorNode | null>(null);
 
   // Didgeridoo Refs
   const didgOscRef = useRef<OscillatorNode | null>(null);
@@ -290,14 +295,17 @@ export default function AudioEngine() {
 
   const setupNoise = () => {
     try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
       if (!audioCtxRef.current) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
         audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       
+      setupAudioTools(); // Ensure master routing is ready
+
       if (!noiseGainRef.current) {
         const gain = ctx.createGain();
         const comp = ctx.createDynamicsCompressor();
@@ -307,7 +315,13 @@ export default function AudioEngine() {
         
         gain.gain.setValueAtTime(0, ctx.currentTime);
         comp.connect(gain);
-        gain.connect(ctx.destination);
+        
+        // Connect to Master Gain instead of direct destination
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
         
         noiseGainRef.current = gain;
         noiseCompRef.current = comp;
@@ -319,9 +333,10 @@ export default function AudioEngine() {
 
   const setupBinaural = () => {
     try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
       if (!audioCtxRef.current) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
         audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
@@ -329,6 +344,8 @@ export default function AudioEngine() {
       if (ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
+
+      setupAudioTools(); // Ensure master routing is ready
 
       if (!leftOscRef.current || !rightOscRef.current) {
         // Create Nodes
@@ -354,10 +371,15 @@ export default function AudioEngine() {
 
         merger.connect(comp);
         comp.connect(gainNode);
-        gainNode.connect(ctx.destination);
+        
+        // Connect to Master Gain instead of direct destination
+        if (masterGainRef.current) {
+          gainNode.connect(masterGainRef.current);
+        } else {
+          gainNode.connect(ctx.destination);
+        }
 
         gainNode.gain.setValueAtTime(0, ctx.currentTime);
-
         leftOsc.start();
         rightOsc.start();
 
@@ -382,6 +404,8 @@ export default function AudioEngine() {
       const ctx = audioCtxRef.current;
 
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      setupAudioTools();
 
       if (!didgOscRef.current) {
         const osc = ctx.createOscillator();
@@ -419,7 +443,13 @@ export default function AudioEngine() {
         subOsc.connect(filter);
         filter.connect(comp);
         comp.connect(gain);
-        gain.connect(ctx.destination);
+        
+        // Connect to Master Gain
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
 
         gain.gain.setValueAtTime(0, ctx.currentTime);
 
@@ -450,6 +480,8 @@ export default function AudioEngine() {
 
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
+      setupAudioTools();
+
       if (!pureHzOscRef.current) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -463,7 +495,13 @@ export default function AudioEngine() {
 
         osc.connect(comp);
         comp.connect(gain);
-        gain.connect(ctx.destination);
+        
+        // Connect to Master Gain
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
 
         gain.gain.setValueAtTime(0, ctx.currentTime);
         osc.start();
@@ -488,6 +526,8 @@ export default function AudioEngine() {
       const ctx = audioCtxRef.current;
 
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      setupAudioTools();
 
       if (!isoOscRef.current) {
         const osc = ctx.createOscillator();
@@ -519,7 +559,13 @@ export default function AudioEngine() {
 
         osc.connect(comp);
         comp.connect(gain);
-        gain.connect(ctx.destination);
+        
+        // Connect to Master Gain
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
 
         osc.start();
         lfo.start();
@@ -547,6 +593,8 @@ export default function AudioEngine() {
 
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
+      setupAudioTools();
+
       if (!solOscRef.current) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -560,7 +608,13 @@ export default function AudioEngine() {
 
         osc.connect(comp);
         comp.connect(gain);
-        gain.connect(ctx.destination);
+        
+        // Connect to Master Gain
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
 
         gain.gain.setValueAtTime(0, ctx.currentTime);
         osc.start();
@@ -585,6 +639,8 @@ export default function AudioEngine() {
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
+      setupAudioTools(); // Ensure master routing is ready
+
       if (natureAudioRef.current && !natureSourceRef.current) {
         natureSourceRef.current = ctx.createMediaElementSource(natureAudioRef.current);
         natureGainRef.current = ctx.createGain();
@@ -595,7 +651,13 @@ export default function AudioEngine() {
         
         natureSourceRef.current.connect(natureCompRef.current);
         natureCompRef.current.connect(natureGainRef.current);
-        natureGainRef.current.connect(ctx.destination);
+        
+        // Connect to Master Gain
+        if (masterGainRef.current) {
+          natureGainRef.current.connect(masterGainRef.current);
+        } else {
+          natureGainRef.current.connect(ctx.destination);
+        }
       }
     } catch (err) {
       console.error("Nature setup failed:", err);
@@ -866,12 +928,32 @@ export default function AudioEngine() {
         audioCtxRef.current = new AudioContextClass();
       }
       const ctx = audioCtxRef.current;
+
+      // 1. Setup Master Routing (The Final Gate)
+      if (!masterGainRef.current) {
+        masterGainRef.current = ctx.createGain();
+        masterLimiterRef.current = ctx.createDynamicsCompressor();
+        
+        // Safety Limiter to prevent clipping across all layers
+        const limiter = masterLimiterRef.current;
+        limiter.threshold.setValueAtTime(-1.0, ctx.currentTime);
+        limiter.knee.setValueAtTime(0, ctx.currentTime);
+        limiter.ratio.setValueAtTime(20, ctx.currentTime);
+        limiter.attack.setValueAtTime(0.001, ctx.currentTime);
+        limiter.release.setValueAtTime(0.1, ctx.currentTime);
+        
+        masterGainRef.current.connect(limiter);
+        limiter.connect(ctx.destination);
+        
+        // Default master gain is 1.0 (individual layers have their own gains)
+        masterGainRef.current.gain.setValueAtTime(1.0, ctx.currentTime);
+      }
       
+      // 2. Setup Tool Routing (Playlist & Subliminal)
       if (!toolGainRef.current) {
         toolGainRef.current = ctx.createGain();
         toolCompressorRef.current = ctx.createDynamicsCompressor();
         
-        // Setup Compressor as a Limiter for Normalization
         const comp = toolCompressorRef.current;
         comp.threshold.setValueAtTime(settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0, ctx.currentTime);
         comp.knee.setValueAtTime(0, ctx.currentTime);
@@ -880,18 +962,22 @@ export default function AudioEngine() {
         comp.release.setValueAtTime(0.25, ctx.currentTime);
         
         toolGainRef.current.connect(comp);
-        comp.connect(ctx.destination);
+        // Connect tool chain to master gain
+        comp.connect(masterGainRef.current);
       }
       
       if (mainAudioRef.current && !mainSourceRef.current) {
         mainSourceRef.current = ctx.createMediaElementSource(mainAudioRef.current);
-        mainSourceRef.current.connect(toolGainRef.current);
+        if (!mainGainRef.current) {
+          mainGainRef.current = ctx.createGain();
+        }
+        mainSourceRef.current.connect(mainGainRef.current);
+        mainGainRef.current.connect(toolGainRef.current);
       }
       
       if (subAudioRef.current && !subSourceRef.current) {
         subSourceRef.current = ctx.createMediaElementSource(subAudioRef.current);
         
-        // Create Subliminal-specific gain node and compressor
         if (!subSpecificGainRef.current) {
           subSpecificGainRef.current = ctx.createGain();
         }
@@ -1332,13 +1418,26 @@ export default function AudioEngine() {
 
   // Handle Volume Balance
   useEffect(() => {
-    if (mainAudioRef.current) {
-      mainAudioRef.current.volume = settings.mainVolume;
+    if (audioCtxRef.current) {
+      const ctx = audioCtxRef.current;
+      const fadeTime = 0.1;
+
+      if (mainGainRef.current) {
+        const gainValue = settings.mainVolume; // Already 0-1
+        mainGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime);
+      }
+      
+      if (subSpecificGainRef.current) {
+        // Respect both volume and gain(dB)
+        const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
+        subSpecificGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime);
+      }
     }
-    if (subAudioRef.current) {
-      subAudioRef.current.volume = settings.subliminal.volume;
-    }
-  }, [settings.mainVolume, settings.subliminal.volume, currentTrack]);
+
+    // Keep elements at 1.0 volume since we control via GainNodes now
+    if (mainAudioRef.current) mainAudioRef.current.volume = 1.0;
+    if (subAudioRef.current) subAudioRef.current.volume = 1.0;
+  }, [settings.mainVolume, settings.subliminal.volume, settings.subliminal.gainDb, currentTrack]);
 
   // Handle Playback Rate
   useEffect(() => {

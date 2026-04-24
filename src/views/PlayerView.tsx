@@ -221,6 +221,112 @@ const LayerAccordion = ({
   );
 };
 
+const HzSelector = ({ value, onChange, color, presets }: { value: number, onChange: (v: number) => void, color: string, presets?: number[] }) => {
+  const { settings } = useAudio();
+  const inputMode = settings.hzInputMode || 'slider';
+  
+  const handleScroll = (deltaY: number) => {
+    const step = 1;
+    const newVal = Math.min(1900, Math.max(20, value + (deltaY > 0 ? -step : step)));
+    onChange(newVal);
+  };
+
+  const colorClass = color === 'rose' ? 'accent-rose-500 text-rose-600' : 
+                     color === 'purple' ? 'accent-purple-500 text-purple-600' :
+                     color === 'amber' ? 'accent-amber-500 text-amber-600' :
+                     color === 'indigo' ? 'accent-indigo-500 text-indigo-600' :
+                     'accent-apple-blue text-apple-blue';
+
+  const borderColorClass = color === 'rose' ? 'border-rose-500/20' : 
+                           color === 'purple' ? 'border-purple-500/20' :
+                           color === 'amber' ? 'border-amber-500/20' :
+                           color === 'indigo' ? 'border-indigo-500/20' :
+                           'border-apple-blue/20';
+
+  const bgActiveColorClass = color === 'rose' ? 'bg-rose-500' : 
+                             color === 'purple' ? 'bg-purple-500' :
+                             color === 'amber' ? 'bg-amber-500' :
+                             color === 'indigo' ? 'bg-indigo-500' :
+                             'bg-apple-blue';
+
+  return (
+    <div className="space-y-4">
+      {inputMode === 'slider' ? (
+        <div className="flex items-center gap-4">
+          <input 
+            type="range" min={20} max={1900} step={1} value={value}
+            onChange={(e) => onChange(parseInt(e.target.value))}
+            className={`flex-1 h-1 bg-apple-border rounded-full appearance-none ${colorClass.split(' ')[0]}`}
+          />
+          <div className="flex items-center gap-2">
+            <input 
+              type="number"
+              value={value}
+              onChange={(e) => onChange(Math.min(1900, Math.max(20, parseInt(e.target.value) || 0)))}
+              className="w-16 h-8 bg-system-background border border-apple-border rounded-xl text-xs font-black text-center focus:outline-none tabular-nums shadow-inner"
+            />
+            <span className="text-[9px] font-black text-system-tertiary-label uppercase">Hz</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center">
+          <div 
+            className={`w-full max-w-[200px] h-32 bg-system-background border-2 ${borderColorClass} rounded-[2rem] relative flex flex-col items-center justify-center overflow-hidden touch-none shadow-inner`}
+            onWheel={(e) => {
+              e.preventDefault();
+              handleScroll(e.deltaY);
+            }}
+          >
+            <div className="absolute inset-x-0 h-10 border-y border-apple-border/30 top-1/2 -translate-y-1/2 bg-secondary-system-background/20" />
+            
+            <motion.div 
+              className="flex flex-col items-center gap-1 py-10"
+              animate={{ y: -(value % 100) / 4 }}
+            >
+              {[value + 2, value + 1, value, value - 1, value - 2].map((v, i) => (
+                <div 
+                  key={i} 
+                  className={`text-center transition-all duration-200 tabular-nums ${i === 2 ? `text-2xl font-black ${colorClass.split(' ')[1]}` : 'text-sm font-bold text-system-tertiary-label opacity-30 scale-90'}`}
+                >
+                  {v > 1900 || v < 20 ? '---' : `${v}Hz`}
+                </div>
+              ))}
+            </motion.div>
+
+            {/* Gesture Overlay for mobile */}
+            <div 
+              className="absolute inset-0 z-10"
+              onTouchMove={(e) => {
+                // Simplified touch handling for demo/mobile scroll wheel feel
+                const touch = e.touches[0];
+                const rect = e.currentTarget.getBoundingClientRect();
+                const relativeY = (touch.clientY - rect.top) / rect.height;
+                const delta = relativeY > 0.5 ? -1 : 1; 
+                if (Math.random() > 0.7) handleScroll(delta);
+              }}
+            />
+          </div>
+          <p className="text-[8px] font-black text-system-tertiary-label uppercase tracking-widest mt-3">Scroll or Swipe to Adjust</p>
+        </div>
+      )}
+
+      {presets && presets.length > 0 && (
+        <div className="grid grid-cols-4 gap-1.5 mt-2">
+          {presets.map(fq => (
+            <button 
+              key={fq}
+              onClick={() => onChange(fq)}
+              className={`py-2 rounded-xl border text-[9px] font-black transition-all active:scale-95 ${value === fq ? `${bgActiveColorClass} text-white border-transparent shadow-md` : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+            >
+              {fq}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function PlayerView({ onBack }: PlayerViewProps) {
   const { 
     tracks, 
@@ -243,6 +349,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     updateNoiseSettings,
     updateDidgeridooSettings,
     updatePureHzSettings,
+    updateIsochronicSettings,
+    updateSolfeggioSettings,
     updateSettings,
     updateAudioTools,
     updateSleepTimer,
@@ -277,7 +385,9 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       settings.nature.isEnabled && settings.nature.type,
       settings.noise.isEnabled && `${settings.noise.type} Noise`,
       settings.didgeridoo.isEnabled && "Didgeridoo",
-      settings.pureHz.isEnabled && "Pure Hz"
+      settings.pureHz.isEnabled && "Pure Hz",
+      settings.isochronic.isEnabled && "Isochronic",
+      settings.solfeggio.isEnabled && "Solfeggio"
     ].filter(Boolean) as string[];
     
     if (layers.length === 0) return "Standard Audio";
@@ -356,6 +466,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       case 'noise': updateNoiseSettings(config); break;
       case 'didgeridoo': updateDidgeridooSettings(config); break;
       case 'pureHz': updatePureHzSettings(config); break;
+      case 'isochronic': updateIsochronicSettings(config); break;
+      case 'solfeggio': updateSolfeggioSettings(config); break;
     }
   };
 
@@ -414,14 +526,16 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
             onClick={() => setIsPanelOpen(true)}
             className={`inline-flex items-center gap-3 bg-secondary-system-background hover:bg-secondary-system-background/80 rounded-full transition-colors active:scale-95 border border-apple-border ${settings.bigTouchMode ? 'px-8 py-4' : 'px-6 py-3'}`}
           >
-            <div className="flex gap-1.5">
-              {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
-              {settings.binaural.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
-              {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
-              {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
-              {settings.didgeridoo.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-800" />}
-              {settings.pureHz.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />}
-            </div>
+              <div className="flex gap-1.5">
+                {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
+                {settings.binaural.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
+                {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+                {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                {settings.didgeridoo.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-800" />}
+                {settings.pureHz.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />}
+                {settings.isochronic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+                {settings.solfeggio.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
+              </div>
             <span className={`font-bold uppercase tracking-[0.1em] text-system-secondary-label ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{activeLayersLabel}</span>
           </button>
         </div>
@@ -561,38 +675,28 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           subtitle={`${settings.binaural.leftFreq}Hz / ${settings.binaural.rightFreq}Hz`}
                           onApplyPreset={(p: any) => applyLayerPreset('binaural', p)}
                         >
-                          <div className="flex flex-col gap-4">
-                             <div className="flex gap-4">
-                                <div className="flex-1 space-y-2">
+                          <div className="flex flex-col gap-6">
+                             <div className="space-y-4">
+                                <div className="space-y-2">
                                    <div className="flex justify-between items-center px-1">
-                                      <span className="text-[9px] font-black text-system-tertiary-label uppercase tabular-nums">Left (Hz)</span>
-                                      <input 
-                                         type="number"
-                                         value={settings.binaural.leftFreq}
-                                         onChange={(e) => updateBinauralSettings({ leftFreq: Math.min(20000, Math.max(20, parseInt(e.target.value) || 0)) })}
-                                         className="w-12 h-6 bg-system-background border border-apple-border rounded-md text-[10px] font-bold text-center focus:outline-none tabular-nums"
-                                      />
+                                      <span className="text-[9px] font-black text-system-tertiary-label uppercase">Left Channel (Hz)</span>
                                    </div>
-                                   <input 
-                                      type="range" min={20} max={500} step={1} value={settings.binaural.leftFreq}
-                                      onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) })}
-                                      className="w-full h-1 bg-apple-border rounded-full appearance-none accent-purple-500"
+                                   <HzSelector 
+                                     value={settings.binaural.leftFreq} 
+                                     onChange={(v) => updateBinauralSettings({ leftFreq: v })} 
+                                     color="purple"
+                                     presets={[200, 432]}
                                    />
                                 </div>
-                                <div className="flex-1 space-y-2">
+                                <div className="space-y-2">
                                    <div className="flex justify-between items-center px-1">
-                                      <span className="text-[9px] font-black text-system-tertiary-label uppercase tabular-nums">Right (Hz)</span>
-                                      <input 
-                                         type="number"
-                                         value={settings.binaural.rightFreq}
-                                         onChange={(e) => updateBinauralSettings({ rightFreq: Math.min(20000, Math.max(20, parseInt(e.target.value) || 0)) })}
-                                         className="w-12 h-6 bg-system-background border border-apple-border rounded-md text-[10px] font-bold text-center focus:outline-none tabular-nums"
-                                      />
+                                      <span className="text-[9px] font-black text-system-tertiary-label uppercase">Right Channel (Hz)</span>
                                    </div>
-                                   <input 
-                                      type="range" min={20} max={500} step={1} value={settings.binaural.rightFreq}
-                                      onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) })}
-                                      className="w-full h-1 bg-apple-border rounded-full appearance-none accent-purple-500"
+                                   <HzSelector 
+                                     value={settings.binaural.rightFreq} 
+                                     onChange={(v) => updateBinauralSettings({ rightFreq: v })} 
+                                     color="purple"
+                                     presets={[210, 440]}
                                    />
                                 </div>
                              </div>
@@ -605,7 +709,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                                  <button 
                                    key={p.label}
                                    onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })}
-                                   className="py-1.5 rounded-lg text-[9px] font-bold uppercase bg-system-background border border-apple-border text-purple-600 active:scale-95 transition-transform"
+                                   className="py-2.5 rounded-xl text-[9px] font-bold uppercase bg-system-background border border-apple-border text-purple-600 active:scale-95 transition-transform shadow-sm"
                                  >
                                    {p.label}
                                  </button>
@@ -716,28 +820,75 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           subtitle={`${settings.pureHz.frequency}Hz`}
                           onApplyPreset={(p: any) => applyLayerPreset('pureHz', p)}
                         >
-                          <div className="flex flex-col gap-4">
-                            <div className="flex items-center gap-3 bg-secondary-system-background p-2 rounded-xl border border-apple-border/50">
-                              <input 
-                                type="number" 
-                                value={settings.pureHz.frequency} 
-                                onChange={(e) => updatePureHzSettings({ frequency: Math.min(Math.max(parseInt(e.target.value) || 0, 20), 20000) })}
-                                className="flex-1 bg-transparent text-system-label font-mono text-xs font-black outline-none px-1 tabular-nums"
-                              />
-                              <span className="text-[9px] font-black text-system-tertiary-label uppercase">Hz</span>
-                            </div>
-                            <div className="grid grid-cols-4 gap-1">
-                              {[174, 432, 528, 852].map(fq => (
-                                <button 
-                                  key={fq}
-                                  onClick={() => updatePureHzSettings({ frequency: fq })}
-                                  className={`py-1.5 rounded-lg border text-[8px] font-black transition-all ${settings.pureHz.frequency === fq ? 'bg-rose-500 text-white border-rose-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
-                                >
-                                  {fq}
-                                </button>
-                              ))}
-                            </div>
+                          <HzSelector 
+                            value={settings.pureHz.frequency} 
+                            onChange={(v) => updatePureHzSettings({ frequency: v })} 
+                            color="rose"
+                            presets={[174, 432, 528, 852]}
+                          />
+                        </LayerAccordion>
+
+                        <LayerAccordion 
+                          icon={Zap} 
+                          label="Isochronic Tones" 
+                          isEnabled={settings.isochronic.isEnabled} 
+                          onToggle={(v: boolean) => updateIsochronicSettings({ isEnabled: v })}
+                          vol={settings.isochronic.volume}
+                          setVol={(v: number) => updateIsochronicSettings({ volume: v })}
+                          gainDb={settings.isochronic.gainDb}
+                          setGainDb={(v: number) => updateIsochronicSettings({ gainDb: v })}
+                          normalize={settings.isochronic.normalize}
+                          setNormalize={(v: boolean) => updateIsochronicSettings({ normalize: v })}
+                          color="text-amber-500"
+                          subtitle={`${settings.isochronic.frequency}Hz @ ${settings.isochronic.pulseRate}Hz`}
+                          onApplyPreset={(p: any) => applyLayerPreset('isochronic', p)}
+                        >
+                          <div className="space-y-4">
+                             <div className="space-y-2">
+                               <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Carrier Frequency (Hz)</p>
+                               <HzSelector 
+                                 value={settings.isochronic.frequency} 
+                                 onChange={(v) => updateIsochronicSettings({ frequency: v })} 
+                                 color="amber"
+                                 presets={[396, 417, 528]}
+                               />
+                             </div>
+                             <div className="space-y-2">
+                               <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Pulse Rate (Hz)</p>
+                               <div className="flex items-center gap-3">
+                                 <input 
+                                   type="range" min={0.5} max={20} step={0.1} 
+                                   value={settings.isochronic.pulseRate} 
+                                   onChange={(e) => updateIsochronicSettings({ pulseRate: parseFloat(e.target.value) })}
+                                   className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-amber-500"
+                                 />
+                                 <span className="text-[10px] font-mono font-black text-amber-600 w-10 text-right tabular-nums">{settings.isochronic.pulseRate}Hz</span>
+                               </div>
+                             </div>
                           </div>
+                        </LayerAccordion>
+
+                        <LayerAccordion 
+                          icon={FocusIcon} 
+                          label="Solfeggio Frequencies" 
+                          isEnabled={settings.solfeggio.isEnabled} 
+                          onToggle={(v: boolean) => updateSolfeggioSettings({ isEnabled: v })}
+                          vol={settings.solfeggio.volume}
+                          setVol={(v: number) => updateSolfeggioSettings({ volume: v })}
+                          gainDb={settings.solfeggio.gainDb}
+                          setGainDb={(v: number) => updateSolfeggioSettings({ gainDb: v })}
+                          normalize={settings.solfeggio.normalize}
+                          setNormalize={(v: boolean) => updateSolfeggioSettings({ normalize: v })}
+                          color="text-indigo-600"
+                          subtitle={`${settings.solfeggio.frequency}Hz`}
+                          onApplyPreset={(p: any) => applyLayerPreset('solfeggio', p)}
+                        >
+                          <HzSelector 
+                            value={settings.solfeggio.frequency} 
+                            onChange={(v) => updateSolfeggioSettings({ frequency: v })} 
+                            color="indigo"
+                            presets={[174, 285, 396, 417, 528, 639, 741, 852, 963]}
+                          />
                         </LayerAccordion>
                       </motion.div>
                     )}
