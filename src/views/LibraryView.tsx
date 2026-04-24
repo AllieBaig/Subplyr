@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useAudio } from '../AudioContext';
+import { useSettings } from '../SettingsContext';
+import { useUIState } from '../UIStateContext';
 import { 
   Upload, Plus, Trash2, Share, SortAsc, 
   LayoutGrid, List, Calendar, CheckCircle2, 
@@ -23,10 +25,6 @@ export default function LibraryView() {
     setCurrentTrackIndex, 
     setIsPlaying, 
     currentTrackIndex, 
-    showToast,
-    settings,
-    updateLibrarySettings,
-    updateSubliminalSettings,
     playlists,
     createPlaylist,
     deletePlaylist,
@@ -38,9 +36,11 @@ export default function LibraryView() {
     playingPlaylistId,
     setPlayingPlaylistId,
     resumePlaylist,
-    isPlaying,
-    navigateTo
+    isPlaying
   } = useAudio();
+
+  const { settings, updateLibrarySettings, updateSubliminalSettings } = useSettings();
+  const { showToast, navigateTo } = useUIState();
 
   const [view, setView] = useState<'tracks' | 'playlists' | 'playlist_detail'>('tracks');
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
@@ -854,7 +854,9 @@ const HighlightText = ({ text, highlight }: { text: string; highlight: string })
 
 const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, onAddToPlaylist, isSelectMode, isSelected, onSelect, searchQuery }: any) => {
   const [showActions, setShowActions] = useState(false);
-  const { settings, updateSubliminalSettings, showToast, relinkTrack } = useAudio();
+  const { updateSubliminalSettings, settings } = useSettings();
+  const { showToast } = useUIState();
+  const { relinkTrack } = useAudio();
 
   return (
     <div className={`group flex flex-col transition-all duration-200 ${track.isMissing ? 'opacity-40' : ''}`}>
@@ -933,7 +935,8 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
 
 const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrackPlay, isSelectMode, editingPlaylistId, selectedTrackIds, onToggleSelection, onEnterSelect, onOpen, searchQuery }: any) => {
   const modal = useModal();
-  const { settings, showToast } = useAudio();
+  const { settings } = useSettings();
+  const { showToast } = useUIState();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   return (

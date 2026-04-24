@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { AudioProvider, useAudio } from './AudioContext';
+import { AudioProvider } from './AudioContext';
 import { PlaybackProvider } from './PlaybackContext';
+import { SettingsProvider, useSettings } from './SettingsContext';
+import { UIStateProvider, useUIState } from './UIStateContext';
 import AudioEngine from './components/AudioEngine';
 import TabBar from './components/TabBar';
 import LibraryView from './views/LibraryView';
@@ -12,18 +14,16 @@ import { WifiOff, AlertCircle, RefreshCcw } from 'lucide-react';
 import { GlobalSafetyManager, LoadingPlaceholder } from './components/Safety';
 import { AnimationStyle } from './types';
 
-export type TabType = 'library' | 'player' | 'settings';
-
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<TabType>('library');
-  const { isLoading, initError, toast, settings, swStatus, showToast, activeTabRequest, clearTabRequest, isOffline } = useAudio();
+  const { activeTab, setActiveTab, isLoading, initError, toast, swStatus, showToast, isOffline, activeTabRequest, clearTabRequest } = useUIState();
+  const { settings } = useSettings();
   
   useEffect(() => {
     if (activeTabRequest) {
-      setActiveTab(activeTabRequest as TabType);
+      setActiveTab(activeTabRequest as any);
       clearTabRequest();
     }
-  }, [activeTabRequest, clearTabRequest]);
+  }, [activeTabRequest, clearTabRequest, setActiveTab]);
 
   // Handle SW updates
   useEffect(() => {
@@ -207,11 +207,15 @@ export default function App() {
   return (
     <GlobalSafetyManager>
       <ModalProvider>
-        <AudioProvider>
-          <PlaybackProvider>
-            <AppContent />
-          </PlaybackProvider>
-        </AudioProvider>
+        <SettingsProvider>
+          <UIStateProvider>
+            <AudioProvider>
+              <PlaybackProvider>
+                <AppContent />
+              </PlaybackProvider>
+            </AudioProvider>
+          </UIStateProvider>
+        </SettingsProvider>
       </ModalProvider>
     </GlobalSafetyManager>
   );

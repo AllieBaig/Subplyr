@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAudio } from '../AudioContext';
 import { usePlayback } from '../PlaybackContext';
+import { useSettings } from '../SettingsContext';
+import { useUIState } from '../UIStateContext';
 import { NATURE_SOUNDS } from '../constants';
 import { AnimationStyle } from '../types';
 import { 
@@ -222,7 +224,7 @@ const LayerAccordion = ({
 };
 
 const HzSelector = ({ value, onChange, color, presets }: { value: number, onChange: (v: number) => void, color: string, presets?: number[] }) => {
-  const { settings } = useAudio();
+  const { settings } = useSettings();
   const inputMode = settings.hzInputMode || 'slider';
   
   const handleScroll = (deltaY: number) => {
@@ -336,26 +338,17 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     isPlaying, 
     setIsPlaying, 
     seekTo,
-    settings,
     playNext,
     playPrevious,
     toggleShuffle,
     toggleLoop,
     playingPlaylistId,
     currentPlaybackList,
-    updateSubliminalSettings,
-    updateBinauralSettings,
-    updateNatureSettings,
-    updateNoiseSettings,
-    updateDidgeridooSettings,
-    updatePureHzSettings,
-    updateIsochronicSettings,
-    updateSolfeggioSettings,
-    updateSettings,
-    updateAudioTools,
-    updateSleepTimer,
     addTrack
   } = useAudio();
+
+  const { settings, updateSettings, updateSubliminalSettings, updateBinauralSettings, updateNatureSettings, updateNoiseSettings, updateDidgeridooSettings, updatePureHzSettings, updateIsochronicSettings, updateSolfeggioSettings, updateAudioTools, updateSleepTimer } = useSettings();
+  const { showToast } = useUIState();
 
   const { currentTime, duration, progress } = usePlayback();
 

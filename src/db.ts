@@ -168,6 +168,22 @@ export async function deletePlaylist(id: string) {
   }
 }
 
+export async function getTracksWithBlobs(isSubliminal: boolean = false): Promise<DBTrack[]> {
+  try {
+    const db = await initDB();
+    const metadataStore = isSubliminal ? SUB_TRACKS_STORE : TRACKS_STORE;
+    const allMetadata = await db.getAll(metadataStore);
+    
+    // We don't fetch all blobs at once to save memory, 
+    // but the API expects DBTrack which has an optional blob.
+    // For specific startup needs, some logic might want blobs.
+    return allMetadata;
+  } catch (err) {
+    console.error("Failed to retrieve tracks with blobs:", err);
+    return [];
+  }
+}
+
 export async function clearAllData() {
   try {
     const db = await initDB();

@@ -1,4 +1,5 @@
 import { useAudio } from '../AudioContext';
+import { useSettings } from '../SettingsContext';
 import { usePlayback } from '../PlaybackContext';
 import { Play, Pause, SkipForward, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -10,7 +11,8 @@ interface MiniPlayerProps {
 }
 
 export default function MiniPlayer({ onExpand }: MiniPlayerProps) {
-  const { currentTrackIndex, isPlaying, setIsPlaying, playNext, settings, currentPlaybackList } = useAudio();
+  const { currentTrackIndex, isPlaying, setIsPlaying, playNext, currentPlaybackList } = useAudio();
+  const { settings } = useSettings();
   const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
 
   if (!currentTrack) return null;

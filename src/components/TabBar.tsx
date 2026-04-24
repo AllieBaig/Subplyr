@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { useAudio } from '../AudioContext';
-import { TabType } from '../App';
+import { useSettings } from '../SettingsContext';
+import { useUIState, TabType } from '../UIStateContext';
 import { Music, Settings as SettingsIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -16,7 +16,7 @@ interface TabBarProps {
 }
 
 export default function TabBar({ activeTab, setActiveTab }: TabBarProps) {
-  const { settings } = useAudio();
+  const { settings } = useSettings();
   const tabs: { id: TabType, label: string, icon: any }[] = [
     { id: 'library', label: 'Library', icon: Music },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },

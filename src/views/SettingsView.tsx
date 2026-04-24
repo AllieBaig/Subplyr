@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useAudio } from '../AudioContext';
+import { useSettings } from '../SettingsContext';
+import { useUIState } from '../UIStateContext';
 import { NATURE_SOUNDS, AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
 import { ChevronRight, ChevronDown, Check, Plus, Trash2, Ear, Activity, Wind, CloudRain, Download, Settings as SettingsIcon, Music, RotateCw, RotateCcw, ShieldCheck, Link, Upload, Sliders, Flame, Droplets, Waves, Trees, History, Sun, Moon, Monitor, Palette, Timer, Repeat, Repeat1, Focus as FocusIcon, Wrench, Terminal } from 'lucide-react';
 
@@ -12,7 +14,18 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     subliminalTracks, 
     addSubliminalTrack, 
     removeSubliminalTrack,
-    settings, 
+    exportAppData,
+    importAppData,
+    relinkTrack,
+    clearAppCache,
+    resetServiceWorker,
+    clearCacheStorage,
+    clearDatabase,
+    fullAppReset
+  } = useAudio();
+
+  const {
+    settings,
     updateSubliminalSettings,
     updateBinauralSettings,
     updateNatureSettings,
@@ -27,19 +40,10 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     updateAudioTools,
     updateSettings,
     updateSleepTimer,
-    exportAppData,
-    importAppData,
-    relinkTrack,
-    resetUISettings,
-    clearAppCache,
-    swStatus,
-    swSupported,
-    resetServiceWorker,
-    clearCacheStorage,
-    clearDatabase,
-    fullAppReset,
-    showToast
-  } = useAudio();
+    resetUISettings
+  } = useSettings();
+
+  const { showToast, swStatus, swSupported } = useUIState();
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);

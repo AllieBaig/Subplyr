@@ -1,6 +1,8 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
 import { useAudio } from '../AudioContext';
 import { usePlayback } from '../PlaybackContext';
+import { useSettings } from '../SettingsContext';
+import { useUIState } from '../UIStateContext';
 import { NATURE_SOUNDS } from '../constants';
 
 export default function AudioEngine() {
@@ -9,8 +11,6 @@ export default function AudioEngine() {
     subliminalTracks, 
     currentTrackIndex, 
     isPlaying, 
-    settings,
-    updateSettings,
     playlists,
     setIsPlaying,
     playNext,
@@ -18,20 +18,17 @@ export default function AudioEngine() {
     seekTo,
     currentPlaybackList,
     playingPlaylistId,
-    isLoading,
-    showToast,
     getTrackUrl,
-    activeTabRequest,
-    clearTabRequest,
-    navigateTo,
-    isOffline
+    seekRequest,
+    clearSeekRequest
   } = useAudio();
+
+  const { settings, updateSettings, updateAudioTools } = useSettings();
+  const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
 
   const { currentTime, setCurrentTime, setDuration } = usePlayback();
   const [preparedUrl, setPreparedUrl] = useState<string | null>(null);
   const [preparedSubUrl, setPreparedSubUrl] = useState<string | null>(null);
-
-  const { seekRequest, clearSeekRequest } = useAudio();
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
   const subAudioRef = useRef<HTMLAudioElement | null>(null);
   const delayTimeoutRef = useRef<number | null>(null);
