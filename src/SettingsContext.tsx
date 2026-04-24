@@ -61,6 +61,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     volume: 0.3,
     gainDb: -6,
     playbackRate: 1.0,
+    frequency: 65,
     depth: 0.5,
     isLooping: true,
     normalize: false,

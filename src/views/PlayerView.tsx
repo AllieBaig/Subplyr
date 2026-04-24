@@ -3,7 +3,7 @@ import { useAudio } from '../AudioContext';
 import { usePlayback } from '../PlaybackContext';
 import { useSettings } from '../SettingsContext';
 import { useUIState } from '../UIStateContext';
-import { NATURE_SOUNDS } from '../constants';
+import { NATURE_SOUNDS, FREQUENCY_PRESETS } from '../constants';
 import { AnimationStyle } from '../types';
 import { 
   Play, Pause, SkipBack, SkipForward, 
@@ -225,27 +225,15 @@ const LayerAccordion = ({
   );
 };
 
-const HzSelector = ({ value, onChange, color, presets }: { value: number, onChange: (v: number) => void, color: string, presets?: number[] }) => {
-  const { settings } = useSettings();
+const HzSelector = ({ value, onChange, color }: { value: number, onChange: (v: number) => void, color: string }) => {
+  const { settings, updateSettings } = useSettings();
   const inputMode = settings.hzInputMode || 'slider';
   
-  const handleScroll = (deltaY: number) => {
-    const step = 1;
-    const newVal = Math.min(1900, Math.max(20, value + (deltaY > 0 ? -step : step)));
-    onChange(newVal);
-  };
-
-  const colorClass = color === 'rose' ? 'accent-rose-500 text-rose-600' : 
-                     color === 'purple' ? 'accent-purple-500 text-purple-600' :
-                     color === 'amber' ? 'accent-amber-500 text-amber-600' :
-                     color === 'indigo' ? 'accent-indigo-500 text-indigo-600' :
-                     'accent-apple-blue text-apple-blue';
-
-  const borderColorClass = color === 'rose' ? 'border-rose-500/20' : 
-                           color === 'purple' ? 'border-purple-500/20' :
-                           color === 'amber' ? 'border-amber-500/20' :
-                           color === 'indigo' ? 'border-indigo-500/20' :
-                           'border-apple-blue/20';
+  const colorClass = color === 'rose' ? 'text-rose-600' : 
+                     color === 'purple' ? 'text-purple-600' :
+                     color === 'amber' ? 'text-amber-600' :
+                     color === 'indigo' ? 'text-indigo-600' :
+                     'text-apple-blue';
 
   const bgActiveColorClass = color === 'rose' ? 'bg-rose-500' : 
                              color === 'purple' ? 'bg-purple-500' :
@@ -253,80 +241,100 @@ const HzSelector = ({ value, onChange, color, presets }: { value: number, onChan
                              color === 'indigo' ? 'bg-indigo-500' :
                              'bg-apple-blue';
 
+  const renderManual = () => (
+    <div className="flex items-center gap-3 justify-center">
+      <div className="relative group">
+        <input 
+          type="number"
+          value={value}
+          onChange={(e) => onChange(Math.min(1900, Math.max(0.1, parseFloat(e.target.value) || 0)))}
+          className="w-32 h-14 bg-system-background border-2 border-apple-border rounded-3xl text-xl font-black text-center focus:border-apple-blue focus:outline-none transition-all tabular-nums shadow-sm"
+          placeholder="0.0"
+        />
+        <div className="absolute -top-2 left-4 bg-system-background px-2">
+          <span className="text-[8px] font-black text-system-tertiary-label uppercase tracking-widest">Frequency</span>
+        </div>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+           <span className="text-[10px] font-black text-system-tertiary-label">Hz</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSlider = () => (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center px-1">
+         <span className={`text-xl font-black tabular-nums ${colorClass}`}>{value} Hz</span>
+         <div className="flex bg-secondary-system-background rounded-full p-0.5 border border-apple-border">
+            <button onClick={() => onChange(Math.max(0.1, value - 1))} className="w-8 h-6 flex items-center justify-center text-system-label hover:bg-system-background rounded-full transition-colors">-</button>
+            <div className="w-px h-3 bg-apple-border my-auto" />
+            <button onClick={() => onChange(Math.min(1900, value + 1))} className="w-8 h-6 flex items-center justify-center text-system-label hover:bg-system-background rounded-full transition-colors">+</button>
+         </div>
+      </div>
+      <input 
+        type="range" min={20} max={1900} step={1} value={value}
+        onChange={(e) => onChange(parseInt(e.target.value))}
+        className={`w-full h-1 bg-apple-border rounded-full appearance-none ${bgActiveColorClass}`}
+      />
+    </div>
+  );
+
+  const renderPicker = () => {
+    const pickerItems = FREQUENCY_PRESETS.map(hz => ({
+      id: hz,
+      label: `${hz} Hz`
+    }));
+
+    // Find nearest preset if current value is not in presets
+    const currentVal = value;
+    const isPreset = FREQUENCY_PRESETS.includes(currentVal);
+
+    return (
+      <div className="space-y-4">
+        {!isPreset && (
+          <div className="flex items-center justify-between px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-2">
+            <span className="text-[9px] font-bold text-amber-700 uppercase">Custom Hz Active</span>
+            <span className="text-[10px] font-black text-amber-700 tabular-nums">{currentVal}Hz</span>
+          </div>
+        )}
+        <PickerWheel 
+          items={pickerItems}
+          selectedValue={isPreset ? currentVal : -1} // -1 will show nothing selected if not a preset
+          onValueChange={(hz) => onChange(hz)}
+          height={160}
+          itemHeight={40}
+        />
+        <div className="flex justify-center">
+           <button 
+            onClick={() => updateSettings({ hzInputMode: 'manual' })}
+            className="text-[9px] font-black text-apple-blue uppercase tracking-widest hover:underline"
+           >
+             Set Custom Frequency
+           </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
-      {inputMode === 'slider' ? (
-        <div className="flex items-center gap-4">
-          <input 
-            type="range" min={20} max={1900} step={1} value={value}
-            onChange={(e) => onChange(parseInt(e.target.value))}
-            className={`flex-1 h-1 bg-apple-border rounded-full appearance-none ${colorClass.split(' ')[0]}`}
-          />
-          <div className="flex items-center gap-2">
-            <input 
-              type="number"
-              value={value}
-              onChange={(e) => onChange(Math.min(1900, Math.max(20, parseInt(e.target.value) || 0)))}
-              className="w-16 h-8 bg-system-background border border-apple-border rounded-xl text-xs font-black text-center focus:outline-none tabular-nums shadow-inner"
-            />
-            <span className="text-[9px] font-black text-system-tertiary-label uppercase">Hz</span>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center">
-          <div 
-            className={`w-full max-w-[200px] h-32 bg-system-background border-2 ${borderColorClass} rounded-[2rem] relative flex flex-col items-center justify-center overflow-hidden touch-none shadow-inner`}
-            onWheel={(e) => {
-              e.preventDefault();
-              handleScroll(e.deltaY);
-            }}
+      <div className="flex bg-secondary-system-background p-1 rounded-2xl h-10 border border-apple-border">
+        {(['picker', 'slider', 'manual'] as const).map(mode => (
+          <button
+            key={mode}
+            onClick={() => updateSettings({ hzInputMode: mode })}
+            className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${inputMode === mode ? 'bg-system-background text-apple-blue shadow-sm' : 'text-system-secondary-label hover:text-system-label'}`}
           >
-            <div className="absolute inset-x-0 h-10 border-y border-apple-border/30 top-1/2 -translate-y-1/2 bg-secondary-system-background/20" />
-            
-            <motion.div 
-              className="flex flex-col items-center gap-1 py-10"
-              animate={{ y: -(value % 100) / 4 }}
-            >
-              {[value + 2, value + 1, value, value - 1, value - 2].map((v, i) => (
-                <div 
-                  key={i} 
-                  className={`text-center transition-all duration-200 tabular-nums ${i === 2 ? `text-2xl font-black ${colorClass.split(' ')[1]}` : 'text-sm font-bold text-system-tertiary-label opacity-30 scale-90'}`}
-                >
-                  {v > 1900 || v < 20 ? '---' : `${v}Hz`}
-                </div>
-              ))}
-            </motion.div>
+            {mode}
+          </button>
+        ))}
+      </div>
 
-            {/* Gesture Overlay for mobile */}
-            <div 
-              className="absolute inset-0 z-10"
-              onTouchMove={(e) => {
-                // Simplified touch handling for demo/mobile scroll wheel feel
-                const touch = e.touches[0];
-                const rect = e.currentTarget.getBoundingClientRect();
-                const relativeY = (touch.clientY - rect.top) / rect.height;
-                const delta = relativeY > 0.5 ? -1 : 1; 
-                if (Math.random() > 0.7) handleScroll(delta);
-              }}
-            />
-          </div>
-          <p className="text-[8px] font-black text-system-tertiary-label uppercase tracking-widest mt-3">Scroll or Swipe to Adjust</p>
-        </div>
-      )}
-
-      {presets && presets.length > 0 && (
-        <div className="grid grid-cols-4 gap-1.5 mt-2">
-          {presets.map(fq => (
-            <button 
-              key={fq}
-              onClick={() => onChange(fq)}
-              className={`py-2 rounded-xl border text-[9px] font-black transition-all active:scale-95 ${value === fq ? `${bgActiveColorClass} text-white border-transparent shadow-md` : 'bg-system-background border-apple-border text-system-secondary-label'}`}
-            >
-              {fq}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="pt-2">
+        {inputMode === 'picker' && renderPicker()}
+        {inputMode === 'slider' && renderSlider()}
+        {inputMode === 'manual' && renderManual()}
+      </div>
     </div>
   );
 };
@@ -711,7 +719,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                                      value={settings.binaural.leftFreq} 
                                      onChange={(v) => updateBinauralSettings({ leftFreq: v })} 
                                      color="purple"
-                                     presets={[200, 432]}
                                    />
                                 </div>
                                 <div className="space-y-2">
@@ -722,7 +729,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                                      value={settings.binaural.rightFreq} 
                                      onChange={(v) => updateBinauralSettings({ rightFreq: v })} 
                                      color="purple"
-                                     presets={[210, 440]}
                                    />
                                 </div>
                              </div>
@@ -812,20 +818,32 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           normalize={settings.didgeridoo.normalize}
                           setNormalize={(v: boolean) => updateDidgeridooSettings({ normalize: v })}
                           color="text-amber-800"
-                          subtitle="Drone oscillation"
+                          subtitle={`${Math.round(settings.didgeridoo.frequency)}Hz Drone`}
                           onApplyPreset={(p: any) => applyLayerPreset('didgeridoo', p)}
                         >
-                          <div className="flex flex-col gap-3">
-                            <div className="flex justify-between items-center px-1">
-                              <p className="text-[9px] font-bold text-system-tertiary-label uppercase tracking-widest">Base Freq</p>
-                              <span className="text-[10px] font-black text-amber-800 tabular-nums">{Math.round(65 * settings.didgeridoo.playbackRate)}Hz</span>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                               <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Target Frequency (Hz)</p>
+                               <HzSelector 
+                                 value={settings.didgeridoo.frequency} 
+                                 onChange={(v) => updateDidgeridooSettings({ 
+                                   frequency: v,
+                                   playbackRate: v / 65 // Keep playbackRate in sync for the engine if it relies on rate
+                                 })} 
+                                 color="amber"
+                               />
                             </div>
-                            <div className="flex items-center gap-3">
+                            
+                            <div className="pt-2 border-t border-apple-border/50 space-y-3">
+                              <div className="flex justify-between items-center px-1">
+                                <p className="text-[9px] font-bold text-system-tertiary-label uppercase tracking-widest">Resonance Depth</p>
+                                <span className="text-[10px] font-black text-amber-800 tabular-nums">{Math.round(settings.didgeridoo.depth * 100)}%</span>
+                              </div>
                               <input 
-                                type="range" min={0.5} max={2.0} step={0.1} 
-                                value={settings.didgeridoo.playbackRate} 
-                                onChange={(e) => updateDidgeridooSettings({ playbackRate: parseFloat(e.target.value) })}
-                                className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-amber-800"
+                                type="range" min={0} max={1} step={0.01} 
+                                value={settings.didgeridoo.depth} 
+                                onChange={(e) => updateDidgeridooSettings({ depth: parseFloat(e.target.value) })}
+                                className="w-full h-1 bg-apple-border rounded-full appearance-none accent-amber-800"
                               />
                             </div>
                           </div>
@@ -850,7 +868,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                             value={settings.pureHz.frequency} 
                             onChange={(v) => updatePureHzSettings({ frequency: v })} 
                             color="rose"
-                            presets={[174, 432, 528, 852]}
                           />
                         </LayerAccordion>
 
@@ -876,7 +893,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                                  value={settings.isochronic.frequency} 
                                  onChange={(v) => updateIsochronicSettings({ frequency: v })} 
                                  color="amber"
-                                 presets={[396, 417, 528]}
                                />
                              </div>
                              <div className="space-y-2">
@@ -913,7 +929,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                             value={settings.solfeggio.frequency} 
                             onChange={(v) => updateSolfeggioSettings({ frequency: v })} 
                             color="indigo"
-                            presets={[174, 285, 396, 417, 528, 639, 741, 852, 963]}
                           />
                         </LayerAccordion>
                       </motion.div>

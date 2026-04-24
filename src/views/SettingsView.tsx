@@ -1478,15 +1478,21 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                 <div className="flex bg-system-background rounded-2xl p-1 shadow-inner border border-apple-border/30">
                   <button 
                     onClick={() => updateSettings({ hzInputMode: 'slider' })}
-                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hzInputMode === 'slider' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hzInputMode === 'slider' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
                   >
                     Slider
                   </button>
                   <button 
                     onClick={() => updateSettings({ hzInputMode: 'picker' })}
-                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hzInputMode === 'picker' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hzInputMode === 'picker' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
                   >
                     Picker
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ hzInputMode: 'manual' })}
+                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hzInputMode === 'manual' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Manual
                   </button>
                 </div>
               </div>

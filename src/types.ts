@@ -19,7 +19,7 @@ export interface Playlist {
 export type SortOption = 'date' | 'alphabetical' | 'recent';
 export type GroupOption = 'none' | 'day' | 'week' | 'month' | 'alphabetical' | 'minutes' | 'numbers';
 export type AnimationStyle = 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'random' | 'off';
-export type HzInputMode = 'slider' | 'picker';
+export type HzInputMode = 'slider' | 'picker' | 'manual';
 
 export interface SubliminalSettings {
   isEnabled: boolean;
@@ -63,6 +63,7 @@ export interface DidgeridooSettings {
   volume: number;
   gainDb: number;
   playbackRate: number;
+  frequency: number;
   depth: number;
   isLooping: boolean;
   normalize: boolean;

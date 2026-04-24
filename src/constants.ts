@@ -1,3 +1,9 @@
+export const FREQUENCY_PRESETS = [
+  4, 4.11, 4.5, 6.3, 7.83, 13, 33, 55,
+  100, 102, 103, 104, 111, 222, 396, 
+  417, 432, 444, 528, 639, 741, 852, 888, 963
+].sort((a, b) => a - b);
+
 export const NATURE_SOUNDS = [
   { 
     id: 'rain', 

@@ -1,10 +1,15 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 
+interface PickerItemData {
+  id: string | number;
+  label: string;
+}
+
 interface PickerWheelProps {
-  items: { id: string; label: string }[];
-  selectedValue: string;
-  onValueChange: (value: string) => void;
+  items: PickerItemData[];
+  selectedValue: string | number;
+  onValueChange: (value: any) => void;
   height?: number;
   itemHeight?: number;
 }
@@ -31,11 +36,13 @@ export function PickerWheel({
 
   useEffect(() => {
     scrollY.set(targetY);
-  }, [targetY, scrollY]);
+  }, [targetY, scrollY, selectedValue]); // Added selectedValue to dependency array
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const newIdx = Math.round(-scrollY.get() / itemHeight) + (e.deltaY > 0 ? 1 : -1);
+    const currentY = scrollY.get();
+    const nearestIdx = Math.round(-currentY / itemHeight);
+    const newIdx = nearestIdx + (e.deltaY > 0 ? 1 : -1);
     const clampedIdx = Math.max(0, Math.min(items.length - 1, newIdx));
     onValueChange(items[clampedIdx].id);
   };
@@ -53,7 +60,6 @@ export function PickerWheel({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
       
-      const velocity = 0; // Simple snap for now
       const finalY = scrollY.get();
       const nearestIdx = Math.round(-finalY / itemHeight);
       const clampedIdx = Math.max(0, Math.min(items.length - 1, nearestIdx));

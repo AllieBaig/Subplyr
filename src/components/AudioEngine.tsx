@@ -437,12 +437,12 @@ export default function AudioEngine() {
         comp.threshold.setValueAtTime(-24, ctx.currentTime);
         comp.ratio.setValueAtTime(12, ctx.currentTime);
 
-        // Deep drone fundamental (around 65Hz)
+        // Deep drone fundamental
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(65 * settings.didgeridoo.playbackRate, ctx.currentTime);
+        osc.frequency.setValueAtTime(settings.didgeridoo.frequency, ctx.currentTime);
 
         subOsc.type = 'sine';
-        subOsc.frequency.setValueAtTime(65 * settings.didgeridoo.playbackRate, ctx.currentTime);
+        subOsc.frequency.setValueAtTime(settings.didgeridoo.frequency, ctx.currentTime);
 
         // Vocalizing filter
         filter.type = 'lowpass';
@@ -1438,15 +1438,18 @@ export default function AudioEngine() {
     };
   }, [settings.displayAlwaysOn, isPlaying]);
 
-  // Handle Didgeridoo Real-time Updates (Rate)
+  // Handle Didgeridoo Real-time Updates (Frequency)
   useEffect(() => {
-    if (didgOscRef.current && didgSubOscRef.current && audioCtxRef.current) {
+    if (didgOscRef.current && didgSubOscRef.current && didgFilterRef.current && audioCtxRef.current) {
       const ctx = audioCtxRef.current;
-      const baseFreq = 65 * settings.didgeridoo.playbackRate;
-      didgOscRef.current.frequency.setTargetAtTime(baseFreq, ctx.currentTime, 0.2);
-      didgSubOscRef.current.frequency.setTargetAtTime(baseFreq, ctx.currentTime, 0.2);
+      didgOscRef.current.frequency.setTargetAtTime(settings.didgeridoo.frequency, ctx.currentTime, 0.2);
+      didgSubOscRef.current.frequency.setTargetAtTime(settings.didgeridoo.frequency, ctx.currentTime, 0.2);
+      
+      // Update filter to follow frequency for consistent timbre
+      const filterBase = settings.didgeridoo.frequency * 2.7;
+      didgFilterRef.current.frequency.setTargetAtTime(filterBase * (1 + settings.didgeridoo.depth), ctx.currentTime, 0.2);
     }
-  }, [settings.didgeridoo.playbackRate]);
+  }, [settings.didgeridoo.frequency, settings.didgeridoo.depth]);
 
   // Handle Nature Layer
   useEffect(() => {
