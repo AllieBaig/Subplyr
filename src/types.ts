@@ -19,6 +19,7 @@ export interface Playlist {
 export type SortOption = 'date' | 'alphabetical' | 'recent';
 export type GroupOption = 'none' | 'day' | 'week' | 'month' | 'alphabetical' | 'minutes' | 'numbers';
 export type AnimationStyle = 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'random' | 'off';
+export type HzInputMode = 'slider' | 'picker';
 
 export interface SubliminalSettings {
   isEnabled: boolean;
@@ -129,6 +130,7 @@ export interface AppSettings {
   menuPosition: 'top' | 'bottom';
   bigTouchMode: boolean;
   animationStyle: AnimationStyle;
+  hzInputMode: HzInputMode;
   subliminalExpanded: boolean;
   showArtwork: boolean;
   alwaysHideArtworkByDefault: boolean;

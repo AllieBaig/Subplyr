@@ -355,6 +355,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     menuPosition: 'bottom',
     bigTouchMode: false,
     animationStyle: 'slide-up',
+    hzInputMode: 'slider',
     subliminalExpanded: false,
     showArtwork: true,
     alwaysHideArtworkByDefault: false,
@@ -450,6 +451,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         const savedSettings = await db.getSettings();
         if (isMounted) {
           if (savedSettings) {
+            // Cap frequencies at 1900Hz safety limit
+            if (savedSettings.binaural.leftFreq > 1900) savedSettings.binaural.leftFreq = 1900;
+            if (savedSettings.binaural.rightFreq > 1900) savedSettings.binaural.rightFreq = 1900;
+            if (savedSettings.pureHz.frequency > 1900) savedSettings.pureHz.frequency = 1900;
+
             // Always sync history from source on load to ensure AI updates are visible
             setSettings({ 
               ...savedSettings, 

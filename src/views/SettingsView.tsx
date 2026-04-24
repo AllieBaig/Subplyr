@@ -45,6 +45,8 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
 
   if (!settings) return null;
 
+  const hzOptions = Array.from({ length: 1901 - 20 }, (_, i) => 20 + i);
+
   const toggleGroup = (groupId: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
@@ -114,6 +116,64 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
           onChange={(e) => onChange(parseFloat(e.target.value))}
           className={`w-full h-1.5 bg-secondary-system-background rounded-full appearance-none accent-${color} cursor-pointer`}
         />
+      </div>
+    );
+  };
+
+  const HzControl = ({ label, value, onChange, min = 20, max = 1900, color = 'apple-blue' }: any) => {
+    const isPicker = settings.hzInputMode === 'picker';
+    const [localValue, setLocalValue] = useState(value.toString());
+
+    React.useEffect(() => {
+      setLocalValue(value.toString());
+    }, [value]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setLocalValue(val);
+      const num = parseInt(val);
+      if (!isNaN(num)) {
+        onChange(Math.min(max, Math.max(min, num)));
+      }
+    };
+
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-between items-center px-1">
+          <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest">{label}</label>
+          <div className="flex items-center gap-1.5 bg-secondary-system-background px-2 py-1 rounded-lg border border-apple-border/50">
+            <input 
+              type="number" 
+              value={localValue} 
+              onChange={handleInputChange}
+              className="w-10 bg-transparent text-right text-[12px] font-black tabular-nums text-system-label outline-none"
+            />
+            <span className="text-[9px] font-bold text-system-tertiary-label uppercase">Hz</span>
+          </div>
+        </div>
+
+        {isPicker ? (
+          <div className="relative h-10 w-full bg-system-background border border-apple-border rounded-xl flex items-center justify-between px-4 overflow-hidden active:scale-[0.98] transition-all">
+             <span className="text-[13px] font-bold text-system-label">{value} Hz</span>
+             <ChevronDown size={14} className="text-system-tertiary-label" />
+             <select 
+               value={value} 
+               onChange={(e) => onChange(parseInt(e.target.value))} 
+               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+             >
+               {hzOptions.map(v => (
+                 <option key={v} value={v}>{v} Hz</option>
+               ))}
+             </select>
+          </div>
+        ) : (
+          <input 
+            type="range" min={min} max={max} step={1} 
+            value={value} 
+            onChange={(e) => onChange(parseInt(e.target.value))}
+            className={`w-full h-1 bg-apple-border rounded-full appearance-none accent-${color.includes('rose') ? 'rose-500' : color.includes('purple') ? 'purple-500' : 'apple-blue'} cursor-pointer`}
+          />
+        )}
       </div>
     );
   };
@@ -747,46 +807,22 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Left Channel</label>
-                      <div className="flex items-center bg-system-background border border-apple-border rounded-xl px-3 py-2">
-                        <input 
-                          type="number" value={settings.binaural.leftFreq} 
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            updateBinauralSettings({ leftFreq: Math.min(1990, Math.max(20, val)) });
-                          }}
-                          className="flex-1 bg-transparent text-system-label font-mono text-sm outline-none"
-                        />
-                        <span className="text-[10px] font-bold text-system-tertiary-label ml-1">Hz</span>
-                      </div>
-                      <input 
-                        type="range" min={20} max={1990} step={1} 
-                        value={settings.binaural.leftFreq} 
-                        onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) })}
-                        className="w-full h-1 bg-apple-border rounded-full appearance-none accent-purple-500 cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Right Channel</label>
-                      <div className="flex items-center bg-system-background border border-apple-border rounded-xl px-3 py-2">
-                        <input 
-                          type="number" value={settings.binaural.rightFreq} 
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            updateBinauralSettings({ rightFreq: Math.min(1990, Math.max(20, val)) });
-                          }}
-                          className="flex-1 bg-transparent text-system-label font-mono text-sm outline-none"
-                        />
-                        <span className="text-[10px] font-bold text-system-tertiary-label ml-1">Hz</span>
-                      </div>
-                      <input 
-                        type="range" min={20} max={1990} step={1} 
-                        value={settings.binaural.rightFreq} 
-                        onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) })}
-                        className="w-full h-1 bg-apple-border rounded-full appearance-none accent-purple-500 cursor-pointer"
-                      />
-                    </div>
+                    <HzControl 
+                      label="Left Channel"
+                      value={settings.binaural.leftFreq}
+                      onChange={(val: number) => updateBinauralSettings({ leftFreq: val })}
+                      min={20}
+                      max={1900}
+                      color="purple-500"
+                    />
+                    <HzControl 
+                      label="Right Channel"
+                      value={settings.binaural.rightFreq}
+                      onChange={(val: number) => updateBinauralSettings({ rightFreq: val })}
+                      min={20}
+                      max={1900}
+                      color="purple-500"
+                    />
                   </div>
                   
                   <VolumeSlider 
@@ -954,27 +990,14 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
             >
               <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2.5">
-                    <label className="text-[10px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Frequency (Hz)</label>
-                    <div className="flex items-center gap-3 bg-secondary-system-background p-3 rounded-2xl border border-apple-border">
-                      <input 
-                        type="number" 
-                        value={settings.pureHz.frequency} 
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          updatePureHzSettings({ frequency: Math.min(1990, Math.max(20, val)) });
-                        }}
-                        className="flex-1 bg-transparent text-system-label font-mono text-[15px] font-black outline-none"
-                        placeholder="Hz"
-                      />
-                      <div className="h-6 w-px bg-apple-border" />
-                      <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Pure Tone</span>
-                    </div>
-                    <input 
-                      type="range" min={20} max={1990} step={1} 
-                      value={settings.pureHz.frequency} 
-                      onChange={(e) => updatePureHzSettings({ frequency: parseInt(e.target.value) })}
-                      className="w-full h-1.5 bg-apple-border rounded-full appearance-none accent-rose-500 cursor-pointer"
+                  <div className="flex flex-col gap-4">
+                    <HzControl 
+                      label="Frequency"
+                      value={settings.pureHz.frequency}
+                      onChange={(val: number) => updatePureHzSettings({ frequency: val })}
+                      min={20}
+                      max={1900}
+                      color="rose-500"
                     />
                   </div>
 
@@ -1338,6 +1361,29 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                     className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hiddenLayersPosition === 'bottom' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
                   >
                     Bottom
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-apple-border/30" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-extrabold text-system-label">Hz Control Mode</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Input style for frequency</p>
+                </div>
+                <div className="flex bg-system-background rounded-2xl p-1 shadow-inner border border-apple-border/30">
+                  <button 
+                    onClick={() => updateSettings({ hzInputMode: 'slider' })}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hzInputMode === 'slider' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Slider
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ hzInputMode: 'picker' })}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-xl transition-all ${settings.hzInputMode === 'picker' ? 'bg-pink-500 text-white shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Picker
                   </button>
                 </div>
               </div>
