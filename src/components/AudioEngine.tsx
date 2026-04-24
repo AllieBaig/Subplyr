@@ -19,6 +19,9 @@ export default function AudioEngine() {
     currentPlaybackList,
     playingPlaylistId,
     getTrackUrl,
+    revokeTrackUrl,
+    checkTrackPlayable,
+    healSystem,
     seekRequest,
     clearSeekRequest
   } = useAudio();
@@ -33,6 +36,9 @@ export default function AudioEngine() {
   const subAudioRef = useRef<HTMLAudioElement | null>(null);
   const delayTimeoutRef = useRef<number | null>(null);
   const subPlaylistIndexRef = useRef<number>(0);
+  const tracksPlayedInSessionRef = useRef<number>(0);
+  const lastSkipTimeRef = useRef<number>(0);
+  const skipCountRef = useRef<number>(0);
 
   // Binaural Web Audio Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -800,6 +806,17 @@ export default function AudioEngine() {
 
     const onEnded = () => {
       console.log("AudioEngine: Track ended, advancing...");
+      tracksPlayedInSessionRef.current += 1;
+      
+      // Periodic reset after long sessions (every 10 tracks)
+      if (tracksPlayedInSessionRef.current % 10 === 0) {
+        console.log("[AudioEngine] Long session detected, resetting audio elements for stability");
+        if (mainAudioRef.current) {
+          mainAudioRef.current.src = "";
+          mainAudioRef.current.load();
+        }
+      }
+
       if (settings.loop === 'one') {
         if (mainAudioRef.current) {
           mainAudioRef.current.currentTime = 0;
@@ -851,6 +868,24 @@ export default function AudioEngine() {
       
       if (!isPlaying || isRecovering) return;
 
+      const now = Date.now();
+      // Check for rapid skipping within 2 seconds
+      if (now - lastSkipTimeRef.current < 2000) {
+        skipCountRef.current += 1;
+      } else {
+        skipCountRef.current = 0;
+      }
+      lastSkipTimeRef.current = now;
+
+      // Protection against infinite skip loops
+      if (skipCountRef.current > 5) {
+        console.error("[AudioEngine] Extreme skip-loop detected. Pausing session.");
+        setIsPlaying(false);
+        showToast("System stabilized. Please tap play again.");
+        skipCountRef.current = 0;
+        return;
+      }
+
       // iOS 16 Recovery Logic:
       // If code is 4 (SRC_NOT_SUPPORTED) or 3 (DECODE), it effectively means the Blob URL was likely revoked
       if (error?.code === 4 || error?.code === 3) {
@@ -860,14 +895,32 @@ export default function AudioEngine() {
           errorCount++;
           
           try {
+            // Check if file still exists in DB
+            const exists = await checkTrackPlayable(currentTrack.id);
+            if (!exists) {
+              console.error("[AudioEngine] Track file literally missing from database.");
+              showToast("Error: Track file lost. Please re-import.");
+              playNext(true);
+              isRecovering = false;
+              return;
+            }
+
             const freshUrl = await getTrackUrl(currentTrack.id, true);
             if (freshUrl && mainAudioRef.current) {
               console.log("[AudioEngine] Fresh URL obtained, re-injecting source");
-              mainAudioRef.current.src = freshUrl;
+              mainAudioRef.current.pause();
+              mainAudioRef.current.src = "";
               mainAudioRef.current.load();
-              await mainAudioRef.current.play();
-              isRecovering = false;
-              errorCount = 0; 
+              
+              setTimeout(async () => {
+                if (mainAudioRef.current) {
+                  mainAudioRef.current.src = freshUrl;
+                  mainAudioRef.current.load();
+                  await mainAudioRef.current.play();
+                }
+                isRecovering = false;
+                errorCount = 0; 
+              }, 100);
               return;
             }
           } catch (recoveryErr) {
@@ -880,8 +933,9 @@ export default function AudioEngine() {
       // If recovery failed or it's another error, do the standard skip
       errorCount++;
       if (errorCount > 2) {
-        console.error("[AudioEngine] Multiple playback failures. Skipping track.");
+        console.error("[AudioEngine] Multiple playback failures. Initiating system healing.");
         errorCount = 0;
+        await healSystem();
         playNext(true);
       } else {
         setTimeout(() => {
@@ -1047,25 +1101,29 @@ export default function AudioEngine() {
         console.log("[AudioEngine] Loading new track source:", currentTrack.id);
         const oldUrl = mainAudioRef.current.src;
         mainAudioRef.current.pause();
-        mainAudioRef.current.src = preparedUrl;
+        mainAudioRef.current.src = "";
         mainAudioRef.current.load(); // Flush
         
         // Help Safari cleanup if old was a blob
         if (oldUrl.startsWith('blob:')) {
-           // We don't revoke here because it might be cached in AudioContext,
-           // but resetting the src helps Safari release the media resource.
+           // Extract ID from URL is hard, so we rely on context's revokeTrackUrl if we knew the ID
+           // Instead, we trust the AudioContext limit implementation and explicit revokes elsewhere.
+           // However, to be extra safe, we could pass previousTrackId to this effect.
         }
-      }
 
-      if (wasPlaying) {
-        // Use a small safety delay for older iPhones to stabilize the media pipeline
+        // Small safety delay before assigning new source to let Safari clear previous media pipeline
         setTimeout(() => {
-           if (mainAudioRef.current && isPlaying) {
-             mainAudioRef.current.play().catch(err => {
-               console.warn("[AudioEngine] Auto-play failed after source change:", err);
-             });
-           }
-        }, 150);
+          if (mainAudioRef.current) {
+            mainAudioRef.current.src = preparedUrl;
+            mainAudioRef.current.load();
+            
+            if (wasPlaying && isPlaying) {
+              mainAudioRef.current.play().catch(err => {
+                console.warn("[AudioEngine] Auto-play failed after source change:", err);
+              });
+            }
+          }
+        }, 100);
       }
     } else if (mainAudioRef.current && !currentTrack) {
       mainAudioRef.current.pause();

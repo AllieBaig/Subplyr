@@ -31,6 +31,8 @@ interface AudioContextType {
   importAppData: (file: File) => Promise<void>;
   relinkTrack: (trackId: string, file: File, isSubliminal: boolean) => Promise<void>;
   getTrackUrl: (id: string, forceRefresh?: boolean) => Promise<string | null>;
+  revokeTrackUrl: (id: string) => void;
+  checkTrackPlayable: (id: string) => Promise<boolean>;
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
@@ -51,6 +53,7 @@ interface AudioContextType {
   clearDatabase: () => Promise<void>;
   fullAppReset: () => Promise<void>;
   clearAppCache: () => void;
+  healSystem: () => Promise<void>;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -137,34 +140,67 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }, [setIsLoading, setInitError]);
 
   const getTrackUrl = useCallback(async (id: string, forceRefresh?: boolean) => {
-    if (!forceRefresh && trackUrlCache.current[id]) {
-      cacheOrder.current = cacheOrder.current.filter(item => item !== id);
-      cacheOrder.current.push(id);
-      return trackUrlCache.current[id];
+    try {
+      if (!forceRefresh && trackUrlCache.current[id]) {
+        // Validation: On iOS 16, sometimes the cached URL points to an invalid/expired object
+        // if memory was purged. We don't verify every time for perf, but we trust forceRefresh.
+        cacheOrder.current = cacheOrder.current.filter(item => item !== id);
+        cacheOrder.current.push(id);
+        return trackUrlCache.current[id];
+      }
+      
+      if (trackUrlCache.current[id]) {
+        console.log(`[AudioContext] Revoking old URL for track: ${id}`);
+        URL.revokeObjectURL(trackUrlCache.current[id]);
+        delete trackUrlCache.current[id];
+        cacheOrder.current = cacheOrder.current.filter(item => item !== id);
+      }
+  
+      // Aggressive cache management: limit concurrent blobs to 8 instead of 15 for iPhone 8 safety
+      if (cacheOrder.current.length >= 8) {
+        const oldestId = cacheOrder.current.shift();
+        if (oldestId && trackUrlCache.current[oldestId]) {
+          console.log(`[AudioContext] Purging oldest URL from cache: ${oldestId}`);
+          URL.revokeObjectURL(trackUrlCache.current[oldestId]);
+          delete trackUrlCache.current[oldestId];
+        }
+      }
+  
+      const blob = await db.getTrackBlob(id);
+      if (blob) {
+        // Verify blob is still valid
+        if (blob.size === 0) {
+          console.error(`[AudioContext] Blob for track ${id} is empty (0 bytes)!`);
+          return null;
+        }
+        
+        const url = URL.createObjectURL(blob);
+        trackUrlCache.current[id] = url;
+        cacheOrder.current.push(id);
+        return url;
+      }
+      return null;
+    } catch (err) {
+      console.error(`[AudioContext] getTrackUrl failed for ${id}:`, err);
+      return null;
     }
-    
+  }, []);
+
+  const revokeTrackUrl = useCallback((id: string) => {
     if (trackUrlCache.current[id]) {
       URL.revokeObjectURL(trackUrlCache.current[id]);
       delete trackUrlCache.current[id];
       cacheOrder.current = cacheOrder.current.filter(item => item !== id);
     }
+  }, []);
 
-    if (cacheOrder.current.length >= 15) {
-      const oldestId = cacheOrder.current.shift();
-      if (oldestId && trackUrlCache.current[oldestId]) {
-        URL.revokeObjectURL(trackUrlCache.current[oldestId]);
-        delete trackUrlCache.current[oldestId];
-      }
+  const checkTrackPlayable = useCallback(async (id: string) => {
+    try {
+      const blob = await db.getTrackBlob(id);
+      return !!(blob && blob.size > 0);
+    } catch (err) {
+      return false;
     }
-
-    const blob = await db.getTrackBlob(id);
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      trackUrlCache.current[id] = url;
-      cacheOrder.current.push(id);
-      return url;
-    }
-    return null;
   }, []);
 
   const validateAudioFile = (file: File): Promise<boolean> => {
@@ -362,14 +398,46 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const fullAppReset = async () => { if (await modal.confirm({ title: "Factory Reset", isDestructive: true })) { await resetServiceWorker(); await clearCacheStorage(); await db.clearAllData(); localStorage.clear(); window.location.reload(); } };
   const clearAppCache = () => { trackUrlCache.current = {}; cacheOrder.current = []; showToast("Mem cache cleared"); };
 
+  const healSystem = async () => {
+    try {
+      setIsLoading(true);
+      console.log("[AudioContext] Initiating System Healing...");
+      
+      // 1. Clear all live object URLs
+      Object.keys(trackUrlCache.current).forEach(id => {
+        URL.revokeObjectURL(trackUrlCache.current[id]);
+      });
+      trackUrlCache.current = {};
+      cacheOrder.current = [];
+      
+      // 2. Re-fetch all data from DB to ensure synced state
+      const [savedTracks, savedSubTracks, savedPlaylists] = await Promise.all([
+        db.getTracks(false),
+        db.getTracks(true),
+        db.getPlaylists()
+      ]);
+      
+      setTracks(savedTracks || []);
+      setSubliminalTracks(savedSubTracks || []);
+      setPlaylists(savedPlaylists || []);
+      
+      showToast("System Healed & Synced");
+    } catch (err) {
+      console.error("[AudioContext] Healing failed:", err);
+      showToast("Healing failed.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <AudioContext.Provider value={{
       tracks, subliminalTracks, playlists, addTrack, addSubliminalTrack, removeTrack, removeSubliminalTrack,
       createPlaylist, deletePlaylist, addTrackToPlaylist, addTracksToPlaylist, removeTrackFromPlaylist, removeTracksFromPlaylist, renamePlaylist,
-      playingPlaylistId, setPlayingPlaylistId, resumePlaylist, exportAppData, importAppData, relinkTrack, getTrackUrl,
+      playingPlaylistId, setPlayingPlaylistId, resumePlaylist, exportAppData, importAppData, relinkTrack, getTrackUrl, revokeTrackUrl, checkTrackPlayable,
       currentTrackIndex, setCurrentTrackIndex, currentPlaybackList, playNext, playPrevious, toggleShuffle, toggleLoop, isPlaying, setIsPlaying,
       seekTo: setSeekRequest, seekRequest, clearSeekRequest: () => setSeekRequest(null),
-      resetServiceWorker, clearCacheStorage, clearDatabase, fullAppReset, clearAppCache
+      resetServiceWorker, clearCacheStorage, clearDatabase, fullAppReset, clearAppCache, healSystem
     }}>
       {children}
     </AudioContext.Provider>

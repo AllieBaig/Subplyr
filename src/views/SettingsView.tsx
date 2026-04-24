@@ -20,6 +20,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     importAppData,
     relinkTrack,
     clearAppCache,
+    healSystem,
     resetServiceWorker,
     clearCacheStorage,
     clearDatabase,
@@ -1502,6 +1503,24 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   className={`w-10 h-6 rounded-full relative transition-colors ${settings.alwaysHideArtworkByDefault ? 'bg-pink-500' : 'bg-system-tertiary-label'}`}
                 >
                   <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.alwaysHideArtworkByDefault ? 16 : 0 }} />
+                </button>
+              </div>
+
+              <div className="h-px bg-apple-border/30" />
+
+              <div className="bg-apple-blue/5 p-4 rounded-2xl border border-apple-blue/10 flex items-center justify-between mt-2">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <Activity size={10} className="text-apple-blue" />
+                    <p className="text-[13px] font-extrabold text-apple-blue">System Stabilization</p>
+                  </div>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-[0.05em] mt-0.5">Clears caches & re-syncs media state</p>
+                </div>
+                <button 
+                  onClick={healSystem}
+                  className="bg-apple-blue text-white py-1.5 px-4 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-transform"
+                >
+                  Heal
                 </button>
               </div>
             </div>
