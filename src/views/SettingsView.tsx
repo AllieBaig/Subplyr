@@ -564,51 +564,9 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     );
   };
 
-  const MinimalSettings = () => {
-    return (
-      <Section
-        id="minimal"
-        title="Minimal Settings"
-        subtitle="UI Visibility Control"
-        icon={FocusIcon}
-        color="bg-purple-500/10 text-purple-600"
-      >
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-system-label">Audio Layers</p>
-              <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Subliminal, Binaural, Nature, Noise</p>
-            </div>
-            <button 
-              onClick={() => updateVisibilitySettings({ audioLayers: !settings.visibility.audioLayers })}
-              className={`w-8 h-5 rounded-full relative transition-colors ${settings.visibility.audioLayers ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-            >
-              <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.visibility.audioLayers ? 12 : 0 }} />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-system-label">App Control</p>
-              <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Management & Maintenance</p>
-            </div>
-            <button 
-              onClick={() => updateVisibilitySettings({ appControl: !settings.visibility.appControl })}
-              className={`w-8 h-5 rounded-full relative transition-colors ${settings.visibility.appControl ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-            >
-              <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.visibility.appControl ? 12 : 0 }} />
-            </button>
-          </div>
-        </div>
-      </Section>
-    );
-  };
-
   return (
     <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto">
       <VersionHistory />
-
-      <MinimalSettings />
 
       <div className="h-px bg-apple-border/50 my-6" />
 
@@ -794,22 +752,40 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                       <div className="flex items-center bg-system-background border border-apple-border rounded-xl px-3 py-2">
                         <input 
                           type="number" value={settings.binaural.leftFreq} 
-                          onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) || 0 })}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            updateBinauralSettings({ leftFreq: Math.min(1990, Math.max(20, val)) });
+                          }}
                           className="flex-1 bg-transparent text-system-label font-mono text-sm outline-none"
                         />
                         <span className="text-[10px] font-bold text-system-tertiary-label ml-1">Hz</span>
                       </div>
+                      <input 
+                        type="range" min={20} max={1990} step={1} 
+                        value={settings.binaural.leftFreq} 
+                        onChange={(e) => updateBinauralSettings({ leftFreq: parseInt(e.target.value) })}
+                        className="w-full h-1 bg-apple-border rounded-full appearance-none accent-purple-500 cursor-pointer"
+                      />
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-[9px] font-bold text-system-secondary-label uppercase tracking-widest px-1">Right Channel</label>
                       <div className="flex items-center bg-system-background border border-apple-border rounded-xl px-3 py-2">
                         <input 
                           type="number" value={settings.binaural.rightFreq} 
-                          onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) || 0 })}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            updateBinauralSettings({ rightFreq: Math.min(1990, Math.max(20, val)) });
+                          }}
                           className="flex-1 bg-transparent text-system-label font-mono text-sm outline-none"
                         />
                         <span className="text-[10px] font-bold text-system-tertiary-label ml-1">Hz</span>
                       </div>
+                      <input 
+                        type="range" min={20} max={1990} step={1} 
+                        value={settings.binaural.rightFreq} 
+                        onChange={(e) => updateBinauralSettings({ rightFreq: parseInt(e.target.value) })}
+                        className="w-full h-1 bg-apple-border rounded-full appearance-none accent-purple-500 cursor-pointer"
+                      />
                     </div>
                   </div>
                   
@@ -984,13 +960,22 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                       <input 
                         type="number" 
                         value={settings.pureHz.frequency} 
-                        onChange={(e) => updatePureHzSettings({ frequency: Math.min(Math.max(parseInt(e.target.value) || 0, 20), 20000) })}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          updatePureHzSettings({ frequency: Math.min(1990, Math.max(20, val)) });
+                        }}
                         className="flex-1 bg-transparent text-system-label font-mono text-[15px] font-black outline-none"
                         placeholder="Hz"
                       />
                       <div className="h-6 w-px bg-apple-border" />
                       <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Pure Tone</span>
                     </div>
+                    <input 
+                      type="range" min={20} max={1990} step={1} 
+                      value={settings.pureHz.frequency} 
+                      onChange={(e) => updatePureHzSettings({ frequency: parseInt(e.target.value) })}
+                      className="w-full h-1.5 bg-apple-border rounded-full appearance-none accent-rose-500 cursor-pointer"
+                    />
                   </div>
 
                   <div className="grid grid-cols-4 gap-1.5">
@@ -1356,91 +1341,25 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="h-px bg-apple-border/50" />
-
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-3">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Transition Animation</label>
-              <div className="grid grid-cols-3 gap-1">
-                {['off', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'random'].map(style => (
-                  <button
-                    key={style}
-                    onClick={() => updateSettings({ animationStyle: style as any })}
-                    className={`py-2 rounded-xl border text-[9px] font-black uppercase transition-all ${settings.animationStyle === style ? 'bg-pink-500 text-white border-pink-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
-                  >
-                    {style.replace('-', ' ')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 bg-secondary-system-background/30 p-4 rounded-2xl border border-apple-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-system-label">Menu Position</p>
-                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Top or Bottom TabBar</p>
-                </div>
-                <div className="flex bg-system-background rounded-lg p-1 border border-apple-border">
-                  <button 
-                    onClick={() => updateSettings({ menuPosition: 'top' })}
-                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.menuPosition === 'top' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
-                  >
-                    Top
-                  </button>
-                  <button 
-                    onClick={() => updateSettings({ menuPosition: 'bottom' })}
-                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.menuPosition === 'bottom' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
-                  >
-                    Bottom
-                  </button>
-                </div>
-              </div>
 
               <div className="h-px bg-apple-border/30" />
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-system-label">Big Touch Mode</p>
-                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Larger interactive targets</p>
+                  <p className="text-[13px] font-extrabold text-system-label">Hide Artwork by Default</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Open Now Playing with artwork hidden</p>
                 </div>
                 <button 
-                  onClick={() => updateSettings({ bigTouchMode: !settings.bigTouchMode })}
-                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.bigTouchMode ? 'bg-pink-500' : 'bg-system-tertiary-label'}`}
+                  onClick={() => updateSettings({ alwaysHideArtworkByDefault: !settings.alwaysHideArtworkByDefault })}
+                  className={`w-10 h-6 rounded-full relative transition-colors ${settings.alwaysHideArtworkByDefault ? 'bg-pink-500' : 'bg-system-tertiary-label'}`}
                 >
-                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.bigTouchMode ? 12 : 0 }} />
+                  <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full shadow-sm" animate={{ x: settings.alwaysHideArtworkByDefault ? 16 : 0 }} />
                 </button>
-              </div>
-              
-              <div className="h-px bg-apple-border/30" />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-system-label">Drawer Position</p>
-                  <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-widest mt-0.5">Layer panel entry side</p>
-                </div>
-                <div className="flex bg-system-background rounded-lg p-1 border border-apple-border">
-                  <button 
-                    onClick={() => updateSettings({ hiddenLayersPosition: 'top' })}
-                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.hiddenLayersPosition === 'top' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
-                  >
-                    Top
-                  </button>
-                  <button 
-                    onClick={() => updateSettings({ hiddenLayersPosition: 'bottom' })}
-                    className={`px-3 py-1 text-[9px] font-black uppercase rounded ${settings.hiddenLayersPosition === 'bottom' ? 'bg-pink-500 text-white' : 'text-system-secondary-label'}`}
-                  >
-                    Bottom
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </Section>
-
     </div>
   );
 }

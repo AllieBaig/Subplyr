@@ -334,6 +334,13 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
   const animationProps = useMemo(() => getAnimationProps(settings.animationStyle), [settings.animationStyle]);
   const panelAnimationProps = useMemo(() => getPanelAnimationProps(), [settings.hiddenLayersPosition, settings.animationStyle]);
 
+  // Initial Artwork Visibility Logic
+  React.useEffect(() => {
+    if (settings.alwaysHideArtworkByDefault && settings.showArtwork) {
+      updateSettings({ showArtwork: false });
+    }
+  }, []);
+
   const applyLayerPreset = (layer: string, preset: 'soft' | 'night' | 'focus') => {
     const configs = {
       soft: { volume: 0.1, gainDb: -12, normalize: true },

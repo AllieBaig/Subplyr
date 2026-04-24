@@ -131,6 +131,7 @@ export interface AppSettings {
   animationStyle: AnimationStyle;
   subliminalExpanded: boolean;
   showArtwork: boolean;
+  alwaysHideArtworkByDefault: boolean;
   displayAlwaysOn: boolean;
   visibility: {
     audioLayers: boolean;

@@ -356,6 +356,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     animationStyle: 'slide-up',
     subliminalExpanded: false,
     showArtwork: true,
+    alwaysHideArtworkByDefault: false,
     displayAlwaysOn: false,
     visibility: {
       audioLayers: true,

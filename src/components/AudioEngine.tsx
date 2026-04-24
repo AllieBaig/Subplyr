@@ -1042,24 +1042,47 @@ export default function AudioEngine() {
   }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb, settings.pureHz.normalize]);
 
   // Handle Display Always On (WakeLock)
-  useEffect(() => {
-    let wakeLock: any = null;
+  const wakeLockRef = useRef<any>(null);
 
+  useEffect(() => {
     const requestWakeLock = async () => {
       if ('wakeLock' in navigator && settings.displayAlwaysOn && isPlaying) {
         try {
-          wakeLock = await (navigator as any).wakeLock.request('screen');
-          console.log('Wake Lock is active');
+          if (wakeLockRef.current) return; // Already active
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          console.log('[AudioEngine] Wake Lock is active');
+          
+          wakeLockRef.current.addEventListener('release', () => {
+            console.log('[AudioEngine] Wake Lock released by system');
+            wakeLockRef.current = null;
+          });
         } catch (err) {
-          console.warn(`${err.name}, ${err.message}`);
+          console.warn(`[AudioEngine] Wake Lock request failed: ${err.name}, ${err.message}`);
+          wakeLockRef.current = null;
         }
       }
     };
 
-    requestWakeLock();
+    const releaseWakeLock = async () => {
+      if (wakeLockRef.current) {
+        try {
+          await wakeLockRef.current.release();
+          wakeLockRef.current = null;
+          console.log('[AudioEngine] Wake Lock released intentionally');
+        } catch (err) {
+          console.warn(`[AudioEngine] Wake Lock release failed: ${err.message}`);
+        }
+      }
+    };
+
+    if (settings.displayAlwaysOn && isPlaying) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
 
     const handleVisibilityChange = () => {
-      if (wakeLock !== null && document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && settings.displayAlwaysOn && isPlaying) {
         requestWakeLock();
       }
       
@@ -1075,12 +1098,7 @@ export default function AudioEngine() {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (wakeLock !== null) {
-        wakeLock.release().then(() => {
-          wakeLock = null;
-          console.log('Wake Lock released');
-        });
-      }
+      releaseWakeLock();
     };
   }, [settings.displayAlwaysOn, isPlaying]);
 
