@@ -40,7 +40,7 @@ interface AudioContextType {
   exportAppData: () => Promise<void>;
   importAppData: (file: File) => Promise<void>;
   relinkTrack: (trackId: string, file: File, isSubliminal: boolean) => Promise<void>;
-  getTrackUrl: (id: string) => Promise<string | null>;
+  getTrackUrl: (id: string, forceRefresh?: boolean) => Promise<string | null>;
   
   currentTrackIndex: number | null;
   setCurrentTrackIndex: (index: number | null) => void;
@@ -95,6 +95,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [activeTabRequest, setActiveTabRequest] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const trackUrlCache = useRef<Record<string, string>>({});
+  const cacheOrder = useRef<string[]>([]);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -550,13 +551,36 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.appearance]);
 
-  const getTrackUrl = useCallback(async (id: string) => {
-    if (trackUrlCache.current[id]) return trackUrlCache.current[id];
+  const getTrackUrl = useCallback(async (id: string, forceRefresh?: boolean) => {
+    if (!forceRefresh && trackUrlCache.current[id]) {
+      // LRU: Move to end (most recent)
+      cacheOrder.current = cacheOrder.current.filter(item => item !== id);
+      cacheOrder.current.push(id);
+      return trackUrlCache.current[id];
+    }
     
+    // Revoke old URL if force refreshing or making space
+    if (trackUrlCache.current[id]) {
+      URL.revokeObjectURL(trackUrlCache.current[id]);
+      delete trackUrlCache.current[id];
+      cacheOrder.current = cacheOrder.current.filter(item => item !== id);
+    }
+
+    // Strictly limit cache: revoking and deleting oldest items to free memory
+    if (cacheOrder.current.length >= 15) { // Lower limit for iPhone 8
+      const oldestId = cacheOrder.current.shift();
+      if (oldestId && trackUrlCache.current[oldestId]) {
+        URL.revokeObjectURL(trackUrlCache.current[oldestId]);
+        delete trackUrlCache.current[oldestId];
+        console.log("[AudioContext] Revoking oldest URL to free memory:", oldestId);
+      }
+    }
+
     const blob = await db.getTrackBlob(id);
     if (blob) {
       const url = URL.createObjectURL(blob);
       trackUrlCache.current[id] = url;
+      cacheOrder.current.push(id);
       return url;
     }
     return null;

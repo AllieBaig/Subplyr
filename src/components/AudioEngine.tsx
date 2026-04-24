@@ -630,7 +630,6 @@ export default function AudioEngine() {
       }
     };
 
-    // Subliminal Playlist Advance logic
     const onSubEnded = () => {
       if (settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId) {
         const playlist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
@@ -643,9 +642,14 @@ export default function AudioEngine() {
             const nextTrack = tracks.find(t => t.id === nextTrackId);
             if (nextTrack && !nextTrack.isMissing && subAudioRef.current) {
               if (isPlaying) {
-                subAudioRef.current.src = nextTrack.url;
-                subAudioRef.current.load();
-                subAudioRef.current.play().catch(console.error);
+                // Pre-validate Sub track before assigning src
+                getTrackUrl(nextTrack.id).then(url => {
+                  if (url && subAudioRef.current) {
+                    subAudioRef.current.src = url;
+                    subAudioRef.current.load();
+                    subAudioRef.current.play().catch(console.error);
+                  }
+                });
               }
               found = true;
             }
@@ -656,24 +660,47 @@ export default function AudioEngine() {
     };
 
     let errorCount = 0;
-    const onError = (e: any) => {
-      const error = mainAudioRef.current?.error;
-      console.warn("Main Engine: Audio resource stall or error detected.", error || e);
-      
-      if (isPlaying) {
-        // If it's a critical error (like src not found), skip immediately
-        if (error?.code === 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
-           playNext(true);
-           return;
-        }
+    let isRecovering = false;
 
-        errorCount++;
-        if (errorCount > 2) {
-          console.error("Main Engine: Multiple playback errors. Skipping to next.");
-          errorCount = 0;
-          playNext(true);
-          return;
+    const onError = async (e: any) => {
+      const error = mainAudioRef.current?.error;
+      console.warn("[AudioEngine] Playback error encountered:", error?.code, error?.message);
+      
+      if (!isPlaying || isRecovering) return;
+
+      // iOS 16 Recovery Logic:
+      // If code is 4 (SRC_NOT_SUPPORTED) or 3 (DECODE), it effectively means the Blob URL was likely revoked
+      if (error?.code === 4 || error?.code === 3) {
+        if (currentTrack && errorCount < 2) {
+          console.log("[AudioEngine] Attempting URL recovery for track:", currentTrack.id);
+          isRecovering = true;
+          errorCount++;
+          
+          try {
+            const freshUrl = await getTrackUrl(currentTrack.id, true);
+            if (freshUrl && mainAudioRef.current) {
+              console.log("[AudioEngine] Fresh URL obtained, re-injecting source");
+              mainAudioRef.current.src = freshUrl;
+              mainAudioRef.current.load();
+              await mainAudioRef.current.play();
+              isRecovering = false;
+              errorCount = 0; 
+              return;
+            }
+          } catch (recoveryErr) {
+            console.error("[AudioEngine] Recovery failed:", recoveryErr);
+          }
+          isRecovering = false;
         }
+      }
+
+      // If recovery failed or it's another error, do the standard skip
+      errorCount++;
+      if (errorCount > 2) {
+        console.error("[AudioEngine] Multiple playback failures. Skipping track.");
+        errorCount = 0;
+        playNext(true);
+      } else {
         setTimeout(() => {
           if (isPlaying && mainAudioRef.current) {
             mainAudioRef.current.play().catch(() => {});
@@ -808,20 +835,37 @@ export default function AudioEngine() {
     if (mainAudioRef.current && currentTrack && preparedUrl) {
       const wasPlaying = isPlaying;
       
-      // iOS stability: only update src if different
+      // Strict reset for iOS: Clear src and load() to flush old buffers
       if (mainAudioRef.current.src !== preparedUrl) {
+        console.log("[AudioEngine] Loading new track source:", currentTrack.id);
+        const oldUrl = mainAudioRef.current.src;
+        mainAudioRef.current.pause();
         mainAudioRef.current.src = preparedUrl;
-        mainAudioRef.current.load(); // Required for iOS stability on src change
+        mainAudioRef.current.load(); // Flush
+        
+        // Help Safari cleanup if old was a blob
+        if (oldUrl.startsWith('blob:')) {
+           // We don't revoke here because it might be cached in AudioContext,
+           // but resetting the src helps Safari release the media resource.
+        }
       }
 
       if (wasPlaying) {
-        mainAudioRef.current.play().catch(console.error);
+        // Use a small safety delay for older iPhones to stabilize the media pipeline
+        setTimeout(() => {
+           if (mainAudioRef.current && isPlaying) {
+             mainAudioRef.current.play().catch(err => {
+               console.warn("[AudioEngine] Auto-play failed after source change:", err);
+             });
+           }
+        }, 150);
       }
     } else if (mainAudioRef.current && !currentTrack) {
       mainAudioRef.current.pause();
       mainAudioRef.current.src = "";
+      mainAudioRef.current.load();
     }
-  }, [currentTrack, preparedUrl]);
+  }, [currentTrack?.id, preparedUrl]);
 
   // Handle Play/Pause and MediaSession State
   useEffect(() => {
@@ -1210,10 +1254,20 @@ export default function AudioEngine() {
       }
       
       // 2. Playback Safety: If supposed to be playing but both are paused, attempt nudge
-      // This helps with iOS system-level silences or stalled media sessions
-      if (mainAudioRef.current && mainAudioRef.current.paused && isPlaying) {
-         console.warn('[AudioEngine] Heartbeat: Playback desync detected, nudging...');
-         mainAudioRef.current.play().catch(() => {});
+      // Enhanced for iOS 16: Check readyState and stalled state
+      if (mainAudioRef.current && isPlaying) {
+         const { paused, readyState, networkState, error } = mainAudioRef.current;
+         
+         if (paused) {
+            console.warn('[AudioEngine] Heartbeat: Playback desync detected, nudging...');
+            mainAudioRef.current.play().catch(() => {});
+         }
+         
+         // If stuck in a "stalled" but not paused state with no meta
+         if (readyState < 1 && networkState === 2) { // 2 = NETWORK_LOADING
+            console.warn('[AudioEngine] Heartbeat: Media stuck in loading state, reloading...');
+            mainAudioRef.current.load();
+         }
       }
     }, 10000); // 10s is safe for background battery
     
