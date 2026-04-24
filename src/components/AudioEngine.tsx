@@ -230,12 +230,27 @@ export default function AudioEngine() {
       window.removeEventListener('touchstart', unlockAudio);
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Attempt to resume audio context if it was suspended by the system
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended' && isPlaying) {
+          audioCtxRef.current.resume().catch(() => {});
+        }
+        // Force sync element state
+        if (isPlaying && mainAudioRef.current && mainAudioRef.current.paused) {
+          mainAudioRef.current.play().catch(() => {});
+        }
+      }
+    };
+
     window.addEventListener('click', unlockAudio, { passive: true });
     window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
       
       [mainAudio, subAudio, natureAudio].forEach(a => {
         a.pause();

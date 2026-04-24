@@ -36,7 +36,8 @@ export default function LibraryView() {
     playingPlaylistId,
     setPlayingPlaylistId,
     resumePlaylist,
-    isPlaying
+    isPlaying,
+    currentPlaybackList
   } = useAudio();
 
   const { settings, updateLibrarySettings, updateSubliminalSettings } = useSettings();
@@ -510,11 +511,13 @@ export default function LibraryView() {
                 )}
                 {group.items.map((track) => {
                   const trueIndex = tracks.findIndex(t => t.id === track.id);
+                  const isActuallyPlaying = currentTrackIndex !== null && currentPlaybackList[currentTrackIndex]?.id === track.id;
+                  
                   return (
                     <TrackItem 
                       key={track.id} 
                       track={track} 
-                      isActive={currentTrackIndex === trueIndex}
+                      isActive={isActuallyPlaying}
                       isSelectMode={isSelectMode}
                       isSelected={selectedTrackIds.has(track.id)}
                       onSelect={() => toggleTrackSelection(track.id)}

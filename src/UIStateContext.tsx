@@ -32,21 +32,52 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
   const [swStatus, setSwStatus] = useState<'active' | 'waiting' | 'installing' | 'none'>('none');
   const swSupported = 'serviceWorker' in navigator;
 
+  const lastToastRef = useRef<string | null>(null);
+  const showToast = useCallback((message: string) => {
+    if (message === lastToastRef.current) return;
+    lastToastRef.current = message;
+    
+    setToast(message);
+    setTimeout(() => {
+      setToast(prev => prev === message ? null : prev);
+      if (lastToastRef.current === message) lastToastRef.current = null;
+    }, 4000);
+  }, []);
+
   const navigateTo = useCallback((tab: string) => setActiveTabRequest(tab), []);
   const clearTabRequest = useCallback(() => setActiveTabRequest(null), []);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    let debounceTimer: number | null = null;
+    let lastState: boolean | null = null;
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    const updateNetworkStatus = () => {
+      const isCurrentlyOffline = !navigator.onLine;
+      
+      if (lastState === isCurrentlyOffline) return;
+      
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      
+      debounceTimer = window.setTimeout(() => {
+        setIsOffline(isCurrentlyOffline);
+        
+        // Only show toast after first transition
+        if (lastState !== null) {
+          showToast(isCurrentlyOffline ? 'System Offline' : 'System Online');
+        }
+        lastState = isCurrentlyOffline;
+      }, 1500); // 1.5s debounce for unstable networks/Safari glitches
+    };
+
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', updateNetworkStatus);
+      window.removeEventListener('offline', updateNetworkStatus);
+      if (debounceTimer) window.clearTimeout(debounceTimer);
     };
-  }, []);
+  }, [showToast]);
 
   // Monitor Service Worker Status
   useEffect(() => {
@@ -106,13 +137,6 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
       navigator.serviceWorker.removeEventListener('controllerchange', updateStatus);
     };
   }, [swSupported]);
-
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    setTimeout(() => {
-      setToast(prev => prev === message ? null : prev);
-    }, 4000);
-  }, []);
 
   return (
     <UIStateContext.Provider value={{

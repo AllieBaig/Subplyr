@@ -476,7 +476,14 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         >
           <ChevronDown size={settings.bigTouchMode ? 32 : 28} />
         </button>
-        <h1 className={`font-bold uppercase tracking-[0.25em] text-system-secondary-label ${settings.bigTouchMode ? 'text-xs' : 'text-[10px]'}`}>Now Playing</h1>
+        <div className="flex flex-col items-center">
+          <h1 className={`font-bold uppercase tracking-[0.25em] text-system-secondary-label ${settings.bigTouchMode ? 'text-xs' : 'text-[10px]'}`}>
+            {currentPlaylist ? currentPlaylist.name : 'Now Playing'}
+          </h1>
+          {currentPlaylist && (
+            <span className="text-[9px] font-bold text-apple-blue mt-1 uppercase tracking-widest">{currentPosition}</span>
+          )}
+        </div>
         <button className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}>
           <MoreHorizontal size={settings.bigTouchMode ? 28 : 24} />
         </button>

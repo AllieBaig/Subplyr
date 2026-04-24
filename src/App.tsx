@@ -32,16 +32,9 @@ function AppContent() {
     }
   }, [swStatus, showToast]);
 
-  // Notify of network changes
+  // Notify of network changes handled in UIStateContext now
   useEffect(() => {
-    if (isOffline) {
-      showToast("Offline: All features active");
-    } else {
-      // Don't show toast on initial load if online
-      if (document.readyState === 'complete') {
-        showToast("Online: System Synced");
-      }
-    }
+    // Only handle initial load if needed, but UIStateContext handles this better
   }, [isOffline, showToast]);
 
   const getAnimationProps = (style: AnimationStyle) => {
@@ -75,13 +68,13 @@ function AppContent() {
         <AnimatePresence>
           {isOffline && (
             <motion.div 
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 12, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              className="absolute top-0 left-1/2 -translate-x-1/2 z-[200] bg-system-label text-system-background py-1.5 px-4 rounded-full flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.15em] shadow-lg border border-apple-border"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute top-12 right-6 z-[200] bg-system-label/90 backdrop-blur-md text-system-background py-1 px-3 rounded-full flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.1em] shadow-xl border border-white/10"
             >
-              <WifiOff size={10} />
-              <span>Offline Mode</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+              <span>Offline</span>
             </motion.div>
           )}
         </AnimatePresence>
