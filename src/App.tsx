@@ -16,8 +16,7 @@ export type TabType = 'library' | 'player' | 'settings';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('library');
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const { isLoading, initError, toast, settings, swStatus, showToast, activeTabRequest, clearTabRequest } = useAudio();
+  const { isLoading, initError, toast, settings, swStatus, showToast, activeTabRequest, clearTabRequest, isOffline } = useAudio();
   
   useEffect(() => {
     if (activeTabRequest) {
@@ -26,31 +25,24 @@ function AppContent() {
     }
   }, [activeTabRequest, clearTabRequest]);
 
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      showToast("Online: System Synced");
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
-      showToast("Offline: All features active");
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [showToast]);
-
   // Handle SW updates
   useEffect(() => {
     if (swStatus === 'waiting') {
       showToast("Update Ready: Reload to apply");
     }
   }, [swStatus, showToast]);
+
+  // Notify of network changes
+  useEffect(() => {
+    if (isOffline) {
+      showToast("Offline: All features active");
+    } else {
+      // Don't show toast on initial load if online
+      if (document.readyState === 'complete') {
+        showToast("Online: System Synced");
+      }
+    }
+  }, [isOffline, showToast]);
 
   const getAnimationProps = (style: AnimationStyle) => {
     if (style === 'off' || !style) return { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } };
@@ -81,7 +73,7 @@ function AppContent() {
         
         {/* Dynamic Status Overlays */}
         <AnimatePresence>
-          {!isOnline && (
+          {isOffline && (
             <motion.div 
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 12, opacity: 1 }}

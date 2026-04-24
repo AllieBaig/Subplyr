@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
 import { useModal } from '../components/SafeModal';
 
+import { ArtworkImage } from '../components/ArtworkImage';
+
 export default function LibraryView() {
   const modal = useModal();
   const { 
@@ -872,7 +874,7 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
           className="flex-1 flex items-center gap-4 text-left min-w-0 h-full py-3"
         >
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-secondary-system-background flex items-center justify-center overflow-hidden relative shadow-sm border border-apple-border/50">
-             {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-system-tertiary-label" size={16} />}
+             <ArtworkImage src={track.artwork} className="w-full h-full" iconSize={16} />
              {isActive && <div className="absolute inset-0 bg-apple-blue/10 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-apple-blue shadow-[0_0_8px_rgba(0,122,255,0.6)]" /></div>}
           </div>
           <div className="flex-1 min-w-0">
@@ -954,18 +956,18 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
           return (
             <div key={playlist.id} className="group relative">
               <div className={`flex items-center gap-4 py-4 px-1 transition-opacity ${isSelectMode && !isEditingThis ? 'opacity-40' : 'opacity-100'}`}>
-                <button 
-                  onClick={() => !isSelectMode && onOpen(playlist.id)}
-                  className="flex-shrink-0 w-12 h-12 rounded-xl bg-secondary-system-background flex items-center justify-center overflow-hidden border border-apple-border active:scale-95 transition-transform"
-                >
-                   {playlist.trackIds.length > 0 && tracks.find((t: any) => t.id === playlist.trackIds[0])?.artwork ? (
-                     <img src={tracks.find((t: any) => t.id === playlist.trackIds[0])?.artwork} className="w-full h-full object-cover" />
-                   ) : (
-                     <div className="grid grid-cols-2 grid-rows-2 w-full h-full p-1 gap-[2px]">
-                        {[0,1,2,3].map(i => <div key={i} className="bg-secondary-system-background rounded-[2px]" />)}
-                     </div>
-                   )}
-                </button>
+                  <button 
+                    onClick={() => !isSelectMode && onOpen(playlist.id)}
+                    className="flex-shrink-0 w-12 h-12 rounded-xl bg-secondary-system-background flex items-center justify-center overflow-hidden border border-apple-border active:scale-95 transition-transform"
+                  >
+                     {playlist.trackIds.length > 0 ? (
+                       <ArtworkImage src={tracks.find((t: any) => t.id === playlist.trackIds[0])?.artwork} className="w-full h-full" iconSize={20} />
+                     ) : (
+                       <div className="grid grid-cols-2 grid-rows-2 w-full h-full p-1 gap-[2px]">
+                          {[0,1,2,3].map(i => <div key={i} className="bg-secondary-system-background rounded-[2px]" />)}
+                       </div>
+                     )}
+                  </button>
 
                 <button 
                   onClick={() => !isSelectMode && onOpen(playlist.id)}
@@ -1244,7 +1246,7 @@ const PlaylistDetailView = ({
                   className="flex-1 flex items-center gap-3 text-left min-w-0"
                 >
                   <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden relative">
-                    {track.artwork ? <img src={track.artwork} className="w-full h-full object-cover" /> : <Music className="text-gray-200" size={16} />}
+                    <ArtworkImage src={track.artwork} className="w-full h-full" iconSize={16} />
                     {isActuallyPlaying && <div className="absolute inset-0 bg-apple-blue/10 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-apple-blue" /></div>}
                   </div>
                   <div className="flex-1 min-w-0">

@@ -86,6 +86,19 @@ export default function AudioEngine() {
       navigator.mediaSession.setActionHandler('previoustrack', () => withResume(() => playPrevious()));
       navigator.mediaSession.setActionHandler('seekto', (details) => {
         if (details.seekTime !== undefined) seekTo(details.seekTime);
+        if (details.fastSeek && mainAudioRef.current) {
+          mainAudioRef.current.currentTime = details.seekTime || 0;
+        }
+      });
+      
+      // iOS 16 fallback seek handlers
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const offset = details.seekOffset || 10;
+        if (mainAudioRef.current) seekTo(Math.max(0, mainAudioRef.current.currentTime - offset));
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const offset = details.seekOffset || 10;
+        if (mainAudioRef.current) seekTo(Math.min(mainAudioRef.current.duration, mainAudioRef.current.currentTime + offset));
       });
     }
 
@@ -96,6 +109,8 @@ export default function AudioEngine() {
         navigator.mediaSession.setActionHandler('nexttrack', null);
         navigator.mediaSession.setActionHandler('previoustrack', null);
         navigator.mediaSession.setActionHandler('seekto', null);
+        navigator.mediaSession.setActionHandler('seekbackward', null);
+        navigator.mediaSession.setActionHandler('seekforward', null);
       }
     };
   }, [playNext, playPrevious, setIsPlaying, seekTo]);
@@ -142,14 +157,26 @@ export default function AudioEngine() {
     }
   }, [currentTrackIndex, tracks]);
 
-  // Initialize Web Audio and Cleanup
+  // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
-    natureAudioRef.current = new Audio();
-    natureAudioRef.current.loop = true;
-    (natureAudioRef.current as any).playsInline = true;
-    (natureAudioRef.current as any).webkitPlaysInline = true;
+    // Initialize elements
+    const mainAudio = new Audio();
+    const subAudio = new Audio();
+    const natureAudio = new Audio();
+    
+    [mainAudio, subAudio, natureAudio].forEach(a => {
+      (a as any).playsInline = true;
+      (a as any).webkitPlaysInline = true;
+      a.preload = 'auto';
+    });
 
-    // iOS Safari Audio Unlock Helper & Context Initialization
+    natureAudio.loop = true;
+
+    mainAudioRef.current = mainAudio;
+    subAudioRef.current = subAudio;
+    natureAudioRef.current = natureAudio;
+
+    // iOS Safari Audio Unlock Helper
     const initCtx = () => {
       if (!audioCtxRef.current) {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -165,7 +192,6 @@ export default function AudioEngine() {
       if (ctx && ctx.state === 'suspended') {
         ctx.resume().then(() => {
           console.log('[AudioEngine] Context resumed via interaction');
-          // Play silent buffer to keep context alive
           const buffer = ctx.createBuffer(1, 1, 22050);
           const source = ctx.createBufferSource();
           source.buffer = buffer;
@@ -174,16 +200,10 @@ export default function AudioEngine() {
         }).catch(err => console.warn('[AudioEngine] Resume failed:', err));
       }
       
-      // Also unlock the HTML Audio elements
-      if (mainAudioRef.current) {
-        mainAudioRef.current.play().then(() => mainAudioRef.current?.pause()).catch(() => {});
-      }
-      if (subAudioRef.current) {
-        subAudioRef.current.play().then(() => subAudioRef.current?.pause()).catch(() => {});
-      }
-      if (natureAudioRef.current) {
-        natureAudioRef.current.play().then(() => natureAudioRef.current?.pause()).catch(() => {});
-      }
+      // Unlock HTML Audio elements by playing/pausing
+      [mainAudio, subAudio, natureAudio].forEach(a => {
+        a.play().then(() => a.pause()).catch(() => {});
+      });
 
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
@@ -196,20 +216,20 @@ export default function AudioEngine() {
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
       
+      [mainAudio, subAudio, natureAudio].forEach(a => {
+        a.pause();
+        a.src = '';
+      });
+      
       if (audioCtxRef.current) {
         audioCtxRef.current.close().catch(console.error);
       }
-      if (natureAudioRef.current) {
-        natureAudioRef.current.pause();
-      }
-      if (mainAudioRef.current?.src.startsWith('blob:')) {
-        URL.revokeObjectURL(mainAudioRef.current.src);
-      }
-      if (subAudioRef.current?.src.startsWith('blob:')) {
-        URL.revokeObjectURL(subAudioRef.current.src);
-      }
+      
+      mainAudioRef.current = null;
+      subAudioRef.current = null;
+      natureAudioRef.current = null;
     };
-  }, []);
+  }, []); // Run once on mount
 
   const createNoiseBuffer = (type: 'white' | 'pink' | 'brown') => {
     if (!audioCtxRef.current) return null;
@@ -515,17 +535,50 @@ export default function AudioEngine() {
     const audio = mainAudioRef.current;
     if (!audio) return;
 
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      
+      // Update Media Session position state for lock screen parity
+      if ('mediaSession' in navigator && (navigator.mediaSession as any).setPositionState && isPlaying) {
+        try {
+          (navigator.mediaSession as any).setPositionState({
+            duration: audio.duration || 0,
+            playbackRate: audio.playbackRate || 1,
+            position: audio.currentTime || 0,
+          });
+        } catch (e) {
+          // Ignore state sync errors if duration is NaN
+        }
+      }
+    };
     const onLoadedMetadata = () => setDuration(audio.duration);
+    
+    // Bidirectional sync: If iOS pauses the audio element (e.g. system interrupt), sync state
+    const onPause = () => {
+      if (isPlaying) {
+        console.log('[AudioEngine] System paused audio, syncing state');
+        setIsPlaying(false);
+      }
+    };
+    const onPlay = () => {
+      if (!isPlaying) {
+        console.log('[AudioEngine] System resumed audio, syncing state');
+        setIsPlaying(true);
+      }
+    };
     
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('play', onPlay);
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('play', onPlay);
     };
-  }, [setCurrentTime, setDuration]);
+  }, [setCurrentTime, setDuration, isPlaying, setIsPlaying]);
 
   // Handle track ending and errors
   useEffect(() => {
@@ -544,6 +597,31 @@ export default function AudioEngine() {
         }
       } else {
         playNext(true);
+      }
+    };
+
+    // Subliminal Playlist Advance logic
+    const onSubEnded = () => {
+      if (settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId) {
+        const playlist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
+        if (playlist && playlist.trackIds.length > 0) {
+          let found = false;
+          let attempts = 0;
+          while (!found && attempts < playlist.trackIds.length) {
+            subPlaylistIndexRef.current = (subPlaylistIndexRef.current + 1) % playlist.trackIds.length;
+            const nextTrackId = playlist.trackIds[subPlaylistIndexRef.current];
+            const nextTrack = tracks.find(t => t.id === nextTrackId);
+            if (nextTrack && !nextTrack.isMissing && subAudioRef.current) {
+              if (isPlaying) {
+                subAudioRef.current.src = nextTrack.url;
+                subAudioRef.current.load();
+                subAudioRef.current.play().catch(console.error);
+              }
+              found = true;
+            }
+            attempts++;
+          }
+        }
       }
     };
 
@@ -589,51 +667,29 @@ export default function AudioEngine() {
     audio.addEventListener('error', onError);
     audio.addEventListener('stalled', handleStalled);
 
+    if (subAudioRef.current) {
+      subAudioRef.current.addEventListener('ended', onSubEnded);
+    }
+
     return () => {
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('error', onError);
       audio.removeEventListener('stalled', handleStalled);
-    };
-  }, [playNext, isPlaying]);
-
-  // Initialize subliminal audio
-  useEffect(() => {
-    const audio = new Audio();
-    (audio as any).playsInline = true;
-    (audio as any).webkitPlaysInline = true;
-    subAudioRef.current = audio;
-    
-    const onEnded = () => {
-      if (settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId) {
-        const playlist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
-        if (playlist && playlist.trackIds.length > 0) {
-          // Skip missing tracks in playlist
-          let found = false;
-          let attempts = 0;
-          while (!found && attempts < playlist.trackIds.length) {
-            subPlaylistIndexRef.current = (subPlaylistIndexRef.current + 1) % playlist.trackIds.length;
-            const nextTrackId = playlist.trackIds[subPlaylistIndexRef.current];
-            const nextTrack = tracks.find(t => t.id === nextTrackId);
-            if (nextTrack && !nextTrack.isMissing) {
-              if (isPlaying) {
-                audio.src = nextTrack.url;
-                audio.play().catch(console.error);
-              }
-              found = true;
-            }
-            attempts++;
-          }
-        }
+      if (subAudioRef.current) {
+        subAudioRef.current.removeEventListener('ended', onSubEnded);
       }
     };
+  }, [playNext, isPlaying, playlists, tracks, settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId]);
 
-    audio.addEventListener('ended', onEnded);
-
-    return () => {
-      audio.removeEventListener('ended', onEnded);
-      audio.pause();
-    };
-  }, [settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId, playlists, tracks, isPlaying]);
+  // Handle Subliminal Source Sync
+  useEffect(() => {
+    if (subAudioRef.current && subTrack && !subTrack.isMissing) {
+      if (subAudioRef.current.src !== subTrack.url) {
+        subAudioRef.current.src = subTrack.url;
+        subAudioRef.current.load();
+      }
+    }
+  }, [subTrack]);
 
   const setupAudioTools = () => {
     try {
@@ -727,7 +783,13 @@ export default function AudioEngine() {
         return;
       }
       const wasPlaying = isPlaying;
-      mainAudioRef.current.src = currentTrack.url;
+      
+      // iOS stability: only update src if different
+      if (mainAudioRef.current.src !== currentTrack.url) {
+        mainAudioRef.current.src = currentTrack.url;
+        mainAudioRef.current.load(); // Required for iOS stability on src change
+      }
+
       if (wasPlaying) {
         mainAudioRef.current.play().catch(console.error);
       }
@@ -748,18 +810,22 @@ export default function AudioEngine() {
         return;
       }
       
-      // Ensure context is running BEFORE starting any audio
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().catch(() => {});
-      }
+      // CRITICAL: Ensure context is running BEFORE starting any audio
+      // On iOS 16, this must be called frequently to prevent suspension
+      const resumeContext = () => {
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume().catch(() => {});
+        }
+      };
 
+      resumeContext();
       setupAudioTools();
       
       const playMain = () => {
         if (mainAudioRef.current && mainAudioRef.current.paused) {
+          resumeContext();
           mainAudioRef.current.play().catch(e => {
             console.error("Playback error:", e);
-            // On some mobile devices, if play() is called too soon after src change without interaction
             if (e.name === 'NotAllowedError') {
               showToast("Tap screen to enable audio");
             }
@@ -781,6 +847,7 @@ export default function AudioEngine() {
         
         delayTimeoutRef.current = window.setTimeout(() => {
           if (subAudioRef.current && isPlaying) {
+            resumeContext();
             if (subAudioRef.current.src !== subTrack.url) {
               subAudioRef.current.src = subTrack.url;
             }
@@ -792,7 +859,7 @@ export default function AudioEngine() {
 
       return () => clearTimeout(timer);
     } else {
-      mainAudioRef.current.pause();
+      if (mainAudioRef.current) mainAudioRef.current.pause();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
@@ -971,6 +1038,13 @@ export default function AudioEngine() {
       if (wakeLock !== null && document.visibilityState === 'visible') {
         requestWakeLock();
       }
+      
+      // Recovery logic for iOS: if we return to the app and audio is supposed to be playing but context is suspended
+      if (document.visibilityState === 'visible' && isPlaying && audioCtxRef.current) {
+        if (audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume().catch(() => {});
+        }
+      }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -1081,6 +1155,28 @@ export default function AudioEngine() {
       subAudioRef.current.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
     }
   }, [settings.subliminal.isLooping, settings.subliminal.isPlaylistMode]);
+
+  // Audio Context Heartbeat & Playback Safety
+  useEffect(() => {
+    if (!isPlaying) return;
+    
+    const interval = setInterval(() => {
+      // 1. Context Nudge
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        console.log('[AudioEngine] Heartbeat: Resuming suspended context');
+        audioCtxRef.current.resume().catch(() => {});
+      }
+      
+      // 2. Playback Safety: If supposed to be playing but both are paused, attempt nudge
+      // This helps with iOS system-level silences or stalled media sessions
+      if (mainAudioRef.current && mainAudioRef.current.paused && isPlaying) {
+         console.warn('[AudioEngine] Heartbeat: Playback desync detected, nudging...');
+         mainAudioRef.current.play().catch(() => {});
+      }
+    }, 10000); // 10s is safe for background battery
+    
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   return null;
 }

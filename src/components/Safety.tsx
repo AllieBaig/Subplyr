@@ -51,9 +51,22 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 <span>Resume App</span>
               </button>
               <button 
-                onClick={() => {
-                  localStorage.clear();
-                  window.location.reload();
+                onClick={async () => {
+                  try {
+                    localStorage.clear();
+                    if ('caches' in window) {
+                      const names = await caches.keys();
+                      await Promise.all(names.map(name => caches.delete(name)));
+                    }
+                    if ('serviceWorker' in navigator) {
+                      const regs = await navigator.serviceWorker.getRegistrations();
+                      await Promise.all(regs.map(reg => reg.unregister()));
+                    }
+                  } catch (e) {
+                    console.error("Emergency cleanup failed:", e);
+                  } finally {
+                    window.location.reload();
+                  }
                 }}
                 className="w-full bg-red-500/10 text-red-600 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-500/20 active:scale-95 transition-all"
               >

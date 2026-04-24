@@ -72,6 +72,7 @@ interface AudioContextType {
   activeTabRequest: string | null;
   clearTabRequest: () => void;
   navigateTo: (tab: string) => void;
+  isOffline: boolean;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -91,6 +92,20 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [initError, setInitError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [activeTabRequest, setActiveTabRequest] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const navigateTo = (tab: string) => setActiveTabRequest(tab);
   const clearTabRequest = () => setActiveTabRequest(null);

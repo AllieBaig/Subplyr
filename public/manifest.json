@@ -3,9 +3,11 @@
   "short_name": "Subliminal",
   "description": "Mindful offline music player with subliminal support.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F5F5F7",
-  "theme_color": "#0071E3",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#007AFF",
   "icons": [
     {
       "src": "https://picsum.photos/seed/subliminal_icon_192/192/192",

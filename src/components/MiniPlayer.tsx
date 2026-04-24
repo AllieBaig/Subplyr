@@ -3,6 +3,8 @@ import { usePlayback } from '../PlaybackContext';
 import { Play, Pause, SkipForward, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+import { ArtworkImage } from '../components/ArtworkImage';
+
 interface MiniPlayerProps {
   onExpand: () => void;
 }
@@ -25,13 +27,7 @@ export default function MiniPlayer({ onExpand }: MiniPlayerProps) {
         <div className="flex items-center gap-3">
           {/* Artwork */}
           <div className="w-10 h-10 rounded-lg bg-system-background flex-shrink-0 overflow-hidden shadow-inner-sm">
-            {currentTrack.artwork ? (
-              <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Music size={16} className="text-system-tertiary-label" />
-              </div>
-            )}
+            <ArtworkImage src={currentTrack.artwork} className="w-full h-full" iconSize={16} />
           </div>
 
           {/* Info */}

@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+import { ArtworkImage } from '../components/ArtworkImage';
+
 interface PlayerViewProps {
   onBack?: () => void;
 }
@@ -381,13 +383,11 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
               className={`w-full ${settings.bigTouchMode ? 'max-w-[400px]' : 'max-w-[340px]'} aspect-square bg-system-background rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.06)] border border-apple-border overflow-hidden relative`}
             >
-              {currentTrack.artwork ? (
-                <img src={currentTrack.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              ) : (
-                <div className="w-full h-full bg-secondary-system-background flex items-center justify-center">
-                  <MusicIcon size={settings.bigTouchMode ? 140 : 120} className="text-secondary-system-background" />
-                </div>
-              )}
+              <ArtworkImage 
+                src={currentTrack.artwork} 
+                className="w-full h-full" 
+                iconSize={settings.bigTouchMode ? 140 : 120} 
+              />
             </motion.div>
           ) : (
             <WaveformAnimation isPlaying={isPlaying} />
