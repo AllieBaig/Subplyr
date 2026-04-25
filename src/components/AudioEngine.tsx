@@ -1237,7 +1237,7 @@ export default function AudioEngine() {
         comp.connect(masterGainRef.current);
       }
       
-      if (mainAudioRef.current && !mainSourceRef.current) {
+      if (mainAudioRef.current && !mainSourceRef.current && !settings.audioTools.playInBackground) {
         mainSourceRef.current = ctx.createMediaElementSource(mainAudioRef.current);
         if (!mainGainRef.current) {
           mainGainRef.current = ctx.createGain();
@@ -1246,7 +1246,7 @@ export default function AudioEngine() {
         mainGainRef.current.connect(toolGainRef.current);
       }
       
-      if (subAudioRef.current && !subSourceRef.current) {
+      if (subAudioRef.current && !subSourceRef.current && !settings.subliminal.playInBackground) {
         subSourceRef.current = ctx.createMediaElementSource(subAudioRef.current);
         
         if (!subSpecificGainRef.current) {
@@ -1296,6 +1296,50 @@ export default function AudioEngine() {
     }
   }, [settings.audioTools.gainDb, settings.audioTools.normalizeTargetDb, settings.subliminal.gainDb]);
 
+  // Handle Background Toggles (Main/Sub) - Flush to un-hijack from Web Audio if needed
+  useEffect(() => {
+    if (mainAudioRef.current && mainSourceRef.current) {
+      const curTime = mainAudioRef.current.currentTime;
+      const wasPlaying = isPlaying;
+      
+      // We must neutralize the source ref and refresh the element to detach from Web Audio
+      mainSourceRef.current.disconnect();
+      mainSourceRef.current = null;
+      mainGainRef.current = null;
+      
+      mainAudioRef.current.pause();
+      mainAudioRef.current.src = "";
+      mainAudioRef.current.load();
+      
+      setTimeout(() => {
+        if (mainAudioRef.current && preparedUrl) {
+          mainAudioRef.current.src = preparedUrl;
+          mainAudioRef.current.currentTime = curTime;
+          if (wasPlaying) mainAudioRef.current.play().catch(() => {});
+        }
+      }, 100);
+    }
+  }, [settings.audioTools.playInBackground]);
+
+  useEffect(() => {
+    if (subAudioRef.current && subSourceRef.current) {
+      subSourceRef.current.disconnect();
+      subSourceRef.current = null;
+      subSpecificGainRef.current = null;
+      
+      subAudioRef.current.pause();
+      subAudioRef.current.src = "";
+      subAudioRef.current.load();
+      
+      setTimeout(() => {
+        if (subAudioRef.current && preparedSubUrl) {
+          subAudioRef.current.src = preparedSubUrl;
+          if (isPlaying) subAudioRef.current.play().catch(() => {});
+        }
+      }, 100);
+    }
+  }, [settings.subliminal.playInBackground]);
+
   // Handle Main Track Source Change
   useEffect(() => {
     if (mainAudioRef.current && currentTrack && preparedUrl) {
@@ -1334,7 +1378,7 @@ export default function AudioEngine() {
     }
   }, [currentTrack?.id, preparedUrl]);
 
-  // Handle Play/Pause and MediaSession State
+  // Handle Main Play/Pause and MediaSession State
   useEffect(() => {
     if (!mainAudioRef.current) return;
 
@@ -1373,54 +1417,73 @@ export default function AudioEngine() {
         navigator.mediaSession.playbackState = 'playing';
       }
       
-      // Start subliminal with delay
-      if (settings.subliminal.isEnabled && subTrack && subAudioRef.current && !subTrack.isMissing && preparedSubUrl) {
-        if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
-        
-        delayTimeoutRef.current = window.setTimeout(() => {
-          if (subAudioRef.current && isPlaying) {
-            resumeContext();
-            const audio = subAudioRef.current;
-            if (audio.src !== preparedSubUrl) {
-              audio.src = preparedSubUrl;
-              audio.load();
-            }
-            audio.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
-            
-            // Background support for Subliminal
-            if (settings.subliminal.playInBackground) {
-              if (subSourceRef.current) {
-                 try { subSourceRef.current.disconnect(); } catch (e) {}
-              }
-              const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
-              audio.volume = Math.min(1, Math.max(0, gainValue));
-            } else {
-              if (subSourceRef.current && subCompRef.current) {
-                subSourceRef.current.connect(subCompRef.current);
-              }
-              audio.volume = 1.0;
-            }
-
-            audio.play().catch(console.error);
-          }
-        }, settings.subliminal.delayMs);
-      }
-
       return () => clearTimeout(timer);
     } else {
       if (mainAudioRef.current) mainAudioRef.current.pause();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
-      if (subAudioRef.current) subAudioRef.current.pause();
+    }
+  }, [isPlaying, currentTrack, settings.audioTools.playInBackground]);
+
+  // Handle Subliminal Playback State (Independent from Main if Background is ON)
+  useEffect(() => {
+    if (!subAudioRef.current) return;
+    
+    const isLayerPlaying = (isPlaying || settings.subliminal.playInBackground) && settings.subliminal.isEnabled;
+    const audio = subAudioRef.current;
+
+    if (isLayerPlaying && subTrack && preparedSubUrl && !subTrack.isMissing) {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+
+      const playSub = () => {
+        if (audio.src !== preparedSubUrl) {
+          audio.src = preparedSubUrl;
+          audio.load();
+        }
+        audio.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
+        
+        // Background support for Subliminal
+        if (settings.subliminal.playInBackground) {
+          if (subSourceRef.current) {
+             try { subSourceRef.current.disconnect(); } catch (e) {}
+          }
+          const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
+          audio.volume = Math.min(1, Math.max(0, gainValue));
+        } else {
+          setupAudioTools();
+          if (subSourceRef.current && subCompRef.current) {
+            subSourceRef.current.connect(subCompRef.current);
+          }
+          audio.volume = 1.0;
+        }
+
+        if (audio.paused) {
+          audio.play().catch(console.error);
+        }
+      };
+
+      if (isPlaying) {
+        delayTimeoutRef.current = window.setTimeout(playSub, settings.subliminal.delayMs);
+      } else {
+        playSub();
+      }
+    } else {
+      audio.pause();
       if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
     }
-  }, [isPlaying, settings.subliminal.isEnabled, settings.subliminal.playInBackground, subTrack, preparedSubUrl]);
+    
+    return () => {
+        if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
+    };
+  }, [isPlaying, settings.subliminal.isEnabled, settings.subliminal.playInBackground, settings.subliminal.isLooping, settings.subliminal.isPlaylistMode, subTrack, preparedSubUrl]);
 
   // Handle Binaural Playback and Fading
   useEffect(() => {
     const isBg = settings.binaural.playInBackground;
-    const isLayerPlaying = isPlaying && settings.binaural.isEnabled;
+    const isLayerPlaying = settings.binaural.isEnabled && (isPlaying || isBg);
 
     // 1. Manage Web Audio State
     if (isLayerPlaying && !isBg) {
@@ -1532,7 +1595,7 @@ export default function AudioEngine() {
   // Handle Noise Layer
   useEffect(() => {
     const isBg = settings.noise.playInBackground;
-    const isLayerPlaying = isPlaying && settings.noise.isEnabled;
+    const isLayerPlaying = settings.noise.isEnabled && (isPlaying || isBg);
 
     if (isLayerPlaying && !isBg) {
       setupNoise();
@@ -1629,7 +1692,7 @@ export default function AudioEngine() {
   // Handle Didgeridoo Layer
   useEffect(() => {
     const isBg = settings.didgeridoo.playInBackground;
-    const isLayerPlaying = isPlaying && settings.didgeridoo.isEnabled && settings.didgeridoo.isLooping;
+    const isLayerPlaying = settings.didgeridoo.isEnabled && settings.didgeridoo.isLooping && (isPlaying || isBg);
 
     if (isLayerPlaying && !isBg) {
       setupDidgeridoo();
@@ -1710,7 +1773,7 @@ export default function AudioEngine() {
   // Handle Pure Hz Layer
   useEffect(() => {
     const isBg = settings.pureHz.playInBackground;
-    const isLayerPlaying = isPlaying && settings.pureHz.isEnabled && settings.pureHz.isLooping;
+    const isLayerPlaying = settings.pureHz.isEnabled && settings.pureHz.isLooping && (isPlaying || isBg);
 
     if (isLayerPlaying && !isBg) {
       setupPureHz();
@@ -1785,7 +1848,7 @@ export default function AudioEngine() {
   // Handle Isochronic Layer
   useEffect(() => {
     const isBg = settings.isochronic.playInBackground;
-    const isLayerPlaying = isPlaying && settings.isochronic.isEnabled;
+    const isLayerPlaying = settings.isochronic.isEnabled && (isPlaying || isBg);
 
     if (isLayerPlaying && !isBg) {
       setupIsochronic();
@@ -1864,7 +1927,7 @@ export default function AudioEngine() {
   // Handle Solfeggio Layer
   useEffect(() => {
     const isBg = settings.solfeggio.playInBackground;
-    const isLayerPlaying = isPlaying && settings.solfeggio.isEnabled;
+    const isLayerPlaying = settings.solfeggio.isEnabled && (isPlaying || isBg);
 
     if (isLayerPlaying && !isBg) {
       setupSolfeggio();
@@ -2013,7 +2076,7 @@ export default function AudioEngine() {
   // Handle Nature Layer
   useEffect(() => {
     const isBg = settings.nature.playInBackground;
-    const isLayerPlaying = (isPlaying || isBg) && settings.nature.isEnabled && natureAudioRef.current;
+    const isLayerPlaying = settings.nature.isEnabled && (isPlaying || isBg);
     const layerId = 'nature';
 
     if (isLayerPlaying) {
@@ -2117,21 +2180,39 @@ export default function AudioEngine() {
       const fadeTime = 0.1;
 
       if (mainGainRef.current) {
-        const gainValue = settings.mainVolume; // Already 0-1
+        const gainValue = settings.mainVolume; // Slider 0-1
         mainGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime);
       }
       
       if (subSpecificGainRef.current) {
-        // Respect both volume and gain(dB)
+        // Respect both volume and gain(dB) for Web Audio
         const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
         subSpecificGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime);
       }
     }
 
-    // Keep elements at 1.0 volume since we control via GainNodes now
-    if (mainAudioRef.current) mainAudioRef.current.volume = 1.0;
-    if (subAudioRef.current) subAudioRef.current.volume = 1.0;
-  }, [settings.mainVolume, settings.subliminal.volume, settings.subliminal.gainDb, currentTrack]);
+    // Handle HTML Audio Element Volume directly if Background mode is on
+    // This ensures Gain dB works even when Web Audio is suspended
+    if (mainAudioRef.current) {
+      if (settings.audioTools.playInBackground) {
+        // Apply both Master Volume and Master Gain dB
+        const masterGainValue = Math.pow(10, settings.audioTools.gainDb / 20);
+        const finalVolume = settings.mainVolume * masterGainValue;
+        mainAudioRef.current.volume = Math.min(1, Math.max(0, finalVolume));
+      } else {
+        mainAudioRef.current.volume = 1.0; // Controlled via mainGainRef/toolGainRef in Web Audio
+      }
+    }
+
+    if (subAudioRef.current) {
+      if (settings.subliminal.playInBackground) {
+        const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
+        subAudioRef.current.volume = Math.min(1, Math.max(0, gainValue));
+      } else {
+        subAudioRef.current.volume = 1.0;
+      }
+    }
+  }, [settings.mainVolume, settings.subliminal.volume, settings.subliminal.gainDb, settings.audioTools.gainDb, settings.audioTools.playInBackground, settings.subliminal.playInBackground, currentTrack]);
 
   // Handle Playback Rate
   useEffect(() => {

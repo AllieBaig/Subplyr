@@ -106,6 +106,7 @@ export interface SolfeggioSettings {
 export interface AudioTools {
   gainDb: number;
   normalizeTargetDb: number | null;
+  playInBackground: boolean;
 }
 
 export interface PlaylistMemory {

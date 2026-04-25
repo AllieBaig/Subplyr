@@ -1163,6 +1163,19 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 
                               <div className="flex items-center justify-between p-4 bg-system-background rounded-2xl border border-apple-border">
                                  <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Always play in background</span>
+                                    <span className="text-[9px] font-bold text-system-secondary-label">Recommended for iOS stability</span>
+                                 </div>
+                                 <button 
+                                    onClick={() => updateAudioTools({ playInBackground: !settings.audioTools.playInBackground })}
+                                    className={`w-10 h-6 rounded-full relative transition-colors ${settings.audioTools.playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                                 >
+                                    <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: settings.audioTools.playInBackground ? 16 : 0 }} />
+                                 </button>
+                              </div>
+
+                              <div className="flex items-center justify-between p-4 bg-system-background rounded-2xl border border-apple-border">
+                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Master Normalization</span>
                                     <span className="text-[9px] font-bold text-system-secondary-label">{settings.audioTools.normalizeTargetDb !== null ? `Peak ${settings.audioTools.normalizeTargetDb}dB` : 'Off'}</span>
                                  </div>

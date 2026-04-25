@@ -100,6 +100,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   audioTools: {
     gainDb: 0,
     normalizeTargetDb: null,
+    playInBackground: false,
   },
   mainVolume: 1.0,
   playbackRate: 1.0,
