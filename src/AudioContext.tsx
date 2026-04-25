@@ -117,23 +117,31 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         ]);
 
         // iOS 16 Persistence Fix: Validate and potentially repair missing track references
-        const validatedTracks = [...(savedTracks || [])];
-        const validatedSubTracks = [...(savedSubTracks || [])];
+        const validatedTracks = (savedTracks || []).map(t => ({
+          ...t,
+          isMissing: false // Reset flag on startup to re-validate
+        }));
+        
+        const validatedSubTracks = (savedSubTracks || []).map(t => ({
+          ...t,
+          isMissing: false
+        }));
 
         if (isMounted) {
           setTracks(validatedTracks);
           setSubliminalTracks(validatedSubTracks);
           setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
           
-          // Optional: Trigger a background deep check for playability without blocking UI
+          // Deep check for binary integrity on boot
           setTimeout(async () => {
              for (const t of validatedTracks) {
                const exists = await db.getTrackBlob(t.id);
                if (!exists || exists.size === 0) {
-                 console.warn(`[AudioContext] Track ${t.id} failed durability check. Marking for repair.`);
+                 console.warn(`[AudioContext] Track ${t.id} failed binary durability check.`);
+                 setTracks(prev => prev.map(pt => pt.id === t.id ? { ...pt, isMissing: true } : pt));
                }
              }
-          }, 5000);
+          }, 3000);
         }
       } catch (err) {
         console.warn("Defensive Load Trace:", err);
@@ -170,11 +178,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         cacheOrder.current = cacheOrder.current.filter(item => item !== id);
       }
   
-      // Aggressive cache management: limit concurrent blobs to 8 instead of 15 for iPhone 8 safety
-      if (cacheOrder.current.length >= 8) {
+      // Aggressive cache management: limit concurrent blobs to 5 for iPhone 8 safety
+      if (cacheOrder.current.length >= 5) {
         const oldestId = cacheOrder.current.shift();
         if (oldestId && trackUrlCache.current[oldestId]) {
-          console.log(`[AudioContext] Purging oldest URL from cache: ${oldestId}`);
+          console.log(`[AudioContext] Purging oldest URL from cache (Memory Protection): ${oldestId}`);
           URL.revokeObjectURL(trackUrlCache.current[oldestId]);
           delete trackUrlCache.current[oldestId];
         }

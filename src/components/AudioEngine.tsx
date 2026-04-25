@@ -238,13 +238,15 @@ export default function AudioEngine() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // Attempt to resume audio context if it was suspended by the system
-        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended' && isPlaying) {
+        console.log('[AudioEngine] System visibility changed to visible - Resuming session');
+        // Pre-emptively resume context
+        if (audioCtxRef.current) {
           audioCtxRef.current.resume().catch(() => {});
         }
+        
         // Force sync element state
         if (isPlaying && mainAudioRef.current && mainAudioRef.current.paused) {
-          mainAudioRef.current.play().catch(() => {});
+          mainAudioRef.current.play().catch(err => console.warn('[AudioEngine] Resume-on-visible failed:', err));
         }
       }
     };
@@ -1098,36 +1100,29 @@ export default function AudioEngine() {
       
       // Strict reset for iOS: Clear src and load() to flush old buffers
       if (mainAudioRef.current.src !== preparedUrl) {
-        console.log("[AudioEngine] Loading new track source:", currentTrack.id);
-        const oldUrl = mainAudioRef.current.src;
+        console.log("[AudioEngine] Atomic Flush & Load for new track:", currentTrack.id);
         mainAudioRef.current.pause();
         mainAudioRef.current.src = "";
-        mainAudioRef.current.load(); // Flush
+        mainAudioRef.current.removeAttribute("src"); // Crucial for iOS
+        mainAudioRef.current.load(); // Flush system buffers
         
-        // Help Safari cleanup if old was a blob
-        if (oldUrl.startsWith('blob:')) {
-          // Attempt to extract the track ID stored in the URL (not direct, but AudioContext handles cache limits)
-          // To be precise, we can revoke if we track the previous ID
-        }
-
-        // Small safety delay before assigning new source to let Safari clear previous media pipeline
+        // Safety delay to ensure media pipeline is fully detached
         setTimeout(() => {
           if (mainAudioRef.current) {
             mainAudioRef.current.src = preparedUrl;
             mainAudioRef.current.load();
             
             if (wasPlaying && isPlaying) {
-              // On iOS 16, a tiny delay helps ensure the media session is ready
               setTimeout(() => {
                 if (mainAudioRef.current && isPlaying) {
                   mainAudioRef.current.play().catch(err => {
-                    console.warn("[AudioEngine] Auto-play failed after source change:", err);
+                    console.warn("[AudioEngine] Auto-play failed after flush:", err);
                   });
                 }
-              }, 50);
+              }, 150); // Increased delay for stability
             }
           }
-        }, 100);
+        }, 200); 
       }
     } else if (mainAudioRef.current && !currentTrack) {
       mainAudioRef.current.pause();
@@ -1581,7 +1576,12 @@ export default function AudioEngine() {
             mainAudioRef.current.load();
          }
       }
-    }, 5000); // 5s is more aggressive for background stability on iOS 16
+      
+      // 3. MediaSession State Sync
+      if ('mediaSession' in navigator && isPlaying) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+    }, 3000); // 3s heartbeats for tight sync on iPhone 8
     
     return () => clearInterval(interval);
   }, [isPlaying]);
