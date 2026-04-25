@@ -37,6 +37,7 @@ export default function LibraryView() {
     setPlayingPlaylistId,
     resumePlaylist,
     isPlaying,
+    userPlayTrack,
     currentPlaybackList
   } = useAudio();
 
@@ -439,9 +440,7 @@ export default function LibraryView() {
               if (p) {
                 const idx = p.trackIds.findIndex(tid => tid === id);
                 if (idx !== -1) {
-                  setPlayingPlaylistId(activePlaylistId);
-                  setCurrentTrackIndex(idx);
-                  setIsPlaying(true);
+                  userPlayTrack(idx, activePlaylistId);
                   navigateTo('player');
                 }
               }
@@ -525,9 +524,7 @@ export default function LibraryView() {
                         if (isSelectMode) {
                           toggleTrackSelection(track.id);
                         } else {
-                          setPlayingPlaylistId(null);
-                          setCurrentTrackIndex(trueIndex);
-                          setIsPlaying(true);
+                          userPlayTrack(trueIndex, null);
                           navigateTo('player');
                         }
                       }}
@@ -563,9 +560,7 @@ export default function LibraryView() {
           onTrackPlay={(id) => {
             const idx = tracks.findIndex(t => t.id === id);
             if (idx !== -1) {
-              setPlayingPlaylistId(null);
-              setCurrentTrackIndex(idx);
-              setIsPlaying(true);
+              userPlayTrack(idx, null);
               navigateTo('player');
             }
           }}

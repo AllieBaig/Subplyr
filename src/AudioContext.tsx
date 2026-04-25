@@ -39,10 +39,14 @@ interface AudioContextType {
   currentPlaybackList: Track[];
   playNext: (isAutoEnded?: boolean) => void;
   playPrevious: () => void;
+  userPlayNext: () => void;
+  userPlayPrevious: () => void;
+  userPlayTrack: (index: number, playlistId?: string | null) => void;
   toggleShuffle: () => void;
   toggleLoop: () => void;
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
+  userTogglePlayback: () => void;
   
   seekTo: (time: number) => void;
   seekRequest: number | null;
@@ -341,6 +345,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const resumePlaylist = (id: string) => {
+    // Manually trigger unlock event for any listener (like AudioEngine)
+    // On iOS, this is crucial for the button to be a valid user gesture
+    window.dispatchEvent(new CustomEvent('zen-audio-unlock'));
+
     const playlist = playlists.find(p => p.id === id);
     if (!playlist || playlist.trackIds.length === 0) return;
     const memory = settings.playlistMemory[id];
@@ -389,6 +397,23 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setCurrentTrackIndex(idx);
     setIsPlaying(true);
   }, [currentPlaybackList, currentTrackIndex]);
+
+  const userPlayNext = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('zen-audio-unlock'));
+    playNext(false);
+  }, [playNext]);
+
+  const userPlayPrevious = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('zen-audio-unlock'));
+    playPrevious();
+  }, [playPrevious]);
+
+  const userPlayTrack = useCallback((index: number, playlistId: string | null = null) => {
+    window.dispatchEvent(new CustomEvent('zen-audio-unlock'));
+    setPlayingPlaylistId(playlistId);
+    setCurrentTrackIndex(index);
+    setIsPlaying(true);
+  }, []);
 
   const exportAppData = async () => {
     try {
@@ -462,12 +487,26 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleSetIsPlaying = useCallback((val: boolean) => {
+    setIsPlaying(val);
+  }, []);
+
+  const userTogglePlayback = useCallback(() => {
+    // 1. Manually trigger unlock event for any listener (like AudioEngine)
+    // On iOS, this is crucial for the Play button to be a valid user gesture
+    window.dispatchEvent(new CustomEvent('zen-audio-unlock'));
+    
+    // 2. Toggle the playing state
+    setIsPlaying(prev => !prev);
+  }, []);
+
   return (
     <AudioContext.Provider value={{
       tracks, subliminalTracks, playlists, addTrack, addSubliminalTrack, removeTrack, removeSubliminalTrack,
       createPlaylist, deletePlaylist, addTrackToPlaylist, addTracksToPlaylist, removeTrackFromPlaylist, removeTracksFromPlaylist, renamePlaylist,
       playingPlaylistId, setPlayingPlaylistId, resumePlaylist, exportAppData, importAppData, relinkTrack, getTrackUrl, revokeTrackUrl, checkTrackPlayable,
-      currentTrackIndex, setCurrentTrackIndex, currentPlaybackList, playNext, playPrevious, toggleShuffle, toggleLoop, isPlaying, setIsPlaying,
+      currentTrackIndex, setCurrentTrackIndex, currentPlaybackList, playNext, playPrevious, toggleShuffle, toggleLoop, isPlaying, setIsPlaying: handleSetIsPlaying,
+      userTogglePlayback, userPlayNext, userPlayPrevious, userPlayTrack,
       seekTo: setSeekRequest, seekRequest, clearSeekRequest: () => setSeekRequest(null),
       resetServiceWorker, clearCacheStorage, clearDatabase, fullAppReset, clearAppCache, healSystem
     }}>

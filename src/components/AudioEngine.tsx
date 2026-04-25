@@ -124,7 +124,8 @@ export default function AudioEngine() {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(options.frequency, 0);
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.5, 0); // Normalized base volume
+      // Use lower base volume for tones to leave headroom for Gain (dB) settings
+      gain.gain.setValueAtTime(0.2, 0); 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(0);
@@ -133,11 +134,14 @@ export default function AudioEngine() {
       const left = ctx.createOscillator();
       const right = ctx.createOscillator();
       const merger = ctx.createChannelMerger(2);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.2, 0);
       left.frequency.setValueAtTime(options.leftFreq, 0);
       right.frequency.setValueAtTime(options.rightFreq, 0);
       left.connect(merger, 0, 0);
       right.connect(merger, 0, 1);
-      merger.connect(ctx.destination);
+      merger.connect(gain);
+      gain.connect(ctx.destination);
       left.start(0);
       right.start(0);
     }
@@ -145,6 +149,7 @@ export default function AudioEngine() {
       const bufferSize = sampleRate * duration;
       const buffer = ctx.createBuffer(1, bufferSize, sampleRate);
       const output = buffer.getChannelData(0);
+      
       if (options.noiseType === 'white') {
         for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
       } else if (options.noiseType === 'pink') {
@@ -172,15 +177,20 @@ export default function AudioEngine() {
         }
       }
       const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.15, 0); // Noise can be fatiguing, lower base
       source.buffer = buffer;
       source.loop = true;
-      source.connect(ctx.destination);
+      source.connect(gain);
+      gain.connect(ctx.destination);
       source.start(0);
     }
     else if (type === 'isochronic') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
+      const outGain = ctx.createGain();
       const lfo = ctx.createOscillator();
+      outGain.gain.setValueAtTime(0.2, 0);
       osc.frequency.setValueAtTime(options.frequency, 0);
       lfo.type = 'square';
       lfo.frequency.setValueAtTime(options.pulseRate, 0);
@@ -192,7 +202,8 @@ export default function AudioEngine() {
       lfoGain.connect(gain.gain);
       constant.connect(gain.gain);
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(outGain);
+      outGain.connect(ctx.destination);
       lfo.start(0);
       constant.start(0);
       osc.start(0);
@@ -201,8 +212,10 @@ export default function AudioEngine() {
       const osc = ctx.createOscillator();
       const sub = ctx.createOscillator();
       const filter = ctx.createBiquadFilter();
+      const outGain = ctx.createGain();
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
+      outGain.gain.setValueAtTime(0.15, 0);
       osc.type = 'sawtooth';
       sub.type = 'sine';
       osc.frequency.setValueAtTime(options.frequency, 0);
@@ -216,7 +229,8 @@ export default function AudioEngine() {
       lfoGain.connect(filter.frequency);
       osc.connect(filter);
       sub.connect(filter);
-      filter.connect(ctx.destination);
+      filter.connect(outGain);
+      outGain.connect(ctx.destination);
       lfo.start(0);
       osc.start(0);
       sub.start(0);
@@ -355,25 +369,46 @@ export default function AudioEngine() {
         if (activeLayer) {
           const [id, s] = activeLayer;
           let title = id.charAt(0).toUpperCase() + id.slice(1);
-          let subtitle = '';
+          let subtitle = 'Active Ambient Layer';
           
-          if (id === 'pureHz') subtitle = `${s.frequency}Hz Tone`;
-          else if (id === 'solfeggio') subtitle = `${s.frequency}Hz frequency`;
-          else if (id === 'binaural') subtitle = `${s.leftFreq}Hz / ${s.rightFreq}Hz`;
-          else if (id === 'isochronic') subtitle = `${s.frequency}Hz @ ${s.pulseRate}Hz`;
+          if (id === 'pureHz') subtitle = `${s.frequency}Hz Pure Tone`;
+          else if (id === 'solfeggio') subtitle = `${s.frequency}Hz Solfeggio`;
+          else if (id === 'binaural') subtitle = `Binaural: ${s.leftFreq}Hz / ${s.rightFreq}Hz`;
+          else if (id === 'isochronic') subtitle = `Isochronic: ${s.pulseRate}Hz Pulse`;
           
           navigator.mediaSession.metadata = new MediaMetadata({
             title: title,
-            artist: subtitle || 'Subliminal Ambience',
-            album: 'Background Layers',
+            artist: subtitle,
+            album: 'Silent Journey',
             artwork: [
-              { src: 'https://picsum.photos/seed/ambience/512/512', sizes: '512x512', type: 'image/png' }
+              { src: 'https://picsum.photos/seed/meditation/512/512', sizes: '512x512', type: 'image/png' }
             ]
           });
         }
       }
     }
   }, [currentTrackIndex, tracks, settings, isPlaying]);
+
+  // Update background layers volume with master gain
+  useEffect(() => {
+    const masterGainMultiplier = settings.audioTools.gainDb !== 0 ? Math.pow(10, settings.audioTools.gainDb / 20) : 1.0;
+
+    Object.entries(bgAudioRefs.current).forEach(([id, el]) => {
+      const s = (settings as any)[id];
+      if (s) {
+        const layerGain = Math.pow(10, (s.gainDb || 0) / 20);
+        const volume = s.volume * layerGain * masterGainMultiplier;
+        el.volume = Math.min(1.0, Math.max(0.0, volume));
+      }
+    });
+
+    if (natureAudioRef.current) {
+      const s = settings.nature;
+      const layerGain = Math.pow(10, (s.gainDb || 0) / 20);
+      const volume = s.volume * layerGain * masterGainMultiplier;
+      natureAudioRef.current.volume = Math.min(1.0, Math.max(0.0, volume));
+    }
+  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.didgeridoo, settings.noise, settings.nature]);
 
   // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
@@ -422,9 +457,6 @@ export default function AudioEngine() {
       [mainAudio, subAudio, natureAudio].forEach(a => {
         a.play().then(() => a.pause()).catch(() => {});
       });
-
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
     };
 
     const handleVisibilityChange = () => {
@@ -444,11 +476,13 @@ export default function AudioEngine() {
 
     window.addEventListener('click', unlockAudio, { passive: true });
     window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('zen-audio-unlock', unlockAudio);
     window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('zen-audio-unlock', unlockAudio);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       
       [mainAudio, subAudio, natureAudio].forEach(a => {
@@ -1272,12 +1306,17 @@ export default function AudioEngine() {
     if (audioCtxRef.current) {
       const ctx = audioCtxRef.current;
       
-      // Update Master Gain
-      if (toolGainRef.current) {
+      // Update Master Gain - Applying to ALL layers via masterGainRef
+      if (masterGainRef.current) {
         const gainValue = Math.pow(10, settings.audioTools.gainDb / 20);
-        toolGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
+        masterGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
       }
       
+      // Update Main Volume (if not in background mode, as background mode uses el.volume)
+      if (mainGainRef.current && !settings.audioTools.playInBackground) {
+        mainGainRef.current.gain.setTargetAtTime(settings.mainVolume, ctx.currentTime, 0.1);
+      }
+
       // Update Subliminal Specific Gain & Normalize
       if (subSpecificGainRef.current) {
         const subGainValue = Math.pow(10, settings.subliminal.gainDb / 20);
@@ -1294,7 +1333,7 @@ export default function AudioEngine() {
         toolCompressorRef.current.threshold.setTargetAtTime(targetDb, ctx.currentTime, 0.1);
       }
     }
-  }, [settings.audioTools.gainDb, settings.audioTools.normalizeTargetDb, settings.subliminal.gainDb]);
+  }, [settings.audioTools.gainDb, settings.audioTools.normalizeTargetDb, settings.subliminal.gainDb, settings.subliminal.normalize, settings.mainVolume, settings.audioTools.playInBackground]);
 
   // Handle Background Toggles (Main/Sub) - Flush to un-hijack from Web Audio if needed
   useEffect(() => {
@@ -1398,26 +1437,20 @@ export default function AudioEngine() {
       resumeContext();
       setupAudioTools();
       
-      const playMain = () => {
-        if (mainAudioRef.current && currentTrack && mainAudioRef.current.paused) {
-          resumeContext();
-          mainAudioRef.current.play().catch(e => {
-            console.error("Playback error:", e);
-            if (e.name === 'NotAllowedError') {
-              showToast("Tap screen to enable audio");
-            }
-            setIsPlaying(false);
-          });
-        }
-      };
-
-      const timer = setTimeout(playMain, 80);
+      if (mainAudioRef.current && currentTrack && mainAudioRef.current.paused) {
+        resumeContext();
+        mainAudioRef.current.play().catch(e => {
+          console.error("Playback error:", e);
+          if (e.name === 'NotAllowedError') {
+            showToast("Tap screen to enable audio");
+          }
+          setIsPlaying(false);
+        });
+      }
       
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
       }
-      
-      return () => clearTimeout(timer);
     } else {
       if (mainAudioRef.current) mainAudioRef.current.pause();
       if ('mediaSession' in navigator) {
@@ -2191,23 +2224,25 @@ export default function AudioEngine() {
       }
     }
 
-    // Handle HTML Audio Element Volume directly if Background mode is on
-    // This ensures Gain dB works even when Web Audio is suspended
+    // Handle HTML Audio Element Volume directly
+    // This ensures Gain dB works even when Web Audio is suspended or bypassed
+    const masterGainMultiplier = settings.audioTools.gainDb !== 0 ? Math.pow(10, settings.audioTools.gainDb / 20) : 1.0;
+
     if (mainAudioRef.current) {
       if (settings.audioTools.playInBackground) {
-        // Apply both Master Volume and Master Gain dB
-        const masterGainValue = Math.pow(10, settings.audioTools.gainDb / 20);
-        const finalVolume = settings.mainVolume * masterGainValue;
-        mainAudioRef.current.volume = Math.min(1, Math.max(0, finalVolume));
+        const finalVolume = settings.mainVolume * masterGainMultiplier;
+        mainAudioRef.current.volume = Math.min(1.0, Math.max(0.0, finalVolume));
       } else {
-        mainAudioRef.current.volume = 1.0; // Controlled via mainGainRef/toolGainRef in Web Audio
+        // Use 1.0 because volume is handled by WebAudio gain node
+        mainAudioRef.current.volume = 1.0; 
       }
     }
 
     if (subAudioRef.current) {
+      const subGainMultiplier = Math.pow(10, settings.subliminal.gainDb / 20);
       if (settings.subliminal.playInBackground) {
-        const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
-        subAudioRef.current.volume = Math.min(1, Math.max(0, gainValue));
+        const finalVolume = settings.subliminal.volume * subGainMultiplier * masterGainMultiplier;
+        subAudioRef.current.volume = Math.min(1.0, Math.max(0.0, finalVolume));
       } else {
         subAudioRef.current.volume = 1.0;
       }

@@ -11,7 +11,7 @@ interface MiniPlayerProps {
 }
 
 export default function MiniPlayer({ onExpand }: MiniPlayerProps) {
-  const { currentTrackIndex, isPlaying, setIsPlaying, currentPlaybackList } = useAudio();
+  const { currentTrackIndex, isPlaying, userTogglePlayback, currentPlaybackList } = useAudio();
   const { settings } = useSettings();
   
   const hasAnyLayerEnabled = settings.subliminal.isEnabled || 
@@ -57,7 +57,7 @@ export default function MiniPlayer({ onExpand }: MiniPlayerProps) {
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                setIsPlaying(!isPlaying);
+                userTogglePlayback();
               }}
               className="w-10 h-10 flex items-center justify-center text-system-label active:opacity-50 transition-opacity"
             >

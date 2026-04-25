@@ -394,8 +394,11 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     seekTo,
     playNext,
     playPrevious,
+    userPlayNext,
+    userPlayPrevious,
     toggleShuffle,
     toggleLoop,
+    userTogglePlayback,
     playingPlaylistId,
     currentPlaybackList,
     addTrack
@@ -421,14 +424,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
   const artworkSrc = currentTrack?.artwork || "";
 
   const currentPlaylist = playingPlaylistId ? playlists.find(p => p.id === playingPlaylistId) : null;
-  const currentPosition = currentTrackIndex !== null ? `${currentTrackIndex + 1}/${currentPlaybackList.length}` : (activeLayersLabel !== "Standard Audio" ? "Layer Only" : "");
-
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return "0:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
 
   const activeLayersLabel = useMemo(() => {
     const layers = [
@@ -437,14 +432,24 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       settings.nature.isEnabled && settings.nature.type,
       settings.noise.isEnabled && `${settings.noise.type} Noise`,
       settings.didgeridoo.isEnabled && "Didgeridoo",
-      settings.pureHz.isEnabled && "Pure Hz",
+      settings.pureHz.isEnabled && `${settings.pureHz.frequency}Hz`,
       settings.isochronic.isEnabled && "Isochronic",
-      settings.solfeggio.isEnabled && "Solfeggio"
-    ].filter(Boolean) as string[];
-    
+      settings.solfeggio.isEnabled && `${settings.solfeggio.frequency}Hz Solfeggio`
+    ].filter(Boolean);
+
     if (layers.length === 0) return "Standard Audio";
-    return layers.join(' • ');
+    if (layers.length === 1) return layers[0].toString();
+    return `${layers[0]} + ${layers.length - 1} more`;
   }, [settings]);
+
+  const currentPosition = currentTrackIndex !== null ? `${currentTrackIndex + 1}/${currentPlaybackList.length}` : (activeLayersLabel !== "Standard Audio" ? "Layer Only" : "");
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00";
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const applyPreset = (mode: 'sleep' | 'focus' | 'relax') => {
     if (mode === 'sleep') {
@@ -615,12 +620,12 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         <PlaybackControls settings={settings} seekTo={seekTo} />
 
         <div className={`flex items-center justify-between px-2 pb-2 transition-all duration-500 ${!settings.showArtwork ? 'scale-110 mt-8' : ''}`}>
-          <button onClick={() => playPrevious()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
+          <button onClick={() => userPlayPrevious()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
             <SkipBack size={settings.bigTouchMode ? (!settings.showArtwork ? 64 : 48) : (!settings.showArtwork ? 52 : 40)} fill="currentColor" stroke="none" />
           </button>
           
           <button 
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={() => userTogglePlayback()}
             className={`${settings.bigTouchMode ? (!settings.showArtwork ? 'w-32 h-32' : 'w-24 h-24') : (!settings.showArtwork ? 'w-28 h-28' : 'w-20 h-20')} bg-system-label text-system-background rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all`}
           >
             {isPlaying ? (
@@ -630,7 +635,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
             )}
           </button>
           
-          <button onClick={() => playNext()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
+          <button onClick={() => userPlayNext()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
             <SkipForward size={settings.bigTouchMode ? (!settings.showArtwork ? 64 : 48) : (!settings.showArtwork ? 52 : 40)} fill="currentColor" stroke="none" />
           </button>
         </div>
