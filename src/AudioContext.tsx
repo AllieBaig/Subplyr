@@ -168,43 +168,35 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const getTrackUrl = useCallback(async (id: string, forceRefresh?: boolean) => {
     try {
       if (!forceRefresh && trackUrlCache.current[id]) {
-        // Validation: On iOS 16, sometimes the cached URL points to an invalid/expired object
-        // if memory was purged. We don't verify every time for perf, but we trust forceRefresh.
-        cacheOrder.current = cacheOrder.current.filter(item => item !== id);
-        cacheOrder.current.push(id);
+        // Validation: On iOS 16, check if the URL is still likely valid
+        // Actually, we'll trust it unless it fails in the actual audio element
         return trackUrlCache.current[id];
       }
       
       if (trackUrlCache.current[id]) {
-        console.log(`[AudioContext] Revoking old URL for track: ${id}`);
         URL.revokeObjectURL(trackUrlCache.current[id]);
         delete trackUrlCache.current[id];
-        cacheOrder.current = cacheOrder.current.filter(item => item !== id);
       }
   
-      // Aggressive cache management: limit concurrent blobs to 5 for iPhone 8 safety
-      if (cacheOrder.current.length >= 5) {
+      // Aggressive cache management: limit concurrent blobs to 3 for iPhone 8 (Very strict)
+      if (cacheOrder.current.length >= 3) {
         const oldestId = cacheOrder.current.shift();
         if (oldestId && trackUrlCache.current[oldestId]) {
-          console.log(`[AudioContext] Purging oldest URL from cache (Memory Protection): ${oldestId}`);
           URL.revokeObjectURL(trackUrlCache.current[oldestId]);
           delete trackUrlCache.current[oldestId];
         }
       }
   
       const blob = await db.getTrackBlob(id);
-      if (blob) {
-        // Verify blob is still valid
-        if (blob.size === 0) {
-          console.error(`[AudioContext] Blob for track ${id} is empty (0 bytes)!`);
-          return null;
-        }
-        
+      if (blob && blob.size > 0) {
         const url = URL.createObjectURL(blob);
         trackUrlCache.current[id] = url;
         cacheOrder.current.push(id);
         return url;
       }
+      
+      // Silent Auto-Repair: Check if it's in tracks but blob is gone (shouldn't happen with IDB but for robustness)
+      console.warn(`[AudioContext] Blob missing for ${id}.`);
       return null;
     } catch (err) {
       console.error(`[AudioContext] getTrackUrl failed for ${id}:`, err);

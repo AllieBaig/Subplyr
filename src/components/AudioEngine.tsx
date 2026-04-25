@@ -62,10 +62,12 @@ export default function AudioEngine() {
   const natureGainRef = useRef<GainNode | null>(null);
   const natureCompRef = useRef<DynamicsCompressorNode | null>(null);
 
-  // Background HTML Audio Refs for iOS 16 Persistence
+  // Background HTML Audio Refs for iOS 16 Persistence - Double Buffered for Gapless
   const bgAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
+  const bgAudioRefs2 = useRef<Record<string, HTMLAudioElement>>({});
+  const activeBgRef = useRef<Record<string, 1 | 2>>({});
   const bgAudioUrls = useRef<Record<string, string>>({});
-  const bgAudioParams = useRef<Record<string, string>>({}); // Track which params generated the current blob
+  const bgAudioParams = useRef<Record<string, string>>({});
 
   // Helper: Simple WAV Encoder
   const audioBufferToWav = (buffer: AudioBuffer) => {
@@ -125,7 +127,7 @@ export default function AudioEngine() {
       osc.frequency.setValueAtTime(options.frequency, 0);
       const gain = ctx.createGain();
       // Use lower base volume for tones to leave headroom for Gain (dB) settings
-      gain.gain.setValueAtTime(0.2, 0); 
+      gain.gain.setValueAtTime(0.08, 0); 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(0);
@@ -135,7 +137,7 @@ export default function AudioEngine() {
       const right = ctx.createOscillator();
       const merger = ctx.createChannelMerger(2);
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.2, 0);
+      gain.gain.setValueAtTime(0.08, 0);
       left.frequency.setValueAtTime(options.leftFreq, 0);
       right.frequency.setValueAtTime(options.rightFreq, 0);
       left.connect(merger, 0, 0);
@@ -178,7 +180,7 @@ export default function AudioEngine() {
       }
       const source = ctx.createBufferSource();
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.15, 0); // Noise can be fatiguing, lower base
+      gain.gain.setValueAtTime(0.06, 0); // Noise can be fatiguing, lower base
       source.buffer = buffer;
       source.loop = true;
       source.connect(gain);
@@ -190,7 +192,7 @@ export default function AudioEngine() {
       const gain = ctx.createGain();
       const outGain = ctx.createGain();
       const lfo = ctx.createOscillator();
-      outGain.gain.setValueAtTime(0.2, 0);
+      outGain.gain.setValueAtTime(0.08, 0);
       osc.frequency.setValueAtTime(options.frequency, 0);
       lfo.type = 'square';
       lfo.frequency.setValueAtTime(options.pulseRate, 0);
@@ -215,7 +217,7 @@ export default function AudioEngine() {
       const outGain = ctx.createGain();
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
-      outGain.gain.setValueAtTime(0.15, 0);
+      outGain.gain.setValueAtTime(0.06, 0);
       osc.type = 'sawtooth';
       sub.type = 'sine';
       osc.frequency.setValueAtTime(options.frequency, 0);
@@ -548,6 +550,116 @@ export default function AudioEngine() {
       }
     }
     return buffer;
+  };
+
+  // Helper: Sync Background Layer with Gapless Looping (Double Buffering)
+  const syncBgLayer = async (layerId: string, isLayerPlaying: boolean, isBg: boolean, type: string, params: any, volume: number, gainDb: number) => {
+    if (isLayerPlaying && isBg) {
+      if (!bgAudioRefs.current[layerId]) {
+        const createEl = () => {
+          const el = new Audio();
+          (el as any).playsInline = true;
+          (el as any).webkitPlaysInline = true;
+          return el;
+        };
+        bgAudioRefs.current[layerId] = createEl();
+        bgAudioRefs2.current[layerId] = createEl();
+        activeBgRef.current[layerId] = 1;
+
+        // Progress tracking on both
+        [bgAudioRefs.current[layerId], bgAudioRefs2.current[layerId]].forEach(el => {
+          el.addEventListener('timeupdate', () => {
+            if (activeBgRef.current[layerId] === (el === bgAudioRefs.current[layerId] ? 1 : 2)) {
+              updateLayerProgress(layerId, {
+                currentTime: el.currentTime,
+                duration: el.duration || 30
+              });
+              
+              // Gapless Logic: Trigger next buffer 0.3s before end
+              if (el.duration > 0 && el.currentTime > el.duration - 0.3) {
+                 const otherIdx = activeBgRef.current[layerId] === 1 ? 2 : 1;
+                 const otherEl = otherIdx === 1 ? bgAudioRefs.current[layerId] : bgAudioRefs2.current[layerId];
+                 if (otherEl.paused) {
+                   console.log(`[AudioEngine] Gapless Swap for ${layerId} to buffer ${otherIdx}`);
+                   otherEl.currentTime = 0;
+                   otherEl.play().catch(() => {});
+                   activeBgRef.current[layerId] = otherIdx;
+                   
+                   // crossfade
+                   const fadeOutEl = el;
+                   const fadeInEl = otherEl;
+                   let fadeStep = 0;
+                   const steps = 10;
+                   const fadeInterval = setInterval(() => {
+                      fadeStep++;
+                      const vol = Math.min(1, Math.max(0, volume * Math.pow(10, gainDb / 20)));
+                      fadeInEl.volume = (fadeStep / steps) * vol;
+                      fadeOutEl.volume = (1 - (fadeStep / steps)) * vol;
+                      if (fadeStep >= steps) {
+                        clearInterval(fadeInterval);
+                        fadeOutEl.pause();
+                        fadeOutEl.currentTime = 0;
+                      }
+                   }, 30);
+                 }
+              }
+            }
+          });
+          el.addEventListener('ended', () => {
+            // Backup for timeupdate miss
+            const otherIdx = el === bgAudioRefs.current[layerId] ? 2 : 1;
+            const otherEl = otherIdx === 1 ? bgAudioRefs.current[layerId] : bgAudioRefs2.current[layerId];
+            if (otherEl.paused) {
+              otherEl.currentTime = 0;
+              otherEl.play().catch(() => {});
+              activeBgRef.current[layerId] = otherIdx;
+            }
+          });
+        });
+      }
+
+      const activeIdx = activeBgRef.current[layerId];
+      const el = activeIdx === 1 ? bgAudioRefs.current[layerId] : bgAudioRefs2.current[layerId];
+      const otherEl = activeIdx === 1 ? bgAudioRefs2.current[layerId] : bgAudioRefs.current[layerId];
+
+      const paramKey = JSON.stringify(params);
+      if (bgAudioParams.current[layerId] !== paramKey) {
+        if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+        const blob = await generateToneBlob(type, params);
+        const url = URL.createObjectURL(blob);
+        bgAudioUrls.current[layerId] = url;
+        bgAudioParams.current[layerId] = paramKey;
+        
+        [bgAudioRefs.current[layerId], bgAudioRefs2.current[layerId]].forEach(a => {
+          a.src = url;
+          a.load();
+        });
+      }
+
+      const masterGainMultiplier = settings.audioTools.gainDb !== 0 ? Math.pow(10, settings.audioTools.gainDb / 20) : 1.0;
+      const vol = Math.min(1, Math.max(0, volume * Math.pow(10, gainDb / 20) * masterGainMultiplier));
+      
+      el.volume = vol;
+      if (el.paused && otherEl.paused) {
+        el.play().catch(() => {});
+      }
+    } else {
+      const el1 = bgAudioRefs.current[layerId];
+      const el2 = bgAudioRefs2.current[layerId];
+      if (el1) el1.pause();
+      if (el2) el2.pause();
+      
+      if (!isLayerPlaying) {
+        if (el1) { el1.src = ''; el1.load(); }
+        if (el2) { el2.src = ''; el2.load(); }
+        if (bgAudioUrls.current[layerId]) {
+          URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+          delete bgAudioUrls.current[layerId];
+        }
+        delete bgAudioParams.current[layerId];
+        updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
+      }
+    }
   };
 
   const setupNoise = () => {
@@ -1301,38 +1413,60 @@ export default function AudioEngine() {
     }
   };
 
-  // Handle Audio Tools Real-time Updates
+  // Handle Audio Tools Real-time Updates - Throttled for stability on iPhone 8
+  const lastAppliedGainRef = useRef<number>(-999);
+  const gainThrottleTimeoutRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (audioCtxRef.current) {
       const ctx = audioCtxRef.current;
       
-      // Update Master Gain - Applying to ALL layers via masterGainRef
-      if (masterGainRef.current) {
-        const gainValue = Math.pow(10, settings.audioTools.gainDb / 20);
-        masterGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
-      }
-      
-      // Update Main Volume (if not in background mode, as background mode uses el.volume)
-      if (mainGainRef.current && !settings.audioTools.playInBackground) {
-        mainGainRef.current.gain.setTargetAtTime(settings.mainVolume, ctx.currentTime, 0.1);
+      const updateNodes = () => {
+        // Update Master Gain - Applying to ALL layers via masterGainRef
+        if (masterGainRef.current) {
+          const gainDb = Math.max(-60, Math.min(0, settings.audioTools.gainDb));
+          const gainValue = Math.pow(10, gainDb / 20);
+          masterGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.05);
+          lastAppliedGainRef.current = settings.audioTools.gainDb;
+        }
+        
+        // Update Main Volume
+        if (mainGainRef.current && !settings.audioTools.playInBackground) {
+          mainGainRef.current.gain.setTargetAtTime(settings.mainVolume, ctx.currentTime, 0.05);
+        }
+
+        // Update Subliminal Specific Gain & Normalize
+        if (subSpecificGainRef.current) {
+          const subGainValue = Math.pow(10, settings.subliminal.gainDb / 20);
+          subSpecificGainRef.current.gain.setTargetAtTime(subGainValue, ctx.currentTime, 0.05);
+        }
+        if (subCompRef.current) {
+          const threshold = settings.subliminal.normalize ? -24 : 0;
+          subCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
+        }
+        
+        // Update Normalization Compressor (Master)
+        if (toolCompressorRef.current) {
+          const targetDb = settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0;
+          toolCompressorRef.current.threshold.setTargetAtTime(targetDb, ctx.currentTime, 0.1);
+        }
+      };
+
+      if (gainThrottleTimeoutRef.current) {
+        clearTimeout(gainThrottleTimeoutRef.current);
       }
 
-      // Update Subliminal Specific Gain & Normalize
-      if (subSpecificGainRef.current) {
-        const subGainValue = Math.pow(10, settings.subliminal.gainDb / 20);
-        subSpecificGainRef.current.gain.setTargetAtTime(subGainValue, ctx.currentTime, 0.1);
-      }
-      if (subCompRef.current) {
-        const threshold = settings.subliminal.normalize ? -24 : 0;
-        subCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
-      }
-      
-      // Update Normalization Compressor (Master)
-      if (toolCompressorRef.current) {
-        const targetDb = settings.audioTools.normalizeTargetDb !== null ? settings.audioTools.normalizeTargetDb : 0;
-        toolCompressorRef.current.threshold.setTargetAtTime(targetDb, ctx.currentTime, 0.1);
+      // If it's a big jump or first time, update immediately
+      if (Math.abs(lastAppliedGainRef.current - settings.audioTools.gainDb) > 2) {
+        updateNodes();
+      } else {
+        // Otherwise throttle for smoothness and to prevent layout/engine thrashing
+        gainThrottleTimeoutRef.current = window.setTimeout(updateNodes, 50);
       }
     }
+    return () => {
+      if (gainThrottleTimeoutRef.current) clearTimeout(gainThrottleTimeoutRef.current);
+    };
   }, [settings.audioTools.gainDb, settings.audioTools.normalizeTargetDb, settings.subliminal.gainDb, settings.subliminal.normalize, settings.mainVolume, settings.audioTools.playInBackground]);
 
   // Handle Background Toggles (Main/Sub) - Flush to un-hijack from Web Audio if needed
@@ -1670,54 +1804,7 @@ export default function AudioEngine() {
     }
 
     const syncBg = async () => {
-      const layerId = 'noise';
-      if (isLayerPlaying && isBg) {
-        let el = bgAudioRefs.current[layerId];
-        if (!el) {
-          el = new Audio();
-          el.loop = true;
-          (el as any).playsInline = true;
-          (el as any).webkitPlaysInline = true;
-          el.addEventListener('timeupdate', () => {
-            if (bgAudioRefs.current[layerId]) {
-              updateLayerProgress(layerId, {
-                currentTime: bgAudioRefs.current[layerId].currentTime,
-                duration: bgAudioRefs.current[layerId].duration || 30
-              });
-            }
-          });
-          bgAudioRefs.current[layerId] = el;
-        }
-
-        const params = settings.noise.type;
-        if (bgAudioParams.current[layerId] !== params) {
-          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-          const blob = await generateToneBlob('noise', { noiseType: settings.noise.type });
-          const url = URL.createObjectURL(blob);
-          el.src = url;
-          bgAudioUrls.current[layerId] = url;
-          bgAudioParams.current[layerId] = params;
-          el.load();
-        }
-
-        const gainValue = settings.noise.volume * Math.pow(10, settings.noise.gainDb / 20);
-        el.volume = Math.min(1, Math.max(0, gainValue));
-        if (el.paused) el.play().catch(console.error);
-      } else {
-        const el = bgAudioRefs.current[layerId];
-        if (el) {
-          el.pause();
-          if (!isLayerPlaying) {
-             el.src = '';
-             if (bgAudioUrls.current[layerId]) {
-               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-               delete bgAudioUrls.current[layerId];
-             }
-             delete bgAudioParams.current[layerId];
-             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
-          }
-        }
-      }
+      syncBgLayer('noise', isLayerPlaying, isBg, 'noise', { noiseType: settings.noise.type }, settings.noise.volume, settings.noise.gainDb);
     };
     syncBg();
   }, [isPlaying, settings.noise.isEnabled, settings.noise.playInBackground, settings.noise.type, settings.noise.volume, settings.noise.gainDb, settings.noise.normalize]);
@@ -1748,57 +1835,10 @@ export default function AudioEngine() {
     }
 
     const syncBg = async () => {
-      const layerId = 'didgeridoo';
-      if (isLayerPlaying && isBg) {
-        let el = bgAudioRefs.current[layerId];
-        if (!el) {
-          el = new Audio();
-          el.loop = true;
-          (el as any).playsInline = true;
-          (el as any).webkitPlaysInline = true;
-          el.addEventListener('timeupdate', () => {
-            if (bgAudioRefs.current[layerId]) {
-              updateLayerProgress(layerId, {
-                currentTime: bgAudioRefs.current[layerId].currentTime,
-                duration: bgAudioRefs.current[layerId].duration || 30
-              });
-            }
-          });
-          bgAudioRefs.current[layerId] = el;
-        }
-
-        const params = `${settings.didgeridoo.frequency}-${settings.didgeridoo.depth}`;
-        if (bgAudioParams.current[layerId] !== params) {
-          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-          const blob = await generateToneBlob('didgeridoo', { 
-            frequency: settings.didgeridoo.frequency, 
-            depth: settings.didgeridoo.depth 
-          });
-          const url = URL.createObjectURL(blob);
-          el.src = url;
-          bgAudioUrls.current[layerId] = url;
-          bgAudioParams.current[layerId] = params;
-          el.load();
-        }
-
-        const gainValue = settings.didgeridoo.volume * Math.pow(10, settings.didgeridoo.gainDb / 20);
-        el.volume = Math.min(1, Math.max(0, gainValue));
-        if (el.paused) el.play().catch(console.error);
-      } else {
-        const el = bgAudioRefs.current[layerId];
-        if (el) {
-          el.pause();
-          if (!isLayerPlaying) {
-             el.src = '';
-             if (bgAudioUrls.current[layerId]) {
-               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-               delete bgAudioUrls.current[layerId];
-             }
-             delete bgAudioParams.current[layerId];
-             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
-          }
-        }
-      }
+      syncBgLayer('didgeridoo', isLayerPlaying, isBg, 'didgeridoo', { 
+        frequency: settings.didgeridoo.frequency, 
+        depth: settings.didgeridoo.depth 
+      }, settings.didgeridoo.volume, settings.didgeridoo.gainDb);
     };
     syncBg();
   }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.didgeridoo.playInBackground, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize, settings.didgeridoo.frequency, settings.didgeridoo.depth]);
@@ -1826,54 +1866,7 @@ export default function AudioEngine() {
     }
 
     const syncBg = async () => {
-      const layerId = 'pureHz';
-      if (isLayerPlaying && isBg) {
-        let el = bgAudioRefs.current[layerId];
-        if (!el) {
-          el = new Audio();
-          el.loop = true;
-          (el as any).playsInline = true;
-          (el as any).webkitPlaysInline = true;
-          el.addEventListener('timeupdate', () => {
-            if (bgAudioRefs.current[layerId]) {
-              updateLayerProgress(layerId, {
-                currentTime: bgAudioRefs.current[layerId].currentTime,
-                duration: bgAudioRefs.current[layerId].duration || 30
-              });
-            }
-          });
-          bgAudioRefs.current[layerId] = el;
-        }
-
-        const params = `${settings.pureHz.frequency}`;
-        if (bgAudioParams.current[layerId] !== params) {
-          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-          const blob = await generateToneBlob('pureHz', { frequency: settings.pureHz.frequency });
-          const url = URL.createObjectURL(blob);
-          el.src = url;
-          bgAudioUrls.current[layerId] = url;
-          bgAudioParams.current[layerId] = params;
-          el.load();
-        }
-
-        const gainValue = settings.pureHz.volume * Math.pow(10, settings.pureHz.gainDb / 20);
-        el.volume = Math.min(1, Math.max(0, gainValue));
-        if (el.paused) el.play().catch(console.error);
-      } else {
-        const el = bgAudioRefs.current[layerId];
-        if (el) {
-          el.pause();
-          if (!isLayerPlaying) {
-             el.src = '';
-             if (bgAudioUrls.current[layerId]) {
-               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-               delete bgAudioUrls.current[layerId];
-             }
-             delete bgAudioParams.current[layerId];
-             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
-          }
-        }
-      }
+      syncBgLayer('pureHz', isLayerPlaying, isBg, 'pureHz', { frequency: settings.pureHz.frequency }, settings.pureHz.volume, settings.pureHz.gainDb);
     };
     syncBg();
   }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.pureHz.playInBackground, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb]);
@@ -1902,57 +1895,10 @@ export default function AudioEngine() {
     }
 
     const syncBg = async () => {
-      const layerId = 'isochronic';
-      if (isLayerPlaying && isBg) {
-        let el = bgAudioRefs.current[layerId];
-        if (!el) {
-          el = new Audio();
-          el.loop = true;
-          (el as any).playsInline = true;
-          (el as any).webkitPlaysInline = true;
-          el.addEventListener('timeupdate', () => {
-            if (bgAudioRefs.current[layerId]) {
-              updateLayerProgress(layerId, {
-                currentTime: bgAudioRefs.current[layerId].currentTime,
-                duration: bgAudioRefs.current[layerId].duration || 30
-              });
-            }
-          });
-          bgAudioRefs.current[layerId] = el;
-        }
-
-        const params = `${settings.isochronic.frequency}-${settings.isochronic.pulseRate}`;
-        if (bgAudioParams.current[layerId] !== params) {
-          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-          const blob = await generateToneBlob('isochronic', { 
-            frequency: settings.isochronic.frequency, 
-            pulseRate: settings.isochronic.pulseRate 
-          });
-          const url = URL.createObjectURL(blob);
-          el.src = url;
-          bgAudioUrls.current[layerId] = url;
-          bgAudioParams.current[layerId] = params;
-          el.load();
-        }
-
-        const gainValue = settings.isochronic.volume * Math.pow(10, settings.isochronic.gainDb / 20);
-        el.volume = Math.min(1, Math.max(0, gainValue));
-        if (el.paused) el.play().catch(console.error);
-      } else {
-        const el = bgAudioRefs.current[layerId];
-        if (el) {
-          el.pause();
-          if (!isLayerPlaying) {
-             el.src = '';
-             if (bgAudioUrls.current[layerId]) {
-               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-               delete bgAudioUrls.current[layerId];
-             }
-             delete bgAudioParams.current[layerId];
-             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
-          }
-        }
-      }
+      syncBgLayer('isochronic', isLayerPlaying, isBg, 'isochronic', { 
+        frequency: settings.isochronic.frequency, 
+        pulseRate: settings.isochronic.pulseRate 
+      }, settings.isochronic.volume, settings.isochronic.gainDb);
     };
     syncBg();
   }, [isPlaying, settings.isochronic.isEnabled, settings.isochronic.playInBackground, settings.fadeInOut, settings.isochronic.volume, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.gainDb]);
@@ -1980,54 +1926,7 @@ export default function AudioEngine() {
     }
 
     const syncBg = async () => {
-      const layerId = 'solfeggio';
-      if (isLayerPlaying && isBg) {
-        let el = bgAudioRefs.current[layerId];
-        if (!el) {
-          el = new Audio();
-          el.loop = true;
-          (el as any).playsInline = true;
-          (el as any).webkitPlaysInline = true;
-          el.addEventListener('timeupdate', () => {
-            if (bgAudioRefs.current[layerId]) {
-              updateLayerProgress(layerId, {
-                currentTime: bgAudioRefs.current[layerId].currentTime,
-                duration: bgAudioRefs.current[layerId].duration || 30
-              });
-            }
-          });
-          bgAudioRefs.current[layerId] = el;
-        }
-
-        const params = `${settings.solfeggio.frequency}`;
-        if (bgAudioParams.current[layerId] !== params) {
-          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-          const blob = await generateToneBlob('solfeggio', { frequency: settings.solfeggio.frequency });
-          const url = URL.createObjectURL(blob);
-          el.src = url;
-          bgAudioUrls.current[layerId] = url;
-          bgAudioParams.current[layerId] = params;
-          el.load();
-        }
-
-        const gainValue = settings.solfeggio.volume * Math.pow(10, settings.solfeggio.gainDb / 20);
-        el.volume = Math.min(1, Math.max(0, gainValue));
-        if (el.paused) el.play().catch(console.error);
-      } else {
-        const el = bgAudioRefs.current[layerId];
-        if (el) {
-          el.pause();
-          if (!isLayerPlaying) {
-             el.src = '';
-             if (bgAudioUrls.current[layerId]) {
-               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-               delete bgAudioUrls.current[layerId];
-             }
-             delete bgAudioParams.current[layerId];
-             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
-          }
-        }
-      }
+      syncBgLayer('solfeggio', isLayerPlaying, isBg, 'solfeggio', { frequency: settings.solfeggio.frequency }, settings.solfeggio.volume, settings.solfeggio.gainDb);
     };
     syncBg();
   }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb]);
