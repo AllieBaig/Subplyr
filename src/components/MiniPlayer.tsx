@@ -11,11 +11,25 @@ interface MiniPlayerProps {
 }
 
 export default function MiniPlayer({ onExpand }: MiniPlayerProps) {
-  const { currentTrackIndex, isPlaying, setIsPlaying, playNext, currentPlaybackList } = useAudio();
+  const { currentTrackIndex, isPlaying, setIsPlaying, currentPlaybackList } = useAudio();
   const { settings } = useSettings();
+  
+  const hasAnyLayerEnabled = settings.subliminal.isEnabled || 
+                             settings.binaural.isEnabled || 
+                             settings.nature.isEnabled || 
+                             settings.noise.isEnabled || 
+                             settings.didgeridoo.isEnabled || 
+                             settings.pureHz.isEnabled || 
+                             settings.isochronic.isEnabled || 
+                             settings.solfeggio.isEnabled;
+
   const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
 
-  if (!currentTrack) return null;
+  if (!currentTrack && !hasAnyLayerEnabled) return null;
+
+  const trackName = currentTrack?.name || "Zen Session";
+  const artistName = currentTrack?.artist || "Ambient Layers Active";
+  const artworkSrc = currentTrack?.artwork || "";
 
   return (
     <motion.div 
@@ -29,13 +43,13 @@ export default function MiniPlayer({ onExpand }: MiniPlayerProps) {
         <div className="flex items-center gap-3">
           {/* Artwork */}
           <div className="w-10 h-10 rounded-lg bg-system-background flex-shrink-0 overflow-hidden shadow-inner-sm">
-            <ArtworkImage src={currentTrack.artwork} className="w-full h-full" iconSize={16} />
+            <ArtworkImage src={artworkSrc} className="w-full h-full" iconSize={16} />
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h4 className="text-[13px] font-bold text-system-label truncate tracking-tight">{currentTrack.name}</h4>
-            <p className="text-[11px] font-medium text-system-secondary-label truncate mt-0.5">{currentTrack.artist}</p>
+            <h4 className="text-[13px] font-bold text-system-label truncate tracking-tight">{trackName}</h4>
+            <p className="text-[11px] font-medium text-system-secondary-label truncate mt-0.5">{artistName}</p>
           </div>
 
           {/* Controls */}

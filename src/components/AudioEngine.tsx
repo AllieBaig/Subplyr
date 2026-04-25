@@ -29,7 +29,7 @@ export default function AudioEngine() {
   const { settings, updateSettings, updateAudioTools } = useSettings();
   const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
 
-  const { currentTime, setCurrentTime, setDuration } = usePlayback();
+  const { currentTime, setCurrentTime, setDuration, updateLayerProgress } = usePlayback();
   const [preparedUrl, setPreparedUrl] = useState<string | null>(null);
   const [preparedSubUrl, setPreparedSubUrl] = useState<string | null>(null);
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -113,7 +113,7 @@ export default function AudioEngine() {
   // Helper: Generate Tone Blob
   const generateToneBlob = async (type: string, options: any) => {
     const OfflineCtx = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext;
-    const duration = 12; // 12s is balanced for memory and loop points
+    const duration = 30; // 30s for smoother looping and stability
     const sampleRate = 44100;
     const numChannels = type === 'binaural' ? 2 : 1;
     const ctx = new OfflineCtx(numChannels, sampleRate * duration, sampleRate);
@@ -335,18 +335,45 @@ export default function AudioEngine() {
 
   // Sync Media Session Metadata
   useEffect(() => {
-    if ('mediaSession' in navigator && currentTrackIndex !== null && tracks[currentTrackIndex]) {
-      const track = tracks[currentTrackIndex];
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: track.name,
-        artist: track.artist || 'Unknown Artist',
-        album: 'Subliminal Journey',
-        artwork: [
-          { src: track.artwork || 'https://picsum.photos/seed/music/512/512', sizes: '512x512', type: 'image/png' }
-        ]
-      });
+    if ('mediaSession' in navigator) {
+      if (currentTrackIndex !== null && tracks[currentTrackIndex]) {
+        const track = tracks[currentTrackIndex];
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.name,
+          artist: track.artist || 'Unknown Artist',
+          album: 'Subliminal Journey',
+          artwork: [
+            { src: track.artwork || 'https://picsum.photos/seed/music/512/512', sizes: '512x512', type: 'image/png' }
+          ]
+        });
+      } else {
+        // Find active Hz layer to show in metadata if no track is playing
+        const activeLayer = Object.entries(settings).find(([key, val]: [string, any]) => 
+          val?.isEnabled && val?.playInBackground && ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'didgeridoo', 'noise', 'nature'].includes(key)
+        );
+
+        if (activeLayer) {
+          const [id, s] = activeLayer;
+          let title = id.charAt(0).toUpperCase() + id.slice(1);
+          let subtitle = '';
+          
+          if (id === 'pureHz') subtitle = `${s.frequency}Hz Tone`;
+          else if (id === 'solfeggio') subtitle = `${s.frequency}Hz frequency`;
+          else if (id === 'binaural') subtitle = `${s.leftFreq}Hz / ${s.rightFreq}Hz`;
+          else if (id === 'isochronic') subtitle = `${s.frequency}Hz @ ${s.pulseRate}Hz`;
+          
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: title,
+            artist: subtitle || 'Subliminal Ambience',
+            album: 'Background Layers',
+            artwork: [
+              { src: 'https://picsum.photos/seed/ambience/512/512', sizes: '512x512', type: 'image/png' }
+            ]
+          });
+        }
+      }
     }
-  }, [currentTrackIndex, tracks]);
+  }, [currentTrackIndex, tracks, settings, isPlaying]);
 
   // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
@@ -1311,6 +1338,12 @@ export default function AudioEngine() {
   useEffect(() => {
     if (!mainAudioRef.current) return;
 
+    const resumeContext = () => {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    };
+
     if (isPlaying) {
       if (currentTrack?.isMissing) {
         setIsPlaying(false);
@@ -1318,17 +1351,11 @@ export default function AudioEngine() {
         return;
       }
       
-      const resumeContext = () => {
-        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume().catch(() => {});
-        }
-      };
-
       resumeContext();
       setupAudioTools();
       
       const playMain = () => {
-        if (mainAudioRef.current && mainAudioRef.current.paused) {
+        if (mainAudioRef.current && currentTrack && mainAudioRef.current.paused) {
           resumeContext();
           mainAudioRef.current.play().catch(e => {
             console.error("Playback error:", e);
@@ -1425,6 +1452,17 @@ export default function AudioEngine() {
           el.loop = true;
           (el as any).playsInline = true;
           (el as any).webkitPlaysInline = true;
+          
+          // Audio elements used for tones need timeupdate listeners to sync progress
+          el.addEventListener('timeupdate', () => {
+            if (bgAudioRefs.current[layerId]) {
+              updateLayerProgress(layerId, {
+                currentTime: bgAudioRefs.current[layerId].currentTime,
+                duration: bgAudioRefs.current[layerId].duration || 30
+              });
+            }
+          });
+          
           bgAudioRefs.current[layerId] = el;
         }
 
@@ -1456,6 +1494,7 @@ export default function AudioEngine() {
                delete bgAudioUrls.current[layerId];
              }
              delete bgAudioParams.current[layerId];
+             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
           }
         }
       }
@@ -1543,6 +1582,14 @@ export default function AudioEngine() {
           el.loop = true;
           (el as any).playsInline = true;
           (el as any).webkitPlaysInline = true;
+          el.addEventListener('timeupdate', () => {
+            if (bgAudioRefs.current[layerId]) {
+              updateLayerProgress(layerId, {
+                currentTime: bgAudioRefs.current[layerId].currentTime,
+                duration: bgAudioRefs.current[layerId].duration || 30
+              });
+            }
+          });
           bgAudioRefs.current[layerId] = el;
         }
 
@@ -1571,6 +1618,7 @@ export default function AudioEngine() {
                delete bgAudioUrls.current[layerId];
              }
              delete bgAudioParams.current[layerId];
+             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
           }
         }
       }
@@ -1612,6 +1660,14 @@ export default function AudioEngine() {
           el.loop = true;
           (el as any).playsInline = true;
           (el as any).webkitPlaysInline = true;
+          el.addEventListener('timeupdate', () => {
+            if (bgAudioRefs.current[layerId]) {
+              updateLayerProgress(layerId, {
+                currentTime: bgAudioRefs.current[layerId].currentTime,
+                duration: bgAudioRefs.current[layerId].duration || 30
+              });
+            }
+          });
           bgAudioRefs.current[layerId] = el;
         }
 
@@ -1643,6 +1699,7 @@ export default function AudioEngine() {
                delete bgAudioUrls.current[layerId];
              }
              delete bgAudioParams.current[layerId];
+             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
           }
         }
       }
@@ -1681,6 +1738,14 @@ export default function AudioEngine() {
           el.loop = true;
           (el as any).playsInline = true;
           (el as any).webkitPlaysInline = true;
+          el.addEventListener('timeupdate', () => {
+            if (bgAudioRefs.current[layerId]) {
+              updateLayerProgress(layerId, {
+                currentTime: bgAudioRefs.current[layerId].currentTime,
+                duration: bgAudioRefs.current[layerId].duration || 30
+              });
+            }
+          });
           bgAudioRefs.current[layerId] = el;
         }
 
@@ -1709,6 +1774,7 @@ export default function AudioEngine() {
                delete bgAudioUrls.current[layerId];
              }
              delete bgAudioParams.current[layerId];
+             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
           }
         }
       }
@@ -1748,6 +1814,14 @@ export default function AudioEngine() {
           el.loop = true;
           (el as any).playsInline = true;
           (el as any).webkitPlaysInline = true;
+          el.addEventListener('timeupdate', () => {
+            if (bgAudioRefs.current[layerId]) {
+              updateLayerProgress(layerId, {
+                currentTime: bgAudioRefs.current[layerId].currentTime,
+                duration: bgAudioRefs.current[layerId].duration || 30
+              });
+            }
+          });
           bgAudioRefs.current[layerId] = el;
         }
 
@@ -1779,6 +1853,7 @@ export default function AudioEngine() {
                delete bgAudioUrls.current[layerId];
              }
              delete bgAudioParams.current[layerId];
+             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
           }
         }
       }
@@ -1817,6 +1892,14 @@ export default function AudioEngine() {
           el.loop = true;
           (el as any).playsInline = true;
           (el as any).webkitPlaysInline = true;
+          el.addEventListener('timeupdate', () => {
+            if (bgAudioRefs.current[layerId]) {
+              updateLayerProgress(layerId, {
+                currentTime: bgAudioRefs.current[layerId].currentTime,
+                duration: bgAudioRefs.current[layerId].duration || 30
+              });
+            }
+          });
           bgAudioRefs.current[layerId] = el;
         }
 
@@ -1845,6 +1928,7 @@ export default function AudioEngine() {
                delete bgAudioUrls.current[layerId];
              }
              delete bgAudioParams.current[layerId];
+             updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
           }
         }
       }
@@ -1929,16 +2013,26 @@ export default function AudioEngine() {
   // Handle Nature Layer
   useEffect(() => {
     const isBg = settings.nature.playInBackground;
-    const isLayerPlaying = isPlaying && settings.nature.isEnabled && natureAudioRef.current;
+    const isLayerPlaying = (isPlaying || isBg) && settings.nature.isEnabled && natureAudioRef.current;
+    const layerId = 'nature';
 
     if (isLayerPlaying) {
       setupNature();
       const audio = natureAudioRef.current!;
       const sound = NATURE_SOUNDS.find(s => s.id === settings.nature.type);
+      
       if (sound) {
         if (audio.src !== sound.url) {
           audio.src = sound.url;
           audio.load();
+          
+          const onProgress = () => {
+            updateLayerProgress(layerId, {
+              currentTime: audio.currentTime,
+              duration: audio.duration || 0
+            });
+          };
+          audio.addEventListener('timeupdate', onProgress);
         }
         
         if (isBg) {
@@ -1966,10 +2060,11 @@ export default function AudioEngine() {
           }
         }
 
-        if (audio.paused) audio.play().catch(console.error);
+        if (audio.paused && (isPlaying || isBg)) audio.play().catch(console.error);
       }
     } else {
       if (natureAudioRef.current) {
+        updateLayerProgress(layerId, { currentTime: 0, duration: 0 });
         if (natureGainRef.current && audioCtxRef.current && !isBg) {
           const ctx = audioCtxRef.current;
           const fadeTime = settings.fadeInOut ? 3 : 0.1;
@@ -1983,6 +2078,37 @@ export default function AudioEngine() {
       }
     }
   }, [isPlaying, settings.nature.isEnabled, settings.nature.playInBackground, settings.nature.type, settings.nature.volume, settings.nature.gainDb, settings.nature.normalize, settings.fadeInOut]);
+
+  // Heartbeat & Stability Sync
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      // 1. Recover AudioContext if suspended
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+
+      // 2. Ensure active background layers are actually playing
+      Object.entries(bgAudioRefs.current).forEach(([id, el]) => {
+        const layerSettings = (settings as any)[id];
+        if (layerSettings?.isEnabled && layerSettings?.playInBackground && el.paused) {
+          console.log(`[AudioEngine] Heartbeat: Resuming stalled background layer: ${id}`);
+          el.play().catch(() => {});
+        }
+      });
+
+      // 3. Main Audio recovery if stalled
+      if (currentTrack && mainAudioRef.current && mainAudioRef.current.paused && isPlaying) {
+        // Only attempt if not already in an error state
+        if (!mainAudioRef.current.error) {
+           mainAudioRef.current.play().catch(() => {});
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTrack, settings]);
 
   // Handle Volume Balance
   useEffect(() => {

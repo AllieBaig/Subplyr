@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useRef, useEffect } from 'react';
 
+interface LayerProgress {
+  currentTime: number;
+  duration: number;
+}
+
 interface PlaybackContextType {
   currentTime: number;
   duration: number;
@@ -7,6 +12,8 @@ interface PlaybackContextType {
   setDuration: (duration: number) => void;
   // Progress normalized (0-100)
   progress: number;
+  layerProgress: Record<string, LayerProgress>;
+  updateLayerProgress: (layerId: string, progress: LayerProgress) => void;
 }
 
 const PlaybackContext = createContext<PlaybackContextType | undefined>(undefined);
@@ -14,15 +21,13 @@ const PlaybackContext = createContext<PlaybackContextType | undefined>(undefined
 export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTimeState] = useState(0);
   const [duration, setDurationState] = useState(0);
+  const [layerProgress, setLayerProgress] = useState<Record<string, LayerProgress>>({});
   
   // Throttle updates for performance
   const lastUpdateRef = useRef<number>(0);
   
   const setCurrentTime = useCallback((time: number) => {
     const now = Date.now();
-    // Allow updates at most every 100ms for UI but throttle the actual state if needed
-    // However, for smooth progress bars, 100-250ms is good.
-    // HTML5 timeupdate is usually 250ms anyway.
     if (now - lastUpdateRef.current > 100 || Math.abs(time - currentTime) > 1) {
       setCurrentTimeState(time);
       lastUpdateRef.current = now;
@@ -33,6 +38,17 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     setDurationState(d);
   }, []);
 
+  const updateLayerProgress = useCallback((layerId: string, progress: LayerProgress) => {
+    setLayerProgress(prev => {
+      // Small optimization: only update if changed significantly
+      const current = prev[layerId];
+      if (current && Math.abs(current.currentTime - progress.currentTime) < 0.2) {
+        return prev;
+      }
+      return { ...prev, [layerId]: progress };
+    });
+  }, []);
+
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
@@ -41,7 +57,9 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       duration,
       setCurrentTime,
       setDuration,
-      progress
+      progress,
+      layerProgress,
+      updateLayerProgress
     }}>
       {children}
     </PlaybackContext.Provider>

@@ -91,8 +91,28 @@ const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
   </button>
 );
 
+const LayerProgress = ({ layerId }: { layerId: string }) => {
+  const { layerProgress } = usePlayback();
+  const progress = layerProgress[layerId];
+  
+  if (!progress || progress.duration === 0) return null;
+  
+  const percentage = (progress.currentTime / progress.duration) * 100;
+  
+  return (
+    <div className="w-full h-1 bg-apple-border/30 rounded-full overflow-hidden mt-4">
+      <motion.div 
+        className="h-full bg-apple-blue"
+        initial={{ width: 0 }}
+        animate={{ width: `${percentage}%` }}
+        transition={{ duration: 0.1, ease: "linear" }}
+      />
+    </div>
+  );
+};
+
 const LayerAccordion = ({ 
-  icon: Icon, label, isEnabled, onToggle, vol, setVol, 
+  id, icon: Icon, label, isEnabled, onToggle, vol, setVol, 
   gainDb, setGainDb, normalize, setNormalize, 
   playInBackground, setPlayInBackground,
   color, subtitle, children, onApplyPreset 
@@ -102,6 +122,7 @@ const LayerAccordion = ({
   return (
     <div className="bg-secondary-system-background border border-apple-border rounded-[2rem] overflow-hidden transition-all shadow-sm">
       <div className="p-5 flex items-center justify-between">
+        {/* ... (existing top section) */}
         <div className="flex items-center gap-4 min-w-0">
           <div className={`w-10 h-10 ${isEnabled ? 'bg-system-background shadow-sm' : 'bg-system-background/50'} rounded-2xl flex-shrink-0 flex items-center justify-center ${isEnabled ? color : 'text-system-tertiary-label'} transition-all`}>
             <Icon size={20} />
@@ -118,6 +139,9 @@ const LayerAccordion = ({
           <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: isEnabled ? 16 : 0 }} />
         </button>
       </div>
+
+      {/* Progress Bar for Active Layer */}
+      {isEnabled && <div className="px-5 pb-2"><LayerProgress layerId={id} /></div>}
       
       <AnimatePresence>
         {isEnabled && (
@@ -391,8 +415,13 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
 
   const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
 
+  // Fallback for Hz-only sessions
+  const trackName = currentTrack?.name || "Ambient Session";
+  const artistName = currentTrack?.artist || "Zen Layers Active";
+  const artworkSrc = currentTrack?.artwork || "";
+
   const currentPlaylist = playingPlaylistId ? playlists.find(p => p.id === playingPlaylistId) : null;
-  const currentPosition = currentTrackIndex !== null ? `${currentTrackIndex + 1}/${currentPlaybackList.length}` : "";
+  const currentPosition = currentTrackIndex !== null ? `${currentTrackIndex + 1}/${currentPlaybackList.length}` : (activeLayersLabel !== "Standard Audio" ? "Layer Only" : "");
 
   const formatTime = (time: number) => {
     if (isNaN(time)) return "0:00";
@@ -494,7 +523,18 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     }
   };
 
-  if (!currentTrack) return null;
+  const hasAnyLayerEnabled = useMemo(() => {
+    return settings.subliminal.isEnabled || 
+           settings.binaural.isEnabled || 
+           settings.nature.isEnabled || 
+           settings.noise.isEnabled || 
+           settings.didgeridoo.isEnabled || 
+           settings.pureHz.isEnabled || 
+           settings.isochronic.isEnabled || 
+           settings.solfeggio.isEnabled;
+  }, [settings]);
+
+  if (!currentTrack && !hasAnyLayerEnabled) return null;
 
   return (
     <div className={`h-full flex flex-col items-center justify-between select-none relative w-full max-w-2xl mx-auto bg-system-background overflow-hidden ${settings.bigTouchMode ? 'pb-16' : 'pb-12'}`}>
@@ -533,7 +573,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               className={`w-full ${settings.bigTouchMode ? 'max-w-[400px]' : 'max-w-[340px]'} aspect-square bg-system-background rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.06)] border border-apple-border overflow-hidden relative`}
             >
               <ArtworkImage 
-                src={currentTrack.artwork} 
+                src={artworkSrc} 
                 className="w-full h-full" 
                 iconSize={settings.bigTouchMode ? 140 : 120} 
               />
@@ -546,10 +586,10 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         {/* Track Title & Artist */}
         <div className={`text-center w-full transition-all duration-500 ${settings.showArtwork ? 'max-w-sm' : 'max-w-xl'}`}>
           <h2 className={`font-extrabold tracking-tight text-system-label line-clamp-1 mb-2 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-6xl mb-4' : 'text-5xl mb-3') : (settings.bigTouchMode ? 'text-4xl' : 'text-3xl')}`}>
-            {currentTrack.name}
+            {trackName}
           </h2>
           <p className={`text-system-secondary-label font-bold mb-8 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-2xl' : 'text-xl') : (settings.bigTouchMode ? 'text-xl' : 'text-lg')}`}>
-            {currentTrack.artist}
+            {artistName}
           </p>
 
           <button 
@@ -658,6 +698,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         className="overflow-hidden space-y-3 pt-1"
                       >
                         <LayerAccordion 
+                          id="subliminal"
                           icon={Volume2} 
                           label="Subliminal Audio" 
                           isEnabled={settings.subliminal.isEnabled} 
@@ -717,6 +758,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         </LayerAccordion>
 
                         <LayerAccordion 
+                          id="binaural"
                           icon={Activity} 
                           label="Binaural Beats" 
                           isEnabled={settings.binaural.isEnabled} 
@@ -775,6 +817,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         </LayerAccordion>
 
                         <LayerAccordion 
+                          id="nature"
                           icon={CloudRain} 
                           label="Nature Ambience" 
                           isEnabled={settings.nature.isEnabled} 
@@ -805,6 +848,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         </LayerAccordion>
 
                         <LayerAccordion 
+                          id="noise"
                           icon={Wind} 
                           label="Noise Colors" 
                           isEnabled={settings.noise.isEnabled} 
@@ -835,6 +879,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         </LayerAccordion>
 
                         <LayerAccordion 
+                          id="didgeridoo"
                           icon={MusicIcon} 
                           label="Didgeridoo" 
                           isEnabled={settings.didgeridoo.isEnabled} 
@@ -880,6 +925,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         </LayerAccordion>
 
                         <LayerAccordion 
+                          id="pureHz"
                           icon={Activity} 
                           label="Pure Hz" 
                           isEnabled={settings.pureHz.isEnabled} 
@@ -904,6 +950,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         </LayerAccordion>
 
                         <LayerAccordion 
+                          id="isochronic"
                           icon={Zap} 
                           label="Isochronic Tones" 
                           isEnabled={settings.isochronic.isEnabled} 
@@ -945,6 +992,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                         </LayerAccordion>
 
                         <LayerAccordion 
+                          id="solfeggio"
                           icon={FocusIcon} 
                           label="Solfeggio Frequencies" 
                           isEnabled={settings.solfeggio.isEnabled} 
