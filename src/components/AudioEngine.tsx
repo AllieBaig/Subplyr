@@ -630,9 +630,10 @@ export default function AudioEngine() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        setIsForeground(true);
         console.log('[AudioEngine] System visibility changed to visible - Resuming session');
-        // Pre-emptively resume context
-        if (audioCtxRef.current) {
+        // Pre-emptively resume context if needed
+        if (audioCtxRef.current && needsWebAudio) {
           audioCtxRef.current.resume().catch(() => {});
         }
         
@@ -640,6 +641,8 @@ export default function AudioEngine() {
         if (isPlaying && mainAudioRef.current && mainAudioRef.current.paused) {
           mainAudioRef.current.play().catch(err => console.warn('[AudioEngine] Resume-on-visible failed:', err));
         }
+      } else {
+        setIsForeground(false);
       }
     };
 
@@ -660,14 +663,16 @@ export default function AudioEngine() {
       });
 
       // Cleanup Background Audio
-      Object.values(bgAudioRefs.current).forEach(a => {
+      Object.entries(bgAudioRefs.current).forEach(([id, a]) => {
         a.pause();
         a.src = '';
+        a.load();
       });
       Object.values(bgAudioUrls.current).forEach(url => {
         URL.revokeObjectURL(url);
       });
       bgAudioRefs.current = {};
+      bgAudioRefs2.current = {};
       bgAudioUrls.current = {};
       bgAudioParams.current = {};
       
@@ -680,6 +685,51 @@ export default function AudioEngine() {
       natureAudioRef.current = null;
     };
   }, []); // Run once on mount
+
+  // Determine if we actually need Web Audio active
+  const needsWebAudio = useMemo(() => {
+    return (isPlaying && (
+      !settings.subliminal.playInBackground ||
+      !settings.binaural.playInBackground ||
+      !settings.noise.playInBackground ||
+      !settings.nature.playInBackground ||
+      !settings.didgeridoo.playInBackground ||
+      !settings.pureHz.playInBackground ||
+      !settings.isochronic.playInBackground ||
+      !settings.solfeggio.playInBackground
+    )) || false;
+  }, [isPlaying, settings]);
+
+  // Audio Context Heartbeat & Battery Management
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!audioCtxRef.current) return;
+      const ctx = audioCtxRef.current;
+
+      if (needsWebAudio && isPlaying) {
+        if (ctx.state === 'suspended') {
+          console.log('[AudioEngine] Power Save: Resuming context for active layer');
+          ctx.resume().catch(() => {});
+        }
+      } else {
+        if (ctx.state === 'running') {
+          console.log('[AudioEngine] Power Save: Suspending idle context');
+          ctx.suspend().catch(() => {});
+        }
+      }
+      
+      // Playback State Nudge (iOS 16 Safety)
+      if (isPlaying && mainAudioRef.current) {
+        const audio = mainAudioRef.current;
+        if (audio.paused && !audio.ended && audio.readyState > 2) {
+          console.log('[AudioEngine] Heartbeat: Restoring interrupted playback');
+          audio.play().catch(() => {});
+        }
+      }
+    }, 10000); // 10s is enough for power saving check
+
+    return () => clearInterval(interval);
+  }, [isPlaying, needsWebAudio]);
 
   const createNoiseBuffer = (type: 'white' | 'pink' | 'brown') => {
     if (!audioCtxRef.current) return null;
@@ -737,13 +787,21 @@ export default function AudioEngine() {
         [bgAudioRefs.current[layerId], bgAudioRefs2.current[layerId]].forEach(el => {
           el.addEventListener('timeupdate', () => {
             if (activeBgRef.current[layerId] === (el === bgAudioRefs.current[layerId] ? 1 : 2)) {
-              updateLayerProgress(layerId, {
-                currentTime: el.currentTime,
-                duration: el.duration || 30
-              });
+              // THROTTLE: Only update UI progress if foreground or every ~2s if background to keep it alive
+              const now = Date.now();
+              const lastUpdate = (el as any).lastProgressTime || 0;
+              const throttleMs = document.visibilityState === 'visible' ? 250 : 2000;
               
-              // Gapless Logic: Trigger next buffer 0.3s before end
-              if (el.duration > 0 && el.currentTime > el.duration - 0.3) {
+              if (now - lastUpdate > throttleMs) {
+                updateLayerProgress(layerId, {
+                  currentTime: el.currentTime,
+                  duration: el.duration || 30
+                });
+                (el as any).lastProgressTime = now;
+              }
+              
+              // Gapless Logic: Trigger next buffer 0.5s before end (safer for iPhone 8)
+              if (el.duration > 0 && el.currentTime > el.duration - 0.5) {
                  const otherIdx = activeBgRef.current[layerId] === 1 ? 2 : 1;
                  const otherEl = otherIdx === 1 ? bgAudioRefs.current[layerId] : bgAudioRefs2.current[layerId];
                  if (otherEl.paused) {
@@ -2277,10 +2335,17 @@ export default function AudioEngine() {
           audio.load();
           
           const onProgress = () => {
-            updateLayerProgress(layerId, {
-              currentTime: audio.currentTime,
-              duration: audio.duration || 0
-            });
+            const now = Date.now();
+            const lastUpdate = (audio as any).lastProgressTime || 0;
+            const throttleMs = document.visibilityState === 'visible' ? 250 : 5000;
+
+            if (now - lastUpdate > throttleMs) {
+              updateLayerProgress(layerId, {
+                currentTime: audio.currentTime,
+                duration: audio.duration || 0
+              });
+              (audio as any).lastProgressTime = now;
+            }
           };
           audio.addEventListener('timeupdate', onProgress);
         }
