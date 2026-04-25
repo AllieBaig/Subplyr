@@ -31,6 +31,7 @@ export interface SubliminalSettings {
   sourcePlaylistId: string | null;
   gainDb: number;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface BinauralSettings {
@@ -40,6 +41,7 @@ export interface BinauralSettings {
   volume: number;
   gainDb: number;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface NatureSettings {
@@ -48,6 +50,7 @@ export interface NatureSettings {
   volume: number;
   gainDb: number;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface NoiseSettings {
@@ -56,6 +59,7 @@ export interface NoiseSettings {
   volume: number;
   gainDb: number;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface DidgeridooSettings {
@@ -67,6 +71,7 @@ export interface DidgeridooSettings {
   depth: number;
   isLooping: boolean;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface PureHzSettings {
@@ -76,6 +81,7 @@ export interface PureHzSettings {
   isLooping: boolean;
   gainDb: number;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface IsochronicSettings {
@@ -85,6 +91,7 @@ export interface IsochronicSettings {
   volume: number;
   gainDb: number;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface SolfeggioSettings {
@@ -93,6 +100,7 @@ export interface SolfeggioSettings {
   volume: number;
   gainDb: number;
   normalize: boolean;
+  playInBackground: boolean;
 }
 
 export interface AudioTools {

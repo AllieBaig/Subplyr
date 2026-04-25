@@ -62,6 +62,170 @@ export default function AudioEngine() {
   const natureGainRef = useRef<GainNode | null>(null);
   const natureCompRef = useRef<DynamicsCompressorNode | null>(null);
 
+  // Background HTML Audio Refs for iOS 16 Persistence
+  const bgAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
+  const bgAudioUrls = useRef<Record<string, string>>({});
+  const bgAudioParams = useRef<Record<string, string>>({}); // Track which params generated the current blob
+
+  // Helper: Simple WAV Encoder
+  const audioBufferToWav = (buffer: AudioBuffer) => {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    const numSamples = buffer.length;
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const dataSize = numSamples * blockAlign;
+    const headerSize = 44;
+    const arrayBuffer = new ArrayBuffer(headerSize + dataSize);
+    const view = new DataView(arrayBuffer);
+
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    const offset = 44;
+    for (let i = 0; i < numSamples; i++) {
+      for (let channel = 0; channel < numChannels; channel++) {
+        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+        const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset + (i * blockAlign) + (channel * bytesPerSample), intSample, true);
+      }
+    }
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+  };
+
+  // Helper: Generate Tone Blob
+  const generateToneBlob = async (type: string, options: any) => {
+    const OfflineCtx = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext;
+    const duration = 12; // 12s is balanced for memory and loop points
+    const sampleRate = 44100;
+    const numChannels = type === 'binaural' ? 2 : 1;
+    const ctx = new OfflineCtx(numChannels, sampleRate * duration, sampleRate);
+    
+    // Setup layer specific offline graph
+    if (type === 'pureHz' || type === 'solfeggio') {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(options.frequency, 0);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.5, 0); // Normalized base volume
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(0);
+    } 
+    else if (type === 'binaural') {
+      const left = ctx.createOscillator();
+      const right = ctx.createOscillator();
+      const merger = ctx.createChannelMerger(2);
+      left.frequency.setValueAtTime(options.leftFreq, 0);
+      right.frequency.setValueAtTime(options.rightFreq, 0);
+      left.connect(merger, 0, 0);
+      right.connect(merger, 0, 1);
+      merger.connect(ctx.destination);
+      left.start(0);
+      right.start(0);
+    }
+    else if (type === 'noise') {
+      const bufferSize = sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, sampleRate);
+      const output = buffer.getChannelData(0);
+      if (options.noiseType === 'white') {
+        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+      } else if (options.noiseType === 'pink') {
+        let b0, b1, b2, b3, b4, b5, b6;
+        b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3102503;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+          output[i] *= 0.11;
+          b6 = white * 0.115926;
+        }
+      } else {
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          const out = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = out;
+          output[i] = out * 3.5;
+        }
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(ctx.destination);
+      source.start(0);
+    }
+    else if (type === 'isochronic') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const lfo = ctx.createOscillator();
+      osc.frequency.setValueAtTime(options.frequency, 0);
+      lfo.type = 'square';
+      lfo.frequency.setValueAtTime(options.pulseRate, 0);
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(0.5, 0);
+      const constant = ctx.createConstantSource();
+      constant.offset.setValueAtTime(0.5, 0);
+      lfo.connect(lfoGain);
+      lfoGain.connect(gain.gain);
+      constant.connect(gain.gain);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      lfo.start(0);
+      constant.start(0);
+      osc.start(0);
+    }
+    else if (type === 'didgeridoo') {
+      const osc = ctx.createOscillator();
+      const sub = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      osc.type = 'sawtooth';
+      sub.type = 'sine';
+      osc.frequency.setValueAtTime(options.frequency, 0);
+      sub.frequency.setValueAtTime(options.frequency, 0);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(options.frequency * 2.7 * (1 + options.depth), 0);
+      filter.Q.setValueAtTime(15, 0);
+      lfo.frequency.setValueAtTime(0.15, 0);
+      lfoGain.gain.setValueAtTime(60 * options.depth, 0);
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      osc.connect(filter);
+      sub.connect(filter);
+      filter.connect(ctx.destination);
+      lfo.start(0);
+      osc.start(0);
+      sub.start(0);
+    }
+
+    const renderedBuffer = await ctx.startRendering();
+    return audioBufferToWav(renderedBuffer);
+  };
+
   // Per-layer Compressor Refs for Normalization
   const subCompRef = useRef<DynamicsCompressorNode | null>(null);
   const binCompRef = useRef<DynamicsCompressorNode | null>(null);
@@ -264,6 +428,18 @@ export default function AudioEngine() {
         a.pause();
         a.src = '';
       });
+
+      // Cleanup Background Audio
+      Object.values(bgAudioRefs.current).forEach(a => {
+        a.pause();
+        a.src = '';
+      });
+      Object.values(bgAudioUrls.current).forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+      bgAudioRefs.current = {};
+      bgAudioUrls.current = {};
+      bgAudioParams.current = {};
       
       if (audioCtxRef.current) {
         audioCtxRef.current.close().catch(console.error);
@@ -1142,8 +1318,6 @@ export default function AudioEngine() {
         return;
       }
       
-      // CRITICAL: Ensure context is running BEFORE starting any audio
-      // On iOS 16, this must be called frequently to prevent suspension
       const resumeContext = () => {
         if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
           audioCtxRef.current.resume().catch(() => {});
@@ -1166,7 +1340,6 @@ export default function AudioEngine() {
         }
       };
 
-      // Small delay to ensure Web Audio graph is ready
       const timer = setTimeout(playMain, 80);
       
       if ('mediaSession' in navigator) {
@@ -1180,11 +1353,28 @@ export default function AudioEngine() {
         delayTimeoutRef.current = window.setTimeout(() => {
           if (subAudioRef.current && isPlaying) {
             resumeContext();
-            if (subAudioRef.current.src !== preparedSubUrl) {
-              subAudioRef.current.src = preparedSubUrl;
+            const audio = subAudioRef.current;
+            if (audio.src !== preparedSubUrl) {
+              audio.src = preparedSubUrl;
+              audio.load();
             }
-            subAudioRef.current.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
-            subAudioRef.current.play().catch(console.error);
+            audio.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
+            
+            // Background support for Subliminal
+            if (settings.subliminal.playInBackground) {
+              if (subSourceRef.current) {
+                 try { subSourceRef.current.disconnect(); } catch (e) {}
+              }
+              const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
+              audio.volume = Math.min(1, Math.max(0, gainValue));
+            } else {
+              if (subSourceRef.current && subCompRef.current) {
+                subSourceRef.current.connect(subCompRef.current);
+              }
+              audio.volume = 1.0;
+            }
+
+            audio.play().catch(console.error);
           }
         }, settings.subliminal.delayMs);
       }
@@ -1198,11 +1388,15 @@ export default function AudioEngine() {
       if (subAudioRef.current) subAudioRef.current.pause();
       if (delayTimeoutRef.current) clearTimeout(delayTimeoutRef.current);
     }
-  }, [isPlaying, settings.subliminal.isEnabled, subTrack, preparedSubUrl]);
+  }, [isPlaying, settings.subliminal.isEnabled, settings.subliminal.playInBackground, subTrack, preparedSubUrl]);
 
   // Handle Binaural Playback and Fading
   useEffect(() => {
-    if (isPlaying && settings.binaural.isEnabled) {
+    const isBg = settings.binaural.playInBackground;
+    const isLayerPlaying = isPlaying && settings.binaural.isEnabled;
+
+    // 1. Manage Web Audio State
+    if (isLayerPlaying && !isBg) {
       setupBinaural();
       if (binauralGainRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
@@ -1220,11 +1414,58 @@ export default function AudioEngine() {
         binauralGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
       }
     }
-  }, [isPlaying, settings.binaural.isEnabled, settings.fadeInOut]);
+
+    // 2. Manage HTML Background Audio State
+    const syncBg = async () => {
+      const layerId = 'binaural';
+      if (isLayerPlaying && isBg) {
+        let el = bgAudioRefs.current[layerId];
+        if (!el) {
+          el = new Audio();
+          el.loop = true;
+          (el as any).playsInline = true;
+          (el as any).webkitPlaysInline = true;
+          bgAudioRefs.current[layerId] = el;
+        }
+
+        const params = `${settings.binaural.leftFreq}-${settings.binaural.rightFreq}`;
+        if (bgAudioParams.current[layerId] !== params) {
+          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+          const blob = await generateToneBlob('binaural', { 
+            leftFreq: settings.binaural.leftFreq, 
+            rightFreq: settings.binaural.rightFreq 
+          });
+          const url = URL.createObjectURL(blob);
+          el.src = url;
+          bgAudioUrls.current[layerId] = url;
+          bgAudioParams.current[layerId] = params;
+          el.load();
+        }
+
+        const gainValue = settings.binaural.volume * Math.pow(10, settings.binaural.gainDb / 20);
+        el.volume = Math.min(1, Math.max(0, gainValue));
+        if (el.paused) el.play().catch(console.error);
+      } else {
+        const el = bgAudioRefs.current[layerId];
+        if (el) {
+          el.pause();
+          if (!isLayerPlaying) {
+             el.src = '';
+             if (bgAudioUrls.current[layerId]) {
+               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+               delete bgAudioUrls.current[layerId];
+             }
+             delete bgAudioParams.current[layerId];
+          }
+        }
+      }
+    };
+    syncBg();
+  }, [isPlaying, settings.binaural.isEnabled, settings.binaural.playInBackground, settings.fadeInOut, settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume, settings.binaural.gainDb, settings.binaural.normalize]);
 
   // Handle Binaural Frequency/Volume Updates
   useEffect(() => {
-    if (leftOscRef.current && rightOscRef.current && audioCtxRef.current) {
+    if (leftOscRef.current && rightOscRef.current && audioCtxRef.current && !settings.binaural.playInBackground) {
       const ctx = audioCtxRef.current;
       // Safety: Difference <= 30Hz
       const diff = Math.abs(settings.binaural.leftFreq - settings.binaural.rightFreq);
@@ -1251,7 +1492,10 @@ export default function AudioEngine() {
 
   // Handle Noise Layer
   useEffect(() => {
-    if (isPlaying && settings.noise.isEnabled) {
+    const isBg = settings.noise.playInBackground;
+    const isLayerPlaying = isPlaying && settings.noise.isEnabled;
+
+    if (isLayerPlaying && !isBg) {
       setupNoise();
       const ctx = audioCtxRef.current!;
       
@@ -1282,19 +1526,64 @@ export default function AudioEngine() {
         noiseGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
         
         const timer = setTimeout(() => {
-           if (!settings.noise.isEnabled && noiseNodeRef.current) {
+           if ((!settings.noise.isEnabled || isBg) && noiseNodeRef.current) {
              noiseNodeRef.current.stop();
              noiseNodeRef.current = null;
            }
         }, fadeTime * 1000);
-        return () => clearTimeout(timer);
       }
     }
-  }, [isPlaying, settings.noise.isEnabled, settings.noise.type, settings.noise.volume, settings.noise.gainDb, settings.noise.normalize]);
+
+    const syncBg = async () => {
+      const layerId = 'noise';
+      if (isLayerPlaying && isBg) {
+        let el = bgAudioRefs.current[layerId];
+        if (!el) {
+          el = new Audio();
+          el.loop = true;
+          (el as any).playsInline = true;
+          (el as any).webkitPlaysInline = true;
+          bgAudioRefs.current[layerId] = el;
+        }
+
+        const params = settings.noise.type;
+        if (bgAudioParams.current[layerId] !== params) {
+          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+          const blob = await generateToneBlob('noise', { noiseType: settings.noise.type });
+          const url = URL.createObjectURL(blob);
+          el.src = url;
+          bgAudioUrls.current[layerId] = url;
+          bgAudioParams.current[layerId] = params;
+          el.load();
+        }
+
+        const gainValue = settings.noise.volume * Math.pow(10, settings.noise.gainDb / 20);
+        el.volume = Math.min(1, Math.max(0, gainValue));
+        if (el.paused) el.play().catch(console.error);
+      } else {
+        const el = bgAudioRefs.current[layerId];
+        if (el) {
+          el.pause();
+          if (!isLayerPlaying) {
+             el.src = '';
+             if (bgAudioUrls.current[layerId]) {
+               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+               delete bgAudioUrls.current[layerId];
+             }
+             delete bgAudioParams.current[layerId];
+          }
+        }
+      }
+    };
+    syncBg();
+  }, [isPlaying, settings.noise.isEnabled, settings.noise.playInBackground, settings.noise.type, settings.noise.volume, settings.noise.gainDb, settings.noise.normalize]);
 
   // Handle Didgeridoo Layer
   useEffect(() => {
-    if (isPlaying && settings.didgeridoo.isEnabled && settings.didgeridoo.isLooping) {
+    const isBg = settings.didgeridoo.playInBackground;
+    const isLayerPlaying = isPlaying && settings.didgeridoo.isEnabled && settings.didgeridoo.isLooping;
+
+    if (isLayerPlaying && !isBg) {
       setupDidgeridoo();
       if (didgGainRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
@@ -1313,11 +1602,60 @@ export default function AudioEngine() {
         didgGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
       }
     }
-  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize]);
+
+    const syncBg = async () => {
+      const layerId = 'didgeridoo';
+      if (isLayerPlaying && isBg) {
+        let el = bgAudioRefs.current[layerId];
+        if (!el) {
+          el = new Audio();
+          el.loop = true;
+          (el as any).playsInline = true;
+          (el as any).webkitPlaysInline = true;
+          bgAudioRefs.current[layerId] = el;
+        }
+
+        const params = `${settings.didgeridoo.frequency}-${settings.didgeridoo.depth}`;
+        if (bgAudioParams.current[layerId] !== params) {
+          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+          const blob = await generateToneBlob('didgeridoo', { 
+            frequency: settings.didgeridoo.frequency, 
+            depth: settings.didgeridoo.depth 
+          });
+          const url = URL.createObjectURL(blob);
+          el.src = url;
+          bgAudioUrls.current[layerId] = url;
+          bgAudioParams.current[layerId] = params;
+          el.load();
+        }
+
+        const gainValue = settings.didgeridoo.volume * Math.pow(10, settings.didgeridoo.gainDb / 20);
+        el.volume = Math.min(1, Math.max(0, gainValue));
+        if (el.paused) el.play().catch(console.error);
+      } else {
+        const el = bgAudioRefs.current[layerId];
+        if (el) {
+          el.pause();
+          if (!isLayerPlaying) {
+             el.src = '';
+             if (bgAudioUrls.current[layerId]) {
+               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+               delete bgAudioUrls.current[layerId];
+             }
+             delete bgAudioParams.current[layerId];
+          }
+        }
+      }
+    };
+    syncBg();
+  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.didgeridoo.playInBackground, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize, settings.didgeridoo.frequency, settings.didgeridoo.depth]);
 
   // Handle Pure Hz Layer
   useEffect(() => {
-    if (isPlaying && settings.pureHz.isEnabled && settings.pureHz.isLooping) {
+    const isBg = settings.pureHz.playInBackground;
+    const isLayerPlaying = isPlaying && settings.pureHz.isEnabled && settings.pureHz.isLooping;
+
+    if (isLayerPlaying && !isBg) {
       setupPureHz();
       if (pureHzGainRef.current && pureHzOscRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
@@ -1333,11 +1671,57 @@ export default function AudioEngine() {
         pureHzGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
       }
     }
-  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb]);
+
+    const syncBg = async () => {
+      const layerId = 'pureHz';
+      if (isLayerPlaying && isBg) {
+        let el = bgAudioRefs.current[layerId];
+        if (!el) {
+          el = new Audio();
+          el.loop = true;
+          (el as any).playsInline = true;
+          (el as any).webkitPlaysInline = true;
+          bgAudioRefs.current[layerId] = el;
+        }
+
+        const params = `${settings.pureHz.frequency}`;
+        if (bgAudioParams.current[layerId] !== params) {
+          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+          const blob = await generateToneBlob('pureHz', { frequency: settings.pureHz.frequency });
+          const url = URL.createObjectURL(blob);
+          el.src = url;
+          bgAudioUrls.current[layerId] = url;
+          bgAudioParams.current[layerId] = params;
+          el.load();
+        }
+
+        const gainValue = settings.pureHz.volume * Math.pow(10, settings.pureHz.gainDb / 20);
+        el.volume = Math.min(1, Math.max(0, gainValue));
+        if (el.paused) el.play().catch(console.error);
+      } else {
+        const el = bgAudioRefs.current[layerId];
+        if (el) {
+          el.pause();
+          if (!isLayerPlaying) {
+             el.src = '';
+             if (bgAudioUrls.current[layerId]) {
+               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+               delete bgAudioUrls.current[layerId];
+             }
+             delete bgAudioParams.current[layerId];
+          }
+        }
+      }
+    };
+    syncBg();
+  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.pureHz.playInBackground, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb]);
 
   // Handle Isochronic Layer
   useEffect(() => {
-    if (isPlaying && settings.isochronic.isEnabled) {
+    const isBg = settings.isochronic.playInBackground;
+    const isLayerPlaying = isPlaying && settings.isochronic.isEnabled;
+
+    if (isLayerPlaying && !isBg) {
       setupIsochronic();
       if (isoGainRef.current && isoOscRef.current && isoLfoRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
@@ -1354,11 +1738,60 @@ export default function AudioEngine() {
         isoGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
       }
     }
-  }, [isPlaying, settings.isochronic.isEnabled, settings.fadeInOut, settings.isochronic.volume, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.gainDb]);
+
+    const syncBg = async () => {
+      const layerId = 'isochronic';
+      if (isLayerPlaying && isBg) {
+        let el = bgAudioRefs.current[layerId];
+        if (!el) {
+          el = new Audio();
+          el.loop = true;
+          (el as any).playsInline = true;
+          (el as any).webkitPlaysInline = true;
+          bgAudioRefs.current[layerId] = el;
+        }
+
+        const params = `${settings.isochronic.frequency}-${settings.isochronic.pulseRate}`;
+        if (bgAudioParams.current[layerId] !== params) {
+          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+          const blob = await generateToneBlob('isochronic', { 
+            frequency: settings.isochronic.frequency, 
+            pulseRate: settings.isochronic.pulseRate 
+          });
+          const url = URL.createObjectURL(blob);
+          el.src = url;
+          bgAudioUrls.current[layerId] = url;
+          bgAudioParams.current[layerId] = params;
+          el.load();
+        }
+
+        const gainValue = settings.isochronic.volume * Math.pow(10, settings.isochronic.gainDb / 20);
+        el.volume = Math.min(1, Math.max(0, gainValue));
+        if (el.paused) el.play().catch(console.error);
+      } else {
+        const el = bgAudioRefs.current[layerId];
+        if (el) {
+          el.pause();
+          if (!isLayerPlaying) {
+             el.src = '';
+             if (bgAudioUrls.current[layerId]) {
+               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+               delete bgAudioUrls.current[layerId];
+             }
+             delete bgAudioParams.current[layerId];
+          }
+        }
+      }
+    };
+    syncBg();
+  }, [isPlaying, settings.isochronic.isEnabled, settings.isochronic.playInBackground, settings.fadeInOut, settings.isochronic.volume, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.gainDb]);
 
   // Handle Solfeggio Layer
   useEffect(() => {
-    if (isPlaying && settings.solfeggio.isEnabled) {
+    const isBg = settings.solfeggio.playInBackground;
+    const isLayerPlaying = isPlaying && settings.solfeggio.isEnabled;
+
+    if (isLayerPlaying && !isBg) {
       setupSolfeggio();
       if (solGainRef.current && solOscRef.current && audioCtxRef.current) {
         const ctx = audioCtxRef.current;
@@ -1374,7 +1807,50 @@ export default function AudioEngine() {
         solGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
       }
     }
-  }, [isPlaying, settings.solfeggio.isEnabled, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb]);
+
+    const syncBg = async () => {
+      const layerId = 'solfeggio';
+      if (isLayerPlaying && isBg) {
+        let el = bgAudioRefs.current[layerId];
+        if (!el) {
+          el = new Audio();
+          el.loop = true;
+          (el as any).playsInline = true;
+          (el as any).webkitPlaysInline = true;
+          bgAudioRefs.current[layerId] = el;
+        }
+
+        const params = `${settings.solfeggio.frequency}`;
+        if (bgAudioParams.current[layerId] !== params) {
+          if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+          const blob = await generateToneBlob('solfeggio', { frequency: settings.solfeggio.frequency });
+          const url = URL.createObjectURL(blob);
+          el.src = url;
+          bgAudioUrls.current[layerId] = url;
+          bgAudioParams.current[layerId] = params;
+          el.load();
+        }
+
+        const gainValue = settings.solfeggio.volume * Math.pow(10, settings.solfeggio.gainDb / 20);
+        el.volume = Math.min(1, Math.max(0, gainValue));
+        if (el.paused) el.play().catch(console.error);
+      } else {
+        const el = bgAudioRefs.current[layerId];
+        if (el) {
+          el.pause();
+          if (!isLayerPlaying) {
+             el.src = '';
+             if (bgAudioUrls.current[layerId]) {
+               URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+               delete bgAudioUrls.current[layerId];
+             }
+             delete bgAudioParams.current[layerId];
+          }
+        }
+      }
+    };
+    syncBg();
+  }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb]);
 
   // Handle Display Always On (WakeLock)
   const wakeLockRef = useRef<any>(null);
@@ -1452,41 +1928,61 @@ export default function AudioEngine() {
 
   // Handle Nature Layer
   useEffect(() => {
-    if (isPlaying && settings.nature.isEnabled && natureAudioRef.current) {
+    const isBg = settings.nature.playInBackground;
+    const isLayerPlaying = isPlaying && settings.nature.isEnabled && natureAudioRef.current;
+
+    if (isLayerPlaying) {
       setupNature();
-      const audio = natureAudioRef.current;
+      const audio = natureAudioRef.current!;
       const sound = NATURE_SOUNDS.find(s => s.id === settings.nature.type);
       if (sound) {
         if (audio.src !== sound.url) {
           audio.src = sound.url;
-          audio.play().catch(console.error);
-        } else if (audio.paused) {
-          audio.play().catch(console.error);
+          audio.load();
         }
         
-        if (natureGainRef.current && audioCtxRef.current) {
-          const ctx = audioCtxRef.current;
-          const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        if (isBg) {
+          // If playing in background, we avoid Web Audio routing for maximum reliability on iOS 16
+          // We must disconnect if it was connected
+          if (natureSourceRef.current) {
+            try { natureSourceRef.current.disconnect(); } catch (e) {}
+          }
           const gainValue = settings.nature.volume * Math.pow(10, settings.nature.gainDb / 20);
-          const threshold = settings.nature.normalize ? -24 : 0;
+          audio.volume = Math.min(1, Math.max(0, gainValue));
+        } else {
+          // Normal mode: Reconnect to Web Audio graph
+          if (natureSourceRef.current && natureGainRef.current) {
+            natureSourceRef.current.connect(natureCompRef.current!);
+          }
+          audio.volume = 1.0; // Control per-layer via GainNode
           
-          if (natureCompRef.current) natureCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
-          natureGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+          if (natureGainRef.current && audioCtxRef.current) {
+            const ctx = audioCtxRef.current;
+            const fadeTime = settings.fadeInOut ? 3 : 0.1;
+            const gainValue = settings.nature.volume * Math.pow(10, settings.nature.gainDb / 20);
+            const threshold = settings.nature.normalize ? -24 : 0;
+            if (natureCompRef.current) natureCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
+            natureGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+          }
         }
+
+        if (audio.paused) audio.play().catch(console.error);
       }
     } else {
-      if (natureGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        natureGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-        setTimeout(() => {
-           if (!settings.nature.isEnabled && natureAudioRef.current) natureAudioRef.current.pause();
-        }, fadeTime * 1000);
-      } else if (natureAudioRef.current) {
-        natureAudioRef.current.pause();
+      if (natureAudioRef.current) {
+        if (natureGainRef.current && audioCtxRef.current && !isBg) {
+          const ctx = audioCtxRef.current;
+          const fadeTime = settings.fadeInOut ? 3 : 0.1;
+          natureGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+          setTimeout(() => {
+            if (!settings.nature.isEnabled && natureAudioRef.current) natureAudioRef.current.pause();
+          }, fadeTime * 1000);
+        } else {
+          natureAudioRef.current.pause();
+        }
       }
     }
-  }, [isPlaying, settings.nature.isEnabled, settings.nature.type, settings.nature.volume, settings.nature.gainDb, settings.nature.normalize, settings.fadeInOut]);
+  }, [isPlaying, settings.nature.isEnabled, settings.nature.playInBackground, settings.nature.type, settings.nature.volume, settings.nature.gainDb, settings.nature.normalize, settings.fadeInOut]);
 
   // Handle Volume Balance
   useEffect(() => {

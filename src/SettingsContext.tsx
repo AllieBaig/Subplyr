@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     sourcePlaylistId: null,
     gainDb: 0,
     normalize: false,
+    playInBackground: false,
   },
   binaural: {
     isEnabled: false,
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     volume: 0.05,
     gainDb: 0,
     normalize: false,
+    playInBackground: false,
   },
   nature: {
     isEnabled: false,
@@ -48,6 +50,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     volume: 0.5,
     gainDb: 0,
     normalize: false,
+    playInBackground: false,
   },
   noise: {
     isEnabled: false,
@@ -55,6 +58,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     volume: 0.2,
     gainDb: 0,
     normalize: false,
+    playInBackground: false,
   },
   didgeridoo: {
     isEnabled: false,
@@ -65,6 +69,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     depth: 0.5,
     isLooping: true,
     normalize: false,
+    playInBackground: false,
   },
   pureHz: {
     isEnabled: false,
@@ -73,6 +78,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     isLooping: true,
     gainDb: 0,
     normalize: false,
+    playInBackground: false,
   },
   isochronic: {
     isEnabled: false,
@@ -81,6 +87,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     volume: 0.1,
     gainDb: -6,
     normalize: false,
+    playInBackground: false,
   },
   solfeggio: {
     isEnabled: false,
@@ -88,6 +95,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     volume: 0.1,
     gainDb: -6,
     normalize: false,
+    playInBackground: false,
   },
   audioTools: {
     gainDb: 0,

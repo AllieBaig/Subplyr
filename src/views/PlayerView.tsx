@@ -94,6 +94,7 @@ const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
 const LayerAccordion = ({ 
   icon: Icon, label, isEnabled, onToggle, vol, setVol, 
   gainDb, setGainDb, normalize, setNormalize, 
+  playInBackground, setPlayInBackground,
   color, subtitle, children, onApplyPreset 
 }: any) => {
   const [isToolsExpanded, setIsToolsExpanded] = useState(false);
@@ -126,6 +127,25 @@ const LayerAccordion = ({
             exit={{ height: 0, opacity: 0 }}
             className="px-5 pb-6 space-y-6"
           >
+            {/* Background Play Support */}
+            <div className="flex items-center justify-between p-4 bg-system-background rounded-2xl border border-apple-border shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-apple-blue/5 text-apple-blue rounded-xl flex items-center justify-center">
+                  <Activity size={16} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Play in Background</span>
+                  <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Enhanced iOS Support</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setPlayInBackground(!playInBackground)}
+                className={`w-10 h-6 rounded-full relative transition-colors ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+              >
+                <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: playInBackground ? 16 : 0 }} />
+              </button>
+            </div>
+
             {/* Volume Section */}
             <div className="space-y-3">
               <div className="flex justify-between items-center px-1">
@@ -648,6 +668,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updateSubliminalSettings({ gainDb: v })}
                           normalize={settings.subliminal.normalize}
                           setNormalize={(v: boolean) => updateSubliminalSettings({ normalize: v })}
+                          playInBackground={settings.subliminal.playInBackground}
+                          setPlayInBackground={(v: boolean) => updateSubliminalSettings({ playInBackground: v })}
                           color="text-apple-blue"
                           subtitle={settings.subliminal.isPlaylistMode ? 'Playlist Mode' : 'Track Mode'}
                           onApplyPreset={(p: any) => applyLayerPreset('subliminal', p)}
@@ -705,6 +727,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updateBinauralSettings({ gainDb: v })}
                           normalize={settings.binaural.normalize}
                           setNormalize={(v: boolean) => updateBinauralSettings({ normalize: v })}
+                          playInBackground={settings.binaural.playInBackground}
+                          setPlayInBackground={(v: boolean) => updateBinauralSettings({ playInBackground: v })}
                           color="text-purple-500"
                           subtitle={`${settings.binaural.leftFreq}Hz / ${settings.binaural.rightFreq}Hz`}
                           onApplyPreset={(p: any) => applyLayerPreset('binaural', p)}
@@ -761,6 +785,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updateNatureSettings({ gainDb: v })}
                           normalize={settings.nature.normalize}
                           setNormalize={(v: boolean) => updateNatureSettings({ normalize: v })}
+                          playInBackground={settings.nature.playInBackground}
+                          setPlayInBackground={(v: boolean) => updateNatureSettings({ playInBackground: v })}
                           color="text-green-500"
                           subtitle={settings.nature.type}
                           onApplyPreset={(p: any) => applyLayerPreset('nature', p)}
@@ -789,6 +815,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updateNoiseSettings({ gainDb: v })}
                           normalize={settings.noise.normalize}
                           setNormalize={(v: boolean) => updateNoiseSettings({ normalize: v })}
+                          playInBackground={settings.noise.playInBackground}
+                          setPlayInBackground={(v: boolean) => updateNoiseSettings({ playInBackground: v })}
                           color="text-orange-500"
                           subtitle={`${settings.noise.type} noise`}
                           onApplyPreset={(p: any) => applyLayerPreset('noise', p)}
@@ -817,6 +845,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updateDidgeridooSettings({ gainDb: v })}
                           normalize={settings.didgeridoo.normalize}
                           setNormalize={(v: boolean) => updateDidgeridooSettings({ normalize: v })}
+                          playInBackground={settings.didgeridoo.playInBackground}
+                          setPlayInBackground={(v: boolean) => updateDidgeridooSettings({ playInBackground: v })}
                           color="text-amber-800"
                           subtitle={`${Math.round(settings.didgeridoo.frequency)}Hz Drone`}
                           onApplyPreset={(p: any) => applyLayerPreset('didgeridoo', p)}
@@ -860,6 +890,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updatePureHzSettings({ gainDb: v })}
                           normalize={settings.pureHz.normalize}
                           setNormalize={(v: boolean) => updatePureHzSettings({ normalize: v })}
+                          playInBackground={settings.pureHz.playInBackground}
+                          setPlayInBackground={(v: boolean) => updatePureHzSettings({ playInBackground: v })}
                           color="text-rose-600"
                           subtitle={`${settings.pureHz.frequency}Hz`}
                           onApplyPreset={(p: any) => applyLayerPreset('pureHz', p)}
@@ -882,6 +914,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updateIsochronicSettings({ gainDb: v })}
                           normalize={settings.isochronic.normalize}
                           setNormalize={(v: boolean) => updateIsochronicSettings({ normalize: v })}
+                          playInBackground={settings.isochronic.playInBackground}
+                          setPlayInBackground={(v: boolean) => updateIsochronicSettings({ playInBackground: v })}
                           color="text-amber-500"
                           subtitle={`${settings.isochronic.frequency}Hz @ ${settings.isochronic.pulseRate}Hz`}
                           onApplyPreset={(p: any) => applyLayerPreset('isochronic', p)}
@@ -921,6 +955,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                           setGainDb={(v: number) => updateSolfeggioSettings({ gainDb: v })}
                           normalize={settings.solfeggio.normalize}
                           setNormalize={(v: boolean) => updateSolfeggioSettings({ normalize: v })}
+                          playInBackground={settings.solfeggio.playInBackground}
+                          setPlayInBackground={(v: boolean) => updateSolfeggioSettings({ playInBackground: v })}
                           color="text-indigo-600"
                           subtitle={`${settings.solfeggio.frequency}Hz`}
                           onApplyPreset={(p: any) => applyLayerPreset('solfeggio', p)}
