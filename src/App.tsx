@@ -4,6 +4,7 @@ import { PlaybackProvider } from './PlaybackContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
 import { UIStateProvider, useUIState } from './UIStateContext';
 import AudioEngine from './components/AudioEngine';
+import OfflineIndicator from './components/OfflineIndicator';
 import TabBar from './components/TabBar';
 import LibraryView from './views/LibraryView';
 import PlayerView from './views/PlayerView';
@@ -59,21 +60,8 @@ function AppContent() {
     >
       <div className="flex-1 w-full max-w-[1400px] mx-auto flex flex-col overflow-hidden relative">
         <AudioEngine />
+        <OfflineIndicator />
         
-        <AnimatePresence>
-          {isOffline && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute top-12 right-6 z-[200] bg-system-label/90 backdrop-blur-md text-system-background py-1 px-3 rounded-full flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.1em] shadow-xl border border-white/10"
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <span>Offline</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <AnimatePresence>
           {toast && (
             <motion.div

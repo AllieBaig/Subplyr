@@ -153,19 +153,35 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
-  // Load from DB
+  // Load from Storage (Priority: localStorage for speed, IndexedDB for reliability)
   useEffect(() => {
     async function load() {
+      // Try localStorage first
+      const local = localStorage.getItem('subliminal_settings_v3');
+      if (local) {
+        try {
+          const parsed = JSON.parse(local);
+          setSettings({ ...parsed, versionHistory: APP_HISTORY });
+        } catch (e) {
+          console.warn('[Settings] LocalStorage corruption, falling back to IDB');
+        }
+      }
+
+      // Check IDB as source of truth/backup
       const saved = await db.getSettings();
       if (saved) {
         setSettings({ ...saved, versionHistory: APP_HISTORY });
+        // Sync to localStorage
+        localStorage.setItem('subliminal_settings_v3', JSON.stringify(saved));
       }
     }
     load();
   }, []);
 
-  // Save to DB
+  // Save to Storage
   useEffect(() => {
+    // Aggressive dual storage to prevent data loss on iPhone 8
+    localStorage.setItem('subliminal_settings_v3', JSON.stringify(settings));
     db.saveSettings(settings);
   }, [settings]);
 

@@ -1,8 +1,15 @@
-const VERSION = 'subliminal-v6';
+const VERSION = 'subliminal-v7'; // Increment for update
 const CACHE_NAME = `subliminal-player-${VERSION}`;
 
-// Nature sounds are core features, pre-cache them for airplane mode support
-// These are preview files and usually small (<1MB)
+// Core assets that MUST be available for the app to start
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/favicon.ico',
+];
+
+// Nature sounds are pre-cached to ensure they work in airplane mode
 const NATURE_SOUNDS_ASSETS = [
   'https://assets.mixkit.co/sfx/preview/mixkit-light-rain-loop-2393.mp3',
   'https://assets.mixkit.co/sfx/preview/mixkit-ocean-waves-loop-1196.mp3',
@@ -12,36 +19,28 @@ const NATURE_SOUNDS_ASSETS = [
   'https://assets.mixkit.co/sfx/preview/mixkit-river-flowing-water-loop-1195.mp3',
 ];
 
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.ico',
-];
-
-// Combine all pre-cache targets
 const PRECACHE_ASSETS = [...STATIC_ASSETS, ...NATURE_SOUNDS_ASSETS];
 
-// Offline-first strategy: Cache essential assets on install
+// Offline-first: Pre-cache core assets
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching system assets');
+      console.log('[SW] Pre-caching core system assets');
       return Promise.allSettled(
         PRECACHE_ASSETS.map(asset => 
-          fetch(asset, { mode: 'no-cors' }).then(response => {
+          fetch(asset, { mode: 'no-cors', cache: 'reload' }).then(response => {
             if (response.type === 'opaque' || response.ok) {
               return cache.put(asset, response);
             }
-          }).catch(err => console.warn(`[SW] Failed to pre-cache ${asset}:`, err))
+          }).catch(err => console.warn(`[SW] Pre-cache failed for ${asset}:`, err))
         )
       );
     })
   );
 });
 
-// Clean up old caches immediately
+// Activate: Cleanup and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -49,7 +48,7 @@ self.addEventListener('activate', (event) => {
         cacheNames
           .filter((name) => name.startsWith('subliminal-player-') && name !== CACHE_NAME)
           .map((name) => {
-            console.log('[SW] Clearing legacy system cache:', name);
+            console.log('[SW] Purging stale cache:', name);
             return caches.delete(name);
           })
       );
@@ -57,20 +56,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Fetch Logic: Strictly Cache-First with Network Update (SWR)
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET requests (except for Share Target handled below)
+  // Skip non-GET
   if (event.request.method !== 'GET') {
-    // Handle Share Target (POST)
+    // Handle Share Target
     if (event.request.method === 'POST' && url.pathname === '/share-target') {
       event.respondWith(
         (async () => {
           try {
             const formData = await event.request.formData();
             const audioFiles = formData.getAll('audio_files');
-            
-            if (audioFiles && audioFiles.length > 0) {
+            if (audioFiles.length > 0) {
               const cache = await caches.open('shared-files');
               for (let i = 0; i < audioFiles.length; i++) {
                 const file = audioFiles[i];
@@ -83,7 +82,7 @@ self.addEventListener('fetch', (event) => {
               return Response.redirect('/?shared-count=' + audioFiles.length, 303);
             }
           } catch (err) {
-            console.error('[SW] System: Share-target fallback failed:', err);
+            console.error('[SW] Share-target error:', err);
           }
           return Response.redirect('/', 303);
         })()
@@ -92,18 +91,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Caching Strategy: Stale-While-Revalidate for most assets, Cache-First for versioned
+  // Bypass for some specific things if needed (e.g. dev server HMR - though HMR is usually disabled)
+  if (url.pathname.startsWith('/@vite') || url.pathname.includes('hot-update')) return;
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Cache successful responses for local assets, fonts, and images
+      // CACHE-FIRST strategy
+      if (cachedResponse) {
+        // Kick off a background update for non-static assets
+        if (navigator.onLine) {
+          fetch(event.request).then(networkResponse => {
+            if (networkResponse && networkResponse.status === 200) {
+              const cache = caches.open(CACHE_NAME);
+              cache.then(c => c.put(event.request, networkResponse.clone()));
+            }
+          }).catch(() => {}); // Silent failure for background update
+        }
+        return cachedResponse;
+      }
+
+      // Fallback to network
+      return fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const isLocal = url.origin === self.location.origin;
-          const isFont = url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com';
-          const isImage = url.hostname === 'picsum.photos' || url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp)$/);
-          const isAudio = url.hostname === 'assets.mixkit.co' || url.pathname.match(/\.(mp3|wav|m4a|aac)$/);
-          
-          if (isLocal || isFont || isImage || isAudio) {
+          const isFont = url.hostname.includes('fonts.gstatic.com') || url.hostname.includes('fonts.googleapis.com');
+          const isImage = url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp)$/);
+          const isAudio = url.pathname.match(/\.(mp3|wav|m4a|aac)$/);
+          const isJSorCSS = url.pathname.match(/\.(js|css)$/);
+
+          if (isLocal || isFont || isImage || isAudio || isJSorCSS) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);
@@ -112,19 +128,10 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch((err) => {
-        // Return cached response if network fails, or nothing if no cache
-        console.warn(`[SW] Network request failed for ${url.pathname}. Using cache if available.`);
-        return cachedResponse;
-      });
-
-      // For core assets like index.html or pre-cached items, prefer cache immediately but update in background
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      // If not in cache, wait for network
-      return fetchPromise.catch(() => {
-        // Offline Fallback shell for navigation
+        // Network failed and no cache
+        console.warn(`[SW] Offline fallback trigger for ${url.pathname}`);
+        
+        // Return blank index.html for navigation or blank if asset
         if (event.request.mode === 'navigate') {
           return caches.match('/');
         }

@@ -23,7 +23,17 @@ interface UIStateContextType {
 const UIStateContext = createContext<UIStateContextType | undefined>(undefined);
 
 export function UIStateProvider({ children }: { children: ReactNode }) {
-  const [activeTab, setActiveTab] = useState<TabType>('library');
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const saved = localStorage.getItem('subliminal_active_tab');
+    if (saved === 'library' || saved === 'search' || saved === 'player' || saved === 'settings') {
+      return saved as TabType;
+    }
+    return 'library';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('subliminal_active_tab', activeTab);
+  }, [activeTab]);
   const [isLoading, setIsLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
