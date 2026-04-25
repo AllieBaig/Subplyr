@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useSettings } from '../SettingsContext';
 import { useUIState, TabType } from '../UIStateContext';
-import { Music, Settings as SettingsIcon } from 'lucide-react';
+import { Music, Settings as SettingsIcon, Search, PlayCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -19,13 +19,15 @@ export default function TabBar({ activeTab, setActiveTab }: TabBarProps) {
   const { settings } = useSettings();
   const tabs: { id: TabType, label: string, icon: any }[] = [
     { id: 'library', label: 'Library', icon: Music },
+    { id: 'search', label: 'Search', icon: Search },
+    { id: 'player', label: 'Now Playing', icon: PlayCircle },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
   return (
     <div className={cn(
-      "w-full bg-secondary-system-background/80 backdrop-blur-3xl border-none rounded-xl flex justify-center items-center z-50 transition-all shadow-sm",
-      settings.miniMode ? "px-4 py-2 h-12 gap-16" : "px-6 py-3 h-16 gap-20",
+      "w-full bg-secondary-system-background/80 backdrop-blur-3xl border-none rounded-2xl flex justify-around items-center z-50 transition-all shadow-sm",
+      settings.miniMode ? "px-2 py-1 h-14" : "px-4 py-2 h-16",
       settings.bigTouchMode && !settings.miniMode && "h-20"
     )}>
       {tabs.map((tab) => {

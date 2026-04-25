@@ -7,10 +7,11 @@ import AudioEngine from './components/AudioEngine';
 import TabBar from './components/TabBar';
 import LibraryView from './views/LibraryView';
 import PlayerView from './views/PlayerView';
+import SearchView from './views/SearchView';
 import SettingsView from './views/SettingsView';
 import MiniPlayer from './components/MiniPlayer';
 import { motion, AnimatePresence } from 'motion/react';
-import { WifiOff, AlertCircle, RefreshCcw } from 'lucide-react';
+import { WifiOff, AlertCircle, RefreshCcw, ArrowLeft } from 'lucide-react';
 import { GlobalSafetyManager, LoadingPlaceholder } from './components/Safety';
 import { AnimationStyle } from './types';
 
@@ -32,11 +33,6 @@ function AppContent() {
     }
   }, [swStatus, showToast]);
 
-  // Notify of network changes handled in UIStateContext now
-  useEffect(() => {
-    // Only handle initial load if needed, but UIStateContext handles this better
-  }, [isOffline, showToast]);
-
   const getAnimationProps = (style: AnimationStyle) => {
     if (style === 'off' || !style) return { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } };
     
@@ -55,7 +51,7 @@ function AppContent() {
     }
   };
 
-  const animationProps = useMemo(() => getAnimationProps(settings.animationStyle), [settings.animationStyle, activeTab]);
+  const animationProps = useMemo(() => getAnimationProps(settings.animationStyle), [settings.animationStyle]);
 
   return (
     <div 
@@ -64,7 +60,6 @@ function AppContent() {
       <div className="flex-1 w-full max-w-[1400px] mx-auto flex flex-col overflow-hidden relative">
         <AudioEngine />
         
-        {/* Dynamic Status Overlays */}
         <AnimatePresence>
           {isOffline && (
             <motion.div 
@@ -85,7 +80,7 @@ function AppContent() {
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              className={`fixed ${settings.menuPosition === 'bottom' ? (settings.miniMode ? 'bottom-20' : 'bottom-28') : 'top-28'} left-1/2 -translate-x-1/2 z-[150] bg-system-label text-system-background px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-apple-border`}
+              className={`fixed ${settings.menuPosition === 'bottom' ? 'bottom-32' : 'top-28'} left-1/2 -translate-x-1/2 z-[160] bg-system-label text-system-background px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-apple-border`}
             >
               {toast}
             </motion.div>
@@ -93,14 +88,6 @@ function AppContent() {
         </AnimatePresence>
         
         <main className="flex-1 relative overflow-hidden flex flex-col">
-          {settings.menuPosition === 'top' && !isLoading && !initError && (
-            <div className="fixed top-0 left-0 right-0 flex items-center justify-center h-20 px-4 pt-4 z-[150] transition-all duration-300 pointer-events-none">
-              <div className="w-full max-w-md pointer-events-auto">
-                <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
-              </div>
-            </div>
-          )}
-
           {isLoading ? (
             <div className="flex-1 px-4 md:px-8 lg:px-12">
               <div className="max-w-2xl mx-auto h-full text-white">
@@ -126,65 +113,74 @@ function AppContent() {
             </div>
           ) : (
             <div className="flex-1 relative overflow-hidden">
-              {/* Base Layer: Library */}
-              <div className={`h-full overflow-y-auto no-scrollbar px-4 md:px-8 lg:px-12 pt-6 transition-all duration-500 ${settings.menuPosition === 'bottom' ? 'pb-80' : 'pb-32'}`}>
-                <LibraryView />
+              {/* Main Tab Views */}
+              <div className="h-full relative overflow-hidden">
+                {/* Library View */}
+                <div className={`absolute inset-0 z-10 overflow-y-auto no-scrollbar pt-6 pb-48 transition-all duration-300 ${activeTab === 'library' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                  <LibraryView />
+                </div>
+
+                {/* Search View */}
+                <div className={`absolute inset-0 z-20 overflow-hidden bg-system-background transition-all duration-300 ${activeTab === 'search' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                  <SearchView />
+                </div>
+
+                {/* Player Overlay (Full Screen Sheet) */}
+                <AnimatePresence>
+                  {activeTab === 'player' && (
+                    <motion.div
+                      key="player"
+                      {...animationProps}
+                      transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
+                      className={`fixed inset-0 z-[100] bg-system-background overflow-hidden shadow-2xl pb-24`}
+                    >
+                      <PlayerView onBack={() => setActiveTab('library')} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Settings Overlay (Full Screen Sheet) */}
+                <AnimatePresence>
+                  {activeTab === 'settings' && (
+                    <motion.div
+                      key="settings"
+                      {...animationProps}
+                      transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
+                      className={`fixed inset-0 z-[110] bg-system-background overflow-y-auto no-scrollbar pb-24`}
+                    >
+                      <div className="w-full px-6 py-10 min-h-full">
+                         <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-10">
+                           <button 
+                             onClick={() => setActiveTab('library')}
+                             className={`w-12 h-12 bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-transform text-system-label`}
+                           >
+                             <ArrowLeft size={20} />
+                           </button>
+                           <h2 className="text-xl font-black tracking-tight text-system-label">Settings</h2>
+                           <div className="w-12" />
+                         </div>
+                         <SettingsView onBack={() => setActiveTab('library')} />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              {/* Mini Player - Only show when NOT in Settings/Full Player */}
+              {/* Mini Player - Always above TabBar. Show when full player is NOT active */}
               <AnimatePresence>
-                {activeTab === 'library' && (
-                  <div className={`fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[80] transition-all duration-500 ${settings.menuPosition === 'bottom' ? 'bottom-24' : 'bottom-6'}`}>
+                {activeTab !== 'player' && (
+                  <div className={`fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[90] transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 bottom-28`}>
                     <MiniPlayer onExpand={() => setActiveTab('player')} />
                   </div>
-                )}
-              </AnimatePresence>
-
-              {/* Player Overlay (Full Screen Sheet) */}
-              <AnimatePresence>
-                {activeTab === 'player' && (
-                  <motion.div
-                    key="player"
-                    {...animationProps}
-                    transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className={`fixed left-0 right-0 top-0 z-[100] bg-system-background overflow-hidden shadow-2xl ${settings.menuPosition === 'bottom' ? 'bottom-24' : 'bottom-0 mt-20'}`}
-                  >
-                    <PlayerView onBack={() => setActiveTab('library')} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Settings Overlay (Full Screen Sheet) */}
-              <AnimatePresence>
-                {activeTab === 'settings' && (
-                  <motion.div
-                    key="settings"
-                    {...animationProps}
-                    transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className={`fixed left-0 right-0 top-0 z-[110] bg-system-background overflow-y-auto no-scrollbar ${settings.menuPosition === 'bottom' ? 'bottom-24' : 'bottom-0 mt-20'}`}
-                  >
-                    <div className="w-full px-4 md:px-8 lg:px-12 py-6 min-h-full pb-32">
-                       <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-8">
-                         <button 
-                           onClick={() => setActiveTab('library')}
-                           className={`px-6 py-2 bg-secondary-system-background border border-apple-border rounded-full text-xs font-bold active:scale-95 transition-transform text-system-label ${settings.bigTouchMode ? 'scale-110 px-8 py-3' : ''}`}
-                         >
-                           Done
-                         </button>
-                         <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-secondary-label">System Settings</h2>
-                       </div>
-                       <SettingsView onBack={() => setActiveTab('library')} />
-                    </div>
-                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
           )}
         </main>
         
-        {settings.menuPosition === 'bottom' && !isLoading && !initError && (
-          <div className="fixed bottom-0 left-0 right-0 flex items-center justify-center h-24 pointer-events-none px-4 pb-4 z-[150] transition-all duration-300">
-            <div className="w-full max-w-md pointer-events-auto">
+        {!isLoading && !initError && (
+          <div className="fixed bottom-0 left-0 right-0 h-24 bg-system-background/80 backdrop-blur-2xl border-t border-apple-border/5 px-4 pb-6 z-[150] flex items-center justify-center">
+            <div className="w-full max-w-md">
               <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { CURRENT_VERSION } from './constants/history';
 
-export type TabType = 'library' | 'player' | 'settings';
+export type TabType = 'library' | 'search' | 'player' | 'settings';
 
 interface UIStateContextType {
   activeTab: TabType;

@@ -361,20 +361,6 @@ export default function LibraryView() {
             Playlists
           </button>
         </div>
-
-        {/* Search Bar - Ultra Flat */}
-        <div className="relative group px-1">
-          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-system-secondary-label pointer-events-none">
-            <Search size={18} />
-          </div>
-          <input 
-            type="text"
-            placeholder={`Search...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 bg-secondary-system-background border-none pl-12 pr-4 py-3 rounded-xl text-[14px] font-medium outline-none transition-all placeholder:text-system-tertiary-label text-system-label"
-          />
-        </div>
       </header>
 
       {showSortMenu && (view === 'tracks' || view === 'playlists') && !isSelectMode && (

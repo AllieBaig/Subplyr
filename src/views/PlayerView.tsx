@@ -616,27 +616,36 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         </div>
       </div>
 
-      <div className={`w-full flex flex-col px-8 transition-all duration-500 ${!settings.showArtwork ? 'max-w-xl flex-1 justify-center' : 'max-w-sm mb-4'} ${settings.bigTouchMode ? 'gap-10 mb-8' : 'gap-8'}`}>
-        <PlaybackControls settings={settings} seekTo={seekTo} />
+      <div className={`w-full flex-1 flex flex-col px-8 transition-all duration-500 items-center justify-center ${settings.bigTouchMode ? 'gap-10' : 'gap-6'} max-w-xl`}>
+        <div className="w-full max-w-md">
+          <PlaybackControls settings={settings} seekTo={seekTo} />
+        </div>
 
-        <div className={`flex items-center justify-between px-2 pb-2 transition-all duration-500 ${!settings.showArtwork ? 'scale-110 mt-8' : ''}`}>
-          <button onClick={() => userPlayPrevious()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
-            <SkipBack size={settings.bigTouchMode ? (!settings.showArtwork ? 64 : 48) : (!settings.showArtwork ? 52 : 40)} fill="currentColor" stroke="none" />
+        <div className={`flex items-center justify-center gap-10 transition-all duration-500 ${!settings.showArtwork ? 'scale-110 mt-4' : ''}`}>
+          <button 
+            onClick={() => userPlayPrevious()} 
+            className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}
+          >
+            <SkipBack size={settings.bigTouchMode ? 48 : 40} fill="currentColor" stroke="none" />
           </button>
           
           <button 
             onClick={() => userTogglePlayback()}
-            className={`${settings.bigTouchMode ? (!settings.showArtwork ? 'w-32 h-32' : 'w-24 h-24') : (!settings.showArtwork ? 'w-28 h-28' : 'w-20 h-20')} bg-system-label text-system-background rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all`}
+            className={`${settings.bigTouchMode ? 'w-28 h-28' : 'w-24 h-24'} bg-system-label text-system-background rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all outline-none border-none`}
+            aria-label={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? (
-              <Pause size={settings.bigTouchMode ? (!settings.showArtwork ? 60 : 44) : (!settings.showArtwork ? 52 : 36)} fill="currentColor" stroke="none" />
+              <Pause size={settings.bigTouchMode ? 52 : 44} fill="currentColor" stroke="none" />
             ) : (
-              <Play size={settings.bigTouchMode ? (!settings.showArtwork ? 60 : 44) : (!settings.showArtwork ? 52 : 36)} fill="currentColor" stroke="none" className="ml-1" />
+              <Play size={settings.bigTouchMode ? 52 : 44} fill="currentColor" stroke="none" className="ml-1.5" />
             )}
           </button>
           
-          <button onClick={() => userPlayNext()} className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}>
-            <SkipForward size={settings.bigTouchMode ? (!settings.showArtwork ? 64 : 48) : (!settings.showArtwork ? 52 : 40)} fill="currentColor" stroke="none" />
+          <button 
+            onClick={() => userPlayNext()} 
+            className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}
+          >
+            <SkipForward size={settings.bigTouchMode ? 48 : 40} fill="currentColor" stroke="none" />
           </button>
         </div>
       </div>
