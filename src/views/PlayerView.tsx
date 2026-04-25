@@ -622,6 +622,19 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         </div>
 
         <div className={`flex items-center justify-center gap-10 transition-all duration-500 ${!settings.showArtwork ? 'scale-110 mt-4' : ''}`}>
+          {/* Mode Toggles */}
+          <div className="flex flex-col gap-4 mr-4">
+            <button 
+              onClick={() => updateSettings({ playbackMode: settings.playbackMode === 'once' ? 'loop' : 'once' })}
+              className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${settings.playbackMode === 'loop' ? 'bg-apple-blue/10 text-apple-blue' : 'bg-secondary-system-background text-system-secondary-label'}`}
+            >
+              {settings.playbackMode === 'loop' ? <Repeat size={20} /> : <Repeat1 size={20} />}
+              <span className="text-[8px] font-black uppercase tracking-widest">
+                {settings.playbackMode === 'loop' ? 'Loop' : 'Once'}
+              </span>
+            </button>
+          </div>
+
           <button 
             onClick={() => userPlayPrevious()} 
             className={`${settings.bigTouchMode ? 'p-6' : 'p-4'} text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all`}

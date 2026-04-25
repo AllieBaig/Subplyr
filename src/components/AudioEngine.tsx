@@ -4,12 +4,15 @@ import { usePlayback } from '../PlaybackContext';
 import { useSettings } from '../SettingsContext';
 import { useUIState } from '../UIStateContext';
 import { NATURE_SOUNDS } from '../constants';
+import { ChunkManager } from '../utils/ChunkManager';
+import * as db from '../db';
 
 export default function AudioEngine() {
   const { 
     tracks, 
     subliminalTracks, 
     currentTrackIndex, 
+    setCurrentTrackIndex,
     isPlaying, 
     playlists,
     setIsPlaying,
@@ -26,10 +29,174 @@ export default function AudioEngine() {
     clearSeekRequest
   } = useAudio();
 
+  const { currentTime, setCurrentTime, setDuration, updateLayerProgress, layerProgress } = usePlayback();
+
   const { settings, updateSettings, updateAudioTools } = useSettings();
   const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
+  const [isRenderingChunk, setIsRenderingChunk] = useState(false);
+  const chunkPlanRef = useRef<any>(null);
+  const activeChunkIdRef = useRef<string | null>(null);
+  const nextChunkIdRef = useRef<string | null>(null);
+  const chunkUrlsRef = useRef<Record<string, string>>({});
+  const chunkCleanupRef = useRef<Set<string>>(new Set());
 
-  const { currentTime, setCurrentTime, setDuration, updateLayerProgress } = usePlayback();
+  // Detect Foreground/Background
+  const [isForeground, setIsForeground] = useState(document.visibilityState === 'visible');
+  useEffect(() => {
+    const handleVisibility = () => setIsForeground(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  // Update Chunk Plan when Playlist changes
+  useEffect(() => {
+    if (!playingPlaylistId || currentPlaybackList.length === 0) {
+      chunkPlanRef.current = null;
+      return;
+    }
+
+    const updatePlan = async () => {
+      const plan = await ChunkManager.createChunkPlan(playingPlaylistId, currentPlaybackList);
+      chunkPlanRef.current = plan;
+      
+      // Determine current chunk and position based on currentTrackIndex
+      if (currentTrackIndex !== null) {
+        let cumulativeTracks = 0;
+        let cumulativeDuration = 0;
+        let foundIdx = 0;
+        let trackStartOffset = 0;
+
+        for (let i = 0; i < plan.chunks.length; i++) {
+          const chunk = plan.chunks[i];
+          let chunkDuration = 0;
+          let trackFoundInThisChunk = false;
+          let offsetInChunk = 0;
+
+          for (let j = 0; j < chunk.trackIds.length; j++) {
+            const trackId = chunk.trackIds[j];
+            const duration = await ChunkManager.getAudioDuration(trackId);
+            
+            if (cumulativeTracks === currentTrackIndex) {
+              trackFoundInThisChunk = true;
+              trackStartOffset = offsetInChunk;
+            }
+            
+            offsetInChunk += duration;
+            chunkDuration += duration;
+            cumulativeTracks++;
+          }
+
+          if (trackFoundInThisChunk) {
+            foundIdx = i;
+            break;
+          }
+        }
+        
+        const isSameChunk = settings.chunking.activePlaylistId === playingPlaylistId && 
+                            settings.chunking.currentChunkIndex === foundIdx;
+
+        updateSettings({
+          chunking: {
+            ...settings.chunking,
+            activePlaylistId: playingPlaylistId,
+            currentChunkIndex: foundIdx,
+            lastChunkPosition: trackStartOffset,
+            currentTrackIndex: currentTrackIndex
+          }
+        });
+
+        // Forced seek if same chunk
+        if (isSameChunk && mainAudioRef.current) {
+          mainAudioRef.current.currentTime = trackStartOffset;
+        }
+      }
+    };
+    updatePlan();
+  }, [playingPlaylistId, currentPlaybackList.length, currentTrackIndex]);
+
+  // Foreground Rendering Loop
+  useEffect(() => {
+    if (!isForeground || !chunkPlanRef.current || isRenderingChunk) return;
+
+    const renderNextIfNeeded = async () => {
+      const plan = chunkPlanRef.current;
+      const { activePlaylistId, currentChunkIndex } = settings.chunking;
+      
+      if (activePlaylistId !== plan.playlistId) return;
+
+      const currentId = `chunk_${activePlaylistId}_${currentChunkIndex}`;
+      const nextIdx = (currentChunkIndex + 1) >= plan.chunks.length ? (settings.playbackMode === 'loop' ? 0 : -1) : currentChunkIndex + 1;
+      
+      // Check if current chunk exists
+      const currentMeta = await db.getChunkMetadata(currentId);
+      if (!currentMeta) {
+        setIsRenderingChunk(true);
+        const rendered = await ChunkManager.renderChunk(activePlaylistId!, currentChunkIndex, plan.chunks[currentChunkIndex].trackIds);
+        if (rendered) {
+          await db.saveChunk({
+            id: currentId,
+            playlistId: activePlaylistId!,
+            index: currentChunkIndex,
+            trackIds: plan.chunks[currentChunkIndex].trackIds,
+            duration: rendered.duration,
+            expiresAt: Date.now() + 3600000
+          }, rendered.blob);
+        }
+        setIsRenderingChunk(false);
+        return;
+      }
+
+      // Pre-render next chunk
+      if (nextIdx !== -1) {
+        const nextId = `chunk_${activePlaylistId}_${nextIdx}`;
+        const nextMeta = await db.getChunkMetadata(nextId);
+        if (!nextMeta) {
+          setIsRenderingChunk(true);
+          const rendered = await ChunkManager.renderChunk(activePlaylistId!, nextIdx, plan.chunks[nextIdx].trackIds);
+          if (rendered) {
+            await db.saveChunk({
+              id: nextId,
+              playlistId: activePlaylistId!,
+              index: nextIdx,
+              trackIds: plan.chunks[nextIdx].trackIds,
+              duration: rendered.duration,
+              expiresAt: Date.now() + 3600000
+            }, rendered.blob);
+          }
+          setIsRenderingChunk(false);
+        }
+      }
+    };
+
+    const interval = setInterval(renderNextIfNeeded, 5000);
+    return () => clearInterval(interval);
+  }, [isForeground, isRenderingChunk, settings.chunking, settings.playbackMode]);
+
+  // Track current URL to revoke it later
+  const lastMainUrlRef = useRef<string | null>(null);
+
+  const cleanupLastUrl = () => {
+    if (lastMainUrlRef.current) {
+      URL.revokeObjectURL(lastMainUrlRef.current);
+      lastMainUrlRef.current = null;
+    }
+  };
+
+  // Save chunk position periodically
+  useEffect(() => {
+    if (!isPlaying || !mainAudioRef.current) return;
+    const interval = setInterval(() => {
+      if (mainAudioRef.current) {
+        updateSettings({
+          chunking: {
+            ...settings.chunking,
+            lastChunkPosition: mainAudioRef.current.currentTime
+          }
+        });
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPlaying, settings.chunking.activePlaylistId, settings.chunking.currentChunkIndex]);
   const [preparedUrl, setPreparedUrl] = useState<string | null>(null);
   const [preparedSubUrl, setPreparedSubUrl] = useState<string | null>(null);
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -1513,43 +1680,131 @@ export default function AudioEngine() {
     }
   }, [settings.subliminal.playInBackground]);
 
-  // Handle Main Track Source Change
+  // Main Audio Playback Loop - Chunk Aware
   useEffect(() => {
-    if (mainAudioRef.current && currentTrack && preparedUrl) {
-      const wasPlaying = isPlaying;
-      
-      // Strict reset for iOS: Clear src and load() to flush old buffers
-      if (mainAudioRef.current.src !== preparedUrl) {
-        console.log("[AudioEngine] Atomic Flush & Load for new track:", currentTrack.id);
-        mainAudioRef.current.pause();
-        mainAudioRef.current.src = "";
-        mainAudioRef.current.removeAttribute("src"); // Crucial for iOS
-        mainAudioRef.current.load(); // Flush system buffers
+    if (!mainAudioRef.current) return;
+    const audio = mainAudioRef.current;
+
+    const handleTimeUpdate = async () => {
+      if (audio.duration > 0 && audio.currentTime > audio.duration - 0.5) {
+        // Prepare next chunk transition
+        const { activePlaylistId, currentChunkIndex } = settings.chunking;
+        const plan = chunkPlanRef.current;
+        if (!plan || activePlaylistId !== plan.playlistId) return;
+
+        const nextIdx = (currentChunkIndex + 1) >= plan.chunks.length ? (settings.playbackMode === 'loop' ? 0 : -1) : currentChunkIndex + 1;
         
-        // Safety delay to ensure media pipeline is fully detached
-        setTimeout(() => {
-          if (mainAudioRef.current) {
-            mainAudioRef.current.src = preparedUrl;
-            mainAudioRef.current.load();
-            
-            if (wasPlaying && isPlaying) {
-              setTimeout(() => {
-                if (mainAudioRef.current && isPlaying) {
-                  mainAudioRef.current.play().catch(err => {
-                    console.warn("[AudioEngine] Auto-play failed after flush:", err);
-                  });
-                }
-              }, 150); // Increased delay for stability
-            }
+        if (nextIdx === -1) {
+          // Play once finished
+          setIsPlaying(false);
+          return;
+        }
+
+        const nextId = `chunk_${activePlaylistId}_${nextIdx}`;
+        const nextBlob = await db.getTrackBlob(nextId);
+        
+        if (nextBlob) {
+          console.log(`[AudioEngine] Transitioning to next chunk: ${nextId}`);
+          const oldChunkId = `chunk_${activePlaylistId}_${currentChunkIndex}`;
+          
+          cleanupLastUrl();
+          const url = URL.createObjectURL(nextBlob);
+          lastMainUrlRef.current = url;
+          audio.src = url;
+          audio.load();
+          audio.play().catch(console.error);
+
+          // Calculate new track index
+          let newTrackIdx = 0;
+          for (let i = 0; i < nextIdx; i++) {
+            newTrackIdx += plan.chunks[i].trackIds.length;
           }
-        }, 200); 
+          setCurrentTrackIndex(newTrackIdx);
+
+          // Update Settings
+          updateSettings({
+            chunking: {
+              ...settings.chunking,
+              currentChunkIndex: nextIdx,
+              lastChunkPosition: 0,
+              currentTrackIndex: newTrackIdx
+            }
+          });
+
+          // Cleanup previous chunk from DB
+          await db.deleteChunk(oldChunkId);
+        }
       }
-    } else if (mainAudioRef.current && !currentTrack) {
-      mainAudioRef.current.pause();
-      mainAudioRef.current.src = "";
-      mainAudioRef.current.load();
-    }
-  }, [currentTrack?.id, preparedUrl]);
+
+      setCurrentTime(audio.currentTime);
+      setDuration(audio.duration);
+
+      // Sync currentTrackIndex within chunk (throttled)
+      const plan = chunkPlanRef.current;
+      if (plan && settings.chunking.activePlaylistId === plan.playlistId) {
+        // Only run every 1 second to avoid excessive async duration calls
+        if (Math.floor(audio.currentTime) !== Math.floor(currentTime)) {
+          const chunk = plan.chunks[settings.chunking.currentChunkIndex];
+          let offset = 0;
+          let foundIdxInChunk = 0;
+          for (let i = 0; i < chunk.trackIds.length; i++) {
+            const d = await ChunkManager.getAudioDuration(chunk.trackIds[i]);
+            if (audio.currentTime >= offset && audio.currentTime < offset + d) {
+              foundIdxInChunk = i;
+              break;
+            }
+            offset += d;
+            if (i === chunk.trackIds.length - 1) foundIdxInChunk = i;
+          }
+          
+          let absoluteIdx = 0;
+          for (let i = 0; i < settings.chunking.currentChunkIndex; i++) {
+            absoluteIdx += plan.chunks[i].trackIds.length;
+          }
+          absoluteIdx += foundIdxInChunk;
+          
+          if (absoluteIdx !== currentTrackIndex) {
+            setCurrentTrackIndex(absoluteIdx);
+          }
+        }
+      }
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    return () => audio.removeEventListener('timeupdate', handleTimeUpdate);
+  }, [isPlaying, settings.chunking, settings.playbackMode]);
+
+  // Handle Main Track Source Change (Chunked)
+  useEffect(() => {
+    if (!mainAudioRef.current) return;
+    const audio = mainAudioRef.current;
+    
+    const applyChunk = async () => {
+      const { activePlaylistId, currentChunkIndex, lastChunkPosition } = settings.chunking;
+      if (!activePlaylistId) {
+        audio.pause();
+        audio.src = "";
+        return;
+      }
+
+      const chunkId = `chunk_${activePlaylistId}_${currentChunkIndex}`;
+      if (activeChunkIdRef.current === chunkId) return;
+
+      const blob = await db.getTrackBlob(chunkId);
+      if (blob) {
+        cleanupLastUrl();
+        const url = URL.createObjectURL(blob);
+        lastMainUrlRef.current = url;
+        audio.src = url;
+        audio.currentTime = lastChunkPosition;
+        audio.load();
+        if (isPlaying) audio.play().catch(console.error);
+        activeChunkIdRef.current = chunkId;
+      }
+    };
+    
+    applyChunk();
+  }, [settings.chunking.activePlaylistId, settings.chunking.currentChunkIndex, isPlaying]);
 
   // Handle Main Play/Pause and MediaSession State
   useEffect(() => {

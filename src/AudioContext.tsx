@@ -131,13 +131,21 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           isMissing: false
         }));
 
-        if (isMounted) {
-          setTracks(validatedTracks);
-          setSubliminalTracks(validatedSubTracks);
-          setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
-          
-          // Deep check for binary integrity on boot
-          setTimeout(async () => {
+          if (isMounted) {
+            setTracks(validatedTracks);
+            setSubliminalTracks(validatedSubTracks);
+            setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
+            
+            // Restore playback state
+            if (settings.chunking.activePlaylistId) {
+              setPlayingPlaylistId(settings.chunking.activePlaylistId);
+              if (settings.chunking.currentTrackIndex !== null) {
+                setCurrentTrackIndex(settings.chunking.currentTrackIndex);
+              }
+            }
+
+            // Deep check for binary integrity on boot
+            setTimeout(async () => {
              for (const t of validatedTracks) {
                const exists = await db.getTrackBlob(t.id);
                if (!exists || exists.size === 0) {

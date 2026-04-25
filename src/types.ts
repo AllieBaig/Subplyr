@@ -165,6 +165,13 @@ export interface AppSettings {
   showArtwork: boolean;
   alwaysHideArtworkByDefault: boolean;
   displayAlwaysOn: boolean;
+  playbackMode: 'once' | 'loop';
+  chunking: {
+    activePlaylistId: string | null;
+    currentChunkIndex: number;
+    lastChunkPosition: number;
+    currentTrackIndex: number | null;
+  };
   visibility: {
     audioLayers: boolean;
     appControl: boolean;

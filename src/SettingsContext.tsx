@@ -129,6 +129,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   showArtwork: true,
   alwaysHideArtworkByDefault: false,
   displayAlwaysOn: false,
+  playbackMode: 'once',
+  chunking: {
+    activePlaylistId: null,
+    currentChunkIndex: 0,
+    lastChunkPosition: 0,
+    currentTrackIndex: null
+  },
   visibility: {
     audioLayers: true,
     appControl: true

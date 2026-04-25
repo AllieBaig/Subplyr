@@ -2,15 +2,25 @@ import { openDB, IDBPDatabase } from 'idb';
 import { Track, AppSettings } from './types';
 
 const DB_NAME = 'subliminal-db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const TRACKS_STORE = 'tracks_v2';
 const SUB_TRACKS_STORE = 'sub_tracks_v2';
 const BLOBS_STORE = 'blobs';
 const SETTINGS_STORE = 'settings';
 const PLAYLISTS_STORE = 'playlists';
+const CHUNKS_STORE = 'chunks';
 
 export interface DBTrack extends Track {
   blob?: Blob;
+}
+
+export interface ChunkMetadata {
+  id: string; // chunk_{playlistId}_{index}
+  playlistId: string;
+  index: number;
+  trackIds: string[];
+  duration: number;
+  expiresAt: number;
 }
 
 export async function initDB() {
@@ -48,11 +58,63 @@ export async function initDB() {
             // Note: In-place migration logic could go here, but for simplicity we'll handle saving
           }
         }
+
+        if (oldVersion < 4) {
+          if (!db.objectStoreNames.contains(CHUNKS_STORE)) {
+            db.createObjectStore(CHUNKS_STORE, { keyPath: 'id' });
+          }
+        }
       },
     });
   } catch (err) {
     console.error("Critical IndexedDB initialization error:", err);
     throw new Error("Unable to start local database");
+  }
+}
+
+export async function saveChunk(metadata: ChunkMetadata, blob: Blob) {
+  try {
+    const db = await initDB();
+    const tx = db.transaction([CHUNKS_STORE, BLOBS_STORE], 'readwrite');
+    await tx.objectStore(CHUNKS_STORE).put(metadata);
+    await tx.objectStore(BLOBS_STORE).put(blob, metadata.id);
+    await tx.done;
+  } catch (err) {
+    console.error("Failed to save chunk:", err);
+  }
+}
+
+export async function getChunkMetadata(id: string): Promise<ChunkMetadata | null> {
+  try {
+    const db = await initDB();
+    return await db.get(CHUNKS_STORE, id);
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function deleteChunk(id: string) {
+  try {
+    const db = await initDB();
+    const tx = db.transaction([CHUNKS_STORE, BLOBS_STORE], 'readwrite');
+    await tx.objectStore(CHUNKS_STORE).delete(id);
+    await tx.objectStore(BLOBS_STORE).delete(id);
+    await tx.done;
+  } catch (err) {
+    console.error("Failed to delete chunk:", err);
+  }
+}
+
+export async function clearAllChunks() {
+  try {
+    const db = await initDB();
+    const tx = db.transaction([CHUNKS_STORE], 'readwrite');
+    await tx.objectStore(CHUNKS_STORE).clear();
+    // We should also clear chunks from BLOBS_STORE but we don't have a prefix index easily.
+    // Chunks are named chunk_* so we'd have to iterate.
+    await tx.done;
+  } catch (err) {
+    console.error("Failed to clear chunks:", err);
   }
 }
 
