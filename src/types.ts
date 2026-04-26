@@ -7,6 +7,7 @@ export interface Track {
   createdAt: number;
   lastPlayedAt?: number;
   isMissing?: boolean;
+  duration?: number;
 }
 
 export interface Playlist {
@@ -171,6 +172,8 @@ export interface AppSettings {
     currentChunkIndex: number;
     lastChunkPosition: number;
     currentTrackIndex: number | null;
+    mode: 'heartbeat' | 'merge';
+    sizeMinutes: number;
   };
   visibility: {
     audioLayers: boolean;

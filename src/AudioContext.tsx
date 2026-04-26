@@ -250,19 +250,37 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const getAudioDuration = (file: File): Promise<number> => {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      const url = URL.createObjectURL(file);
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(audio.duration);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(0);
+      };
+      audio.src = url;
+    });
+  };
+
   const addTrack = async (file: File, targetPlaylistId?: string) => {
     if (!(await validateAudioFile(file))) {
       showToast(`Unsupported format: ${file.name}`);
       return null;
     }
     const id = Math.random().toString(36).substr(2, 9);
+    const duration = await getAudioDuration(file);
     const newTrack: db.DBTrack = {
       id,
       name: file.name.replace(/\.[^/.]+$/, ""),
       url: '', 
       artist: 'Unknown Artist',
       blob: new Blob([file], { type: file.type }), // Force data copy for IDB durability
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      duration
     };
     await db.saveTrack(newTrack, false);
     const { blob, ...metadata } = newTrack;
@@ -275,18 +293,54 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const addSubliminalTrack = async (file: File) => {
     if (!(await validateAudioFile(file))) return;
     const id = Math.random().toString(36).substr(2, 9);
+    const duration = await getAudioDuration(file);
     const newTrack: db.DBTrack = { 
       id, 
       name: file.name.replace(/\.[^/.]+$/, ""), 
       url: '', 
       blob: new Blob([file], { type: file.type }), // Force data copy
-      createdAt: Date.now() 
+      createdAt: Date.now(),
+      duration
     };
     await db.saveTrack(newTrack, true);
     const { blob, ...metadata } = newTrack;
     setSubliminalTracks(prev => [...prev, metadata]);
     if (!settings.subliminal.selectedTrackId) updateSubliminalSettings({ selectedTrackId: id });
   };
+
+  // Duration Migration
+  useEffect(() => {
+    if (!isLoading && tracks.length > 0) {
+      const tracksToFix = tracks.filter(t => !t.duration);
+      if (tracksToFix.length > 0) {
+        async function fixDurations() {
+          console.log(`[AudioContext] Fixing durations for ${tracksToFix.length} tracks...`);
+          for (const track of tracksToFix) {
+            const blob = await db.getTrackBlob(track.id);
+            if (blob) {
+              const audio = new Audio();
+              const url = URL.createObjectURL(blob);
+              await new Promise<void>((resolve) => {
+                audio.onloadedmetadata = () => {
+                  const duration = audio.duration;
+                  db.saveTrack({ ...track, duration } as db.DBTrack, false);
+                  setTracks(prev => prev.map(t => t.id === track.id ? { ...t, duration } : t));
+                  URL.revokeObjectURL(url);
+                  resolve();
+                };
+                audio.onerror = () => {
+                  URL.revokeObjectURL(url);
+                  resolve();
+                };
+                audio.src = url;
+              });
+            }
+          }
+        }
+        fixDurations();
+      }
+    }
+  }, [isLoading, tracks.length]);
 
   const removeTrack = async (id: string) => {
     await db.deleteTrack(id, false);

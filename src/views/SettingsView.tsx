@@ -633,11 +633,99 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
     );
   };
 
+  const PlaybackControl = () => (
+    <Group 
+      title="Playback Control" 
+      icon={Repeat} 
+      color="bg-orange-100 text-orange-600"
+      isExpanded={expandedGroups.has('playback')}
+      onToggle={() => toggleGroup('playback')}
+    >
+      <Section
+        id="bg-playback"
+        title="Background Playback Settings"
+        subtitle="iPhone Optimization"
+        icon={ShieldCheck}
+        color="bg-green-100 text-green-600"
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
+            <p className="text-[10px] font-black text-system-secondary-label uppercase tracking-[0.2em] px-1">Playback Mode</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => updateSettings({ chunking: { ...settings.chunking, mode: 'heartbeat' } })}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${settings.chunking.mode === 'heartbeat' ? 'border-apple-blue bg-apple-blue/5' : 'border-apple-border bg-system-background'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${settings.chunking.mode === 'heartbeat' ? 'bg-apple-blue text-white' : 'bg-secondary-system-background text-system-tertiary-label'}`}>
+                    <Activity size={16} />
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-[13px] font-bold ${settings.chunking.mode === 'heartbeat' ? 'text-apple-blue' : 'text-system-label'}`}>Heartbeat Mode</p>
+                    <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-tight mt-0.5">Lightweight Keep-Alive</p>
+                  </div>
+                </div>
+                {settings.chunking.mode === 'heartbeat' && <Check size={16} className="text-apple-blue" />}
+              </button>
+
+              <button
+                onClick={() => updateSettings({ chunking: { ...settings.chunking, mode: 'merge' } })}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${settings.chunking.mode === 'merge' ? 'border-apple-blue bg-apple-blue/5' : 'border-apple-border bg-system-background'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${settings.chunking.mode === 'merge' ? 'bg-apple-blue text-white' : 'bg-secondary-system-background text-system-tertiary-label'}`}>
+                    <Wrench size={16} />
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-[13px] font-bold ${settings.chunking.mode === 'merge' ? 'text-apple-blue' : 'text-system-label'}`}>Merge Playlist Mode</p>
+                    <p className="text-[9px] text-system-secondary-label font-bold uppercase tracking-tight mt-0.5">Stable Chunked Playback</p>
+                  </div>
+                </div>
+                {settings.chunking.mode === 'merge' && <Check size={16} className="text-apple-blue" />}
+              </button>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {settings.chunking.mode === 'merge' && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-col gap-3 py-2">
+                  <p className="text-[10px] font-black text-system-secondary-label uppercase tracking-[0.2em] px-1">Chunk Size Settings</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[5, 10, 15, 20].map(size => (
+                      <button
+                        key={size}
+                        onClick={() => updateSettings({ chunking: { ...settings.chunking, sizeMinutes: size } })}
+                        className={`py-3 rounded-xl border text-[11px] font-black transition-all ${settings.chunking.sizeMinutes === size ? 'bg-apple-blue text-white border-apple-blue' : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                      >
+                        {size}m
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-system-tertiary-label font-bold uppercase tracking-tight mt-1 px-1">
+                    Next chunk prepared in foreground only.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </Section>
+    </Group>
+  );
+
   return (
     <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto">
       <VersionHistory />
 
       <div className="h-px bg-apple-border/50 my-6" />
+
+      <PlaybackControl />
 
       {/* Audio Layers Group */}
       <Group 

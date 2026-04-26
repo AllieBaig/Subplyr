@@ -93,6 +93,15 @@ export async function getChunkMetadata(id: string): Promise<ChunkMetadata | null
   }
 }
 
+export async function getAllChunkMetadata(): Promise<ChunkMetadata[]> {
+  try {
+    const db = await initDB();
+    return await db.getAll(CHUNKS_STORE);
+  } catch (err) {
+    return [];
+  }
+}
+
 export async function deleteChunk(id: string) {
   try {
     const db = await initDB();

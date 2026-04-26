@@ -134,7 +134,9 @@ const DEFAULT_SETTINGS: AppSettings = {
     activePlaylistId: null,
     currentChunkIndex: 0,
     lastChunkPosition: 0,
-    currentTrackIndex: null
+    currentTrackIndex: null,
+    mode: 'heartbeat',
+    sizeMinutes: 10
   },
   visibility: {
     audioLayers: true,

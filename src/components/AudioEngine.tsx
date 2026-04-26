@@ -48,6 +48,29 @@ export default function AudioEngine() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
+  // Heartbeat Mechanism for iOS 16 Background Persistence
+  const heartbeatAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const audio = new Audio();
+    // 1 second of silence (WAV)
+    audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAA+AD4APgA+A="; 
+    audio.loop = true;
+    audio.volume = 0.001; // Active but silent
+    heartbeatAudioRef.current = audio;
+    return () => {
+      audio.pause();
+      audio.src = "";
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isPlaying && settings.chunking.mode === 'heartbeat') {
+      heartbeatAudioRef.current?.play().catch(() => {});
+    } else {
+      heartbeatAudioRef.current?.pause();
+    }
+  }, [isPlaying, settings.chunking.mode]);
+
   // Update Chunk Plan when Playlist changes
   useEffect(() => {
     if (!playingPlaylistId || currentPlaybackList.length === 0) {
@@ -56,7 +79,7 @@ export default function AudioEngine() {
     }
 
     const updatePlan = async () => {
-      const plan = await ChunkManager.createChunkPlan(playingPlaylistId, currentPlaybackList);
+      const plan = await ChunkManager.createChunkPlan(playingPlaylistId, currentPlaybackList, settings.chunking.sizeMinutes);
       chunkPlanRef.current = plan;
       
       // Determine current chunk and position based on currentTrackIndex
@@ -164,6 +187,15 @@ export default function AudioEngine() {
             }, rendered.blob);
           }
           setIsRenderingChunk(false);
+        }
+      }
+
+      // Cleanup old chunks: Keep only current + next
+      const chunksInDb = await db.getAllChunkMetadata();
+      const nextId = nextIdx !== -1 ? `chunk_${activePlaylistId}_${nextIdx}` : null;
+      for (const meta of chunksInDb) {
+        if (meta.id !== currentId && meta.id !== nextId) {
+          await db.deleteChunk(meta.id);
         }
       }
     };

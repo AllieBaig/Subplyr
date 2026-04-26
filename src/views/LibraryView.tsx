@@ -923,6 +923,23 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
   const { showToast } = useUIState();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
+  const formatTotalDuration = (trackIds: string[]) => {
+    const totalSeconds = trackIds.reduce((acc, tid) => {
+      const t = tracks.find(mt => mt.id === tid);
+      return acc + (t?.duration || 0);
+    }, 0);
+    
+    if (totalSeconds === 0) return '0m';
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m total`;
+    }
+    return `${minutes}m total`;
+  };
+
   return (
     <div className={`flex flex-col gap-4 w-full max-w-7xl mx-auto pb-12`}>
       <button 
@@ -963,7 +980,11 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
                   <h3 className="font-bold text-[15px] truncate text-system-label">
                     <HighlightText text={playlist.name} highlight={searchQuery} />
                   </h3>
-                  <p className="text-[12px] text-system-secondary-label font-medium tracking-tight mt-0.5">{playlist.trackIds.length} tracks</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[12px] text-system-secondary-label font-medium tracking-tight">{playlist.trackIds.length} tracks</p>
+                    <span className="text-gray-300">•</span>
+                    <p className="text-[12px] text-system-secondary-label font-medium tracking-tight">{formatTotalDuration(playlist.trackIds)}</p>
+                  </div>
                 </button>
 
                 <div className="flex items-center gap-2">

@@ -14,16 +14,20 @@ export interface ChunkPlan {
 }
 
 export class ChunkManager {
-  static async createChunkPlan(playlistId: string, tracks: Track[]): Promise<ChunkPlan> {
+  static async createChunkPlan(playlistId: string, tracks: Track[], maxDurationMinutes: number = 5): Promise<ChunkPlan> {
+    const maxDurationSeconds = maxDurationMinutes * 60;
     const plan: ChunkPlan = { playlistId, chunks: [] };
     let currentChunkTracks: string[] = [];
     let currentChunkDuration = 0;
     let chunkIndex = 0;
 
     for (const track of tracks) {
-      const duration = await this.getAudioDuration(track.id);
+      let duration = track.duration || 0;
+      if (duration === 0) {
+        duration = await this.getAudioDuration(track.id);
+      }
       
-      if (currentChunkDuration + duration > MAX_CHUNK_DURATION && currentChunkTracks.length > 0) {
+      if (currentChunkDuration + duration > maxDurationSeconds && currentChunkTracks.length > 0) {
         plan.chunks.push({
           index: chunkIndex++,
           trackIds: currentChunkTracks,
