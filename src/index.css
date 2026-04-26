@@ -84,12 +84,44 @@
     @apply cursor-pointer;
   }
 
-  /* Text Overflow Management */
+  /* Custom Touch Target Rules */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Stability Overrides */
+  .ios-scroll-area {
+    @apply overflow-y-auto overflow-x-hidden w-full h-full;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .ios-fixed-layer {
+    @apply fixed inset-0 z-[200] bg-system-background;
+    transform: translateZ(0); /* Force GPU */
+  }
+
+  /* Fixed Card Heights */
+  .library-card {
+    @apply h-[72px] min-h-[72px] w-full;
+  }
+
+  .playlist-card {
+    @apply h-24 min-h-[96px] w-full;
+  }
+
+  /* GPU Optimized Hidden Layers */
+  .layer-panel-gpu {
+    backface-visibility: hidden;
+    perspective: 1000;
+  }
+
+  /* Text Clamp Utility */
   .truncate-1 {
     @apply truncate block;
   }
-  
-  .truncate-2 {
+
+  .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;

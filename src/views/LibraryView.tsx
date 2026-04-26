@@ -15,6 +15,12 @@ import { AUDIO_ACCEPT_STRING, SUPPORTED_AUDIO_FORMATS } from '../constants';
 import { useModal } from '../components/SafeModal';
 
 import { ArtworkImage } from '../components/ArtworkImage';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export default function LibraryView() {
   const modal = useModal();
@@ -305,7 +311,7 @@ export default function LibraryView() {
   }, [playlists, searchQuery, playlistSort]);
 
   return (
-    <div className={`flex flex-col relative w-full max-w-7xl mx-auto px-4 pt-10`}>
+    <div className="flex flex-col w-full max-w-7xl mx-auto px-4 pb-40">
       <header className="flex flex-col bg-system-background pb-6 gap-8">
         <div className="flex justify-between items-center px-1">
           <h1 className="text-3xl font-[900] tracking-tight text-system-label flex items-center gap-3">
@@ -411,7 +417,7 @@ export default function LibraryView() {
       )}
 
       {view === 'playlist_detail' && activePlaylistId ? (
-        <div className="fixed inset-0 z-[120] bg-system-background flex flex-col animate-in fade-in slide-in-from-right duration-500 overflow-y-auto no-scrollbar pb-32">
+        <div className="ios-fixed-layer z-[120] flex flex-col ios-scroll-area no-scrollbar pb-32">
            <PlaylistDetailView 
             playlist={playlists.find(p => p.id === activePlaylistId)!}
             tracks={tracks}
@@ -843,8 +849,11 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
   const { relinkTrack } = useAudio();
 
   return (
-    <div className={`group flex flex-col transition-all duration-200 ${track.isMissing ? 'opacity-40' : ''}`}>
-      <div className={`flex items-center gap-4 px-4 min-h-[56px] leading-tight`}>
+    <div className={cn(
+      "group flex flex-col transition-all duration-200",
+      track.isMissing && "opacity-40"
+    )}>
+      <div className="flex items-center gap-4 px-4 library-card leading-tight">
         {isSelectMode && (
           <button 
             onClick={onSelect}

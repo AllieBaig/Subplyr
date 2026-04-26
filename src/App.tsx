@@ -64,114 +64,125 @@ function AppContent() {
     <div 
       className={`fixed inset-0 bg-system-background overflow-hidden flex flex-col pt-safe select-none h-[100dvh] transition-[padding,background] duration-500 ease-in-out ${settings.miniMode ? 'p-1' : ''} ${settings.bigTouchMode ? 'big-touch-mode' : ''}`}
     >
-      <div className={cn("flex-1 w-full max-w-[1400px] mx-auto flex flex-col overflow-hidden relative", 
-        settings.menuPosition === 'top' ? 'pt-24' : 'pb-32'
-      )}>
+      <div className="flex-1 w-full max-w-[1400px] mx-auto relative overflow-hidden">
         <AudioEngine />
         <OfflineIndicator />
         
         <AnimatePresence>
           {toast && (
             <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              className={`fixed ${settings.menuPosition === 'bottom' ? 'bottom-32' : 'top-28'} left-1/2 -translate-x-1/2 z-[160] bg-system-label text-system-background px-6 py-3 rounded-2xl text-xs font-semibold shadow-2xl border border-apple-border`}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className={cn(
+                "fixed left-1/2 -translate-x-1/2 z-[200] bg-system-label text-system-background px-6 py-3 rounded-2xl text-xs font-bold shadow-2xl border border-apple-border/10 backdrop-blur-xl",
+                settings.menuPosition === 'bottom' ? 'bottom-32' : 'top-28'
+              )}
             >
               {toast}
             </motion.div>
           )}
         </AnimatePresence>
         
-        <main className="flex-1 relative overflow-hidden flex flex-col">
+        <main className="absolute inset-0 overflow-hidden flex flex-col">
           {isLoading ? (
-            <div className="flex-1 px-4 md:px-8 lg:px-12">
-              <div className="max-w-2xl mx-auto h-full text-white">
-                <LoadingPlaceholder />
-              </div>
+            <div className="flex-1 px-4 flex items-center justify-center">
+              <LoadingPlaceholder />
             </div>
           ) : initError ? (
-            <div className="flex-1 flex items-center justify-center px-4 md:px-8 lg:px-12">
-              <div className={`w-full max-w-lg bg-apple-card ${settings.miniMode ? 'rounded-2xl p-6' : 'rounded-[2.5rem] p-8'} border border-apple-border shadow-2xl text-center`}>
-                <div className="w-16 h-16 bg-amber-100/10 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <div className="flex-1 flex items-center justify-center px-6">
+              <div className={`w-full max-w-sm bg-secondary-system-background ${settings.miniMode ? 'rounded-2xl p-6' : 'rounded-[2.5rem] p-8'} border border-apple-border shadow-2xl text-center`}>
+                <div className="w-16 h-16 bg-amber-100/10 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
                   <AlertCircle size={32} />
                 </div>
-                <h2 className="text-2xl font-bold mb-2 text-system-label">Startup Issue</h2>
-                <p className="text-system-secondary-label text-sm mb-8 font-medium">{initError}</p>
+                <h2 className="text-xl font-black mb-2 text-system-label">Startup Error</h2>
+                <p className="text-system-secondary-label text-sm mb-8 font-bold leading-relaxed">{initError}</p>
                 <button 
                   onClick={() => window.location.reload()}
-                  className="w-full bg-system-label text-system-background py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className="w-full bg-system-label text-system-background h-14 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform"
                 >
-                  <RefreshCcw size={20} />
+                  <RefreshCcw size={18} />
                   <span>Retry System</span>
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex-1 relative overflow-hidden">
-              {/* Main Tab Views */}
-              <div className="h-full relative overflow-hidden">
-                {/* Library View */}
-                <div className={`absolute inset-0 z-10 overflow-y-auto no-scrollbar pt-6 pb-12 transition-all duration-300 ${activeTab === 'library' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  <LibraryView />
+            <div className="flex-1 relative ios-scroll-area no-scrollbar">
+              {/* Layout Specific Padding for Content Area */}
+              <div className={cn(
+                "min-h-full w-full max-w-7xl mx-auto flex flex-col",
+                settings.menuPosition === 'top' ? 'pt-28 pb-40' : 'pt-10 pb-64'
+              )}>
+                {/* Main Tab Views Stacked */}
+                <div className="flex-1 relative w-full h-full">
+                  {/* Library View */}
+                  <div className={cn(
+                    "w-full h-full transition-opacity duration-300",
+                    activeTab === 'library' ? 'relative opacity-100' : 'absolute inset-0 opacity-0 pointer-events-none'
+                  )}>
+                    <LibraryView />
+                  </div>
+
+                  {/* Search View */}
+                  <div className={cn(
+                    "w-full h-full transition-opacity duration-300",
+                    activeTab === 'search' ? 'relative opacity-100' : 'absolute inset-0 opacity-0 pointer-events-none'
+                  )}>
+                    <SearchView />
+                  </div>
                 </div>
-
-                {/* Search View */}
-                <div className={`absolute inset-0 z-20 overflow-hidden bg-system-background transition-all duration-300 ${activeTab === 'search' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                  <SearchView />
-                </div>
-
-                {/* Player Overlay (Full Screen Sheet) */}
-                <AnimatePresence>
-                  {activeTab === 'player' && (
-                    <motion.div
-                      key="player"
-                      {...animationProps}
-                      transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                      className={`fixed inset-0 z-[100] bg-system-background overflow-hidden shadow-2xl pb-32`}
-                    >
-                      <PlayerView onBack={() => setActiveTab('library')} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Settings Overlay (Full Screen Sheet) */}
-                <AnimatePresence>
-                  {activeTab === 'settings' && (
-                    <motion.div
-                      key="settings"
-                      {...animationProps}
-                      transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                      className={`fixed inset-0 z-[110] bg-system-background overflow-y-auto no-scrollbar pb-32`}
-                    >
-                      <div className="w-full px-6 py-10 min-h-full pb-32">
-                        <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-10">
-                          {settings.backButtonPosition === 'top' ? (
-                            <button 
-                              onClick={() => setActiveTab('library')}
-                              className={`w-12 h-12 bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-transform text-system-label`}
-                            >
-                              <ArrowLeft size={20} />
-                            </button>
-                          ) : (
-                            <div className="w-12 h-12" />
-                          )}
-                          <h2 className="text-xl font-black tracking-tight text-system-label">Settings</h2>
-                          <div className="w-12 h-12" />
-                        </div>
-                         <SettingsView onBack={() => setActiveTab('library')} />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
 
-              {/* Mini Player - Always above TabBar. Show when full player is NOT active */}
+              {/* Overlays (Sheets) */}
               <AnimatePresence>
-                {activeTab !== 'player' && (
-                  <div className={`fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[90] transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 ${
+                {activeTab === 'player' && (
+                  <motion.div
+                    key="player"
+                    {...animationProps}
+                    transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
+                    className="fixed inset-0 z-[300] bg-system-background ios-scroll-area no-scrollbar"
+                  >
+                    <PlayerView onBack={() => setActiveTab('library')} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {activeTab === 'settings' && (
+                  <motion.div
+                    key="settings"
+                    {...animationProps}
+                    transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
+                    className="fixed inset-0 z-[310] bg-system-background ios-scroll-area no-scrollbar"
+                  >
+                    <div className="w-full px-6 py-12 pb-40">
+                      <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-10">
+                        {settings.backButtonPosition === 'top' ? (
+                          <button 
+                            onClick={() => setActiveTab('library')}
+                            className="w-12 h-12 bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-transform text-system-label"
+                          >
+                            <ArrowLeft size={20} />
+                          </button>
+                        ) : (
+                          <div className="w-12 h-12" />
+                        )}
+                        <h2 className="text-xl font-black tracking-tight text-system-label">Settings</h2>
+                        <div className="w-12 h-12" />
+                      </div>
+                      <SettingsView onBack={() => setActiveTab('library')} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Mini Player */}
+              <AnimatePresence>
+                {activeTab !== 'player' && activeTab !== 'settings' && (
+                  <div className={cn(
+                    "fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[90] transition-all duration-500",
                     settings.menuPosition === 'bottom' ? 'bottom-28' : 'bottom-10'
-                  }`}>
+                  )}>
                     <MiniPlayer onExpand={() => setActiveTab('player')} />
                   </div>
                 )}
@@ -182,8 +193,8 @@ function AppContent() {
         
         {!isLoading && !initError && (
           <div className={cn(
-            "fixed left-0 right-0 h-24 bg-system-background/80 backdrop-blur-2xl px-4 flex items-center justify-center z-[150]",
-            settings.menuPosition === 'top' ? 'top-0 border-b border-apple-border/5 pt-6' : 'bottom-0 border-t border-apple-border/5 pb-6'
+            "fixed left-0 right-0 h-24 bg-system-background/80 backdrop-blur-2xl px-4 flex items-center justify-center z-[250] transition-all",
+            settings.menuPosition === 'top' ? "top-0 border-b border-apple-border/5 pt-safe" : "bottom-0 border-t border-apple-border/5 pb-safe"
           )}>
             <div className="w-full max-w-md">
               <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />

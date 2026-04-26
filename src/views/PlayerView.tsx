@@ -30,20 +30,20 @@ const WaveformAnimation = ({ isPlaying }: { isPlaying: boolean }) => {
   return (
     <motion.div 
       key="waveform"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
-      className="w-full max-w-[280px] h-32 flex items-center justify-center gap-1.5"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="w-full max-w-[280px] h-32 flex items-center justify-center gap-1.5 overflow-hidden"
     >
       {[...Array(24)].map((_, i) => (
         <motion.div
           key={i}
           animate={{ 
-            height: isPlaying ? [12, 48, 24, 64, 16][(i + Math.floor(currentTime)) % 5] : 8,
+            scaleY: isPlaying ? [1.5, 6, 3, 8, 2][(i + Math.floor(currentTime)) % 5] : 1,
             opacity: isPlaying ? [0.2, 0.5, 0.3, 0.6, 0.4][(i + Math.floor(currentTime)) % 5] : 0.1
           }}
           transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
-          className="w-1 bg-apple-blue rounded-full"
+          className="w-1 h-2 bg-apple-blue rounded-full origin-center"
         />
       ))}
     </motion.div>
@@ -296,19 +296,19 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         </AnimatePresence>
         
         {/* Track Title & Artist */}
-        <div className={`text-center w-full transition-all duration-500 ${settings.showArtwork ? 'max-w-sm' : 'max-w-xl'}`}>
-          <h2 className={`font-extrabold tracking-tight text-system-label line-clamp-1 mb-2 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-6xl mb-4' : 'text-5xl mb-3') : (settings.bigTouchMode ? 'text-4xl' : 'text-3xl')}`}>
+        <div className={`text-center w-full transition-all duration-500 overflow-hidden ${settings.showArtwork ? 'max-w-sm' : 'max-w-xl'}`}>
+          <h2 className={`font-extrabold tracking-tight text-system-label truncate px-4 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-6xl mb-4' : 'text-5xl mb-3') : (settings.bigTouchMode ? 'text-4xl' : 'text-3xl')}`}>
             {trackName}
           </h2>
-          <p className={`text-system-secondary-label font-bold mb-8 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-2xl' : 'text-xl') : (settings.bigTouchMode ? 'text-xl' : 'text-lg')}`}>
+          <p className={`text-system-secondary-label font-bold mb-8 truncate px-4 transition-all ${!settings.showArtwork ? (settings.bigTouchMode ? 'text-2xl' : 'text-xl') : (settings.bigTouchMode ? 'text-xl' : 'text-lg')}`}>
             {artistName}
           </p>
 
           <button 
             onClick={() => setIsPanelOpen(true)}
-            className={`inline-flex items-center gap-3 bg-secondary-system-background hover:bg-secondary-system-background/80 rounded-full transition-colors active:scale-95 border border-apple-border ${settings.bigTouchMode ? 'px-8 py-4' : 'px-6 py-3'}`}
+            className={`inline-flex items-center gap-3 bg-secondary-system-background hover:bg-secondary-system-background/80 rounded-full transition-colors active:scale-95 border border-apple-border max-w-[90%] ${settings.bigTouchMode ? 'px-8 py-4' : 'px-6 py-3'}`}
           >
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 flex-shrink-0">
                 {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
                 {settings.binaural.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
                 {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
@@ -318,7 +318,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                 {settings.isochronic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
                 {settings.solfeggio.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
               </div>
-            <span className={`font-bold uppercase tracking-[0.1em] text-system-secondary-label ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{activeLayersLabel}</span>
+            <span className={`font-bold uppercase tracking-[0.1em] text-system-secondary-label truncate ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>{activeLayersLabel}</span>
           </button>
         </div>
       </div>
