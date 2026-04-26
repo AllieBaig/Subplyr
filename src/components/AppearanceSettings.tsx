@@ -86,33 +86,98 @@ export const AppearanceSettings = ({ isExpanded = false, onToggle = () => {} }: 
         <Section
           id="visuals"
           title="Visual Features"
-          subtitle="Buttons & Art"
+          subtitle="Interface & Motion"
           icon={Zap}
           color="bg-amber-500/10 text-amber-600"
         >
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-system-label">Hide Artwork Default</p>
-              </div>
-              <button 
-                onClick={() => updateSettings({ showArtwork: !settings.showArtwork })}
-                className={`w-8 h-5 rounded-full relative transition-colors ${!settings.showArtwork ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}
+          <div className="flex flex-col gap-6">
+            {/* Animation Style */}
+            <div className="flex flex-col gap-3">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-system-secondary-label">Animation Style</label>
+              <select
+                value={settings.animationStyle}
+                onChange={(e) => updateSettings({ animationStyle: e.target.value as any })}
+                className="w-full bg-system-background border border-apple-border rounded-xl text-xs font-semibold px-4 py-3 outline-none"
               >
-                <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: !settings.showArtwork ? 12 : 0 }} />
-              </button>
+                <option value="slide-up">Slide Up (Default)</option>
+                <option value="slide-down">Slide Down</option>
+                <option value="slide-left">Slide Left</option>
+                <option value="slide-right">Slide Right</option>
+                <option value="fade">Fade</option>
+                <option value="random">Random</option>
+              </select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-system-label">Big Touch Buttons</p>
+            {/* Navigation Layout */}
+            <div className="flex flex-col gap-4 pt-4 border-t border-apple-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Back Button Position</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase mt-0.5">{settings.backButtonPosition === 'top' ? 'Screen Top' : 'Bottom Menu'}</p>
+                </div>
+                <div className="flex bg-secondary-system-background p-1 rounded-xl border border-apple-border h-8">
+                  <button 
+                    onClick={() => updateSettings({ backButtonPosition: 'top' })}
+                    className={`px-3 h-full rounded-lg text-[9px] font-black uppercase transition-all ${settings.backButtonPosition === 'top' ? 'bg-system-background text-amber-600 shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ backButtonPosition: 'bottom' })}
+                    className={`px-3 h-full rounded-lg text-[9px] font-black uppercase transition-all ${settings.backButtonPosition === 'bottom' ? 'bg-system-background text-amber-600 shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
               </div>
-              <button 
-                onClick={() => updateSettings({ bigTouchMode: !settings.bigTouchMode })}
-                className={`w-8 h-5 rounded-full relative transition-colors ${settings.bigTouchMode ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}
-              >
-                <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.bigTouchMode ? 12 : 0 }} />
-              </button>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Navigation Bar Position</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase mt-0.5">{settings.menuPosition === 'top' ? 'Screen Top' : 'Screen Bottom'}</p>
+                </div>
+                <div className="flex bg-secondary-system-background p-1 rounded-xl border border-apple-border h-8">
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'top' })}
+                    className={`px-3 h-full rounded-lg text-[9px] font-black uppercase transition-all ${settings.menuPosition === 'top' ? 'bg-system-background text-amber-600 shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ menuPosition: 'bottom' })}
+                    className={`px-3 h-full rounded-lg text-[9px] font-black uppercase transition-all ${settings.menuPosition === 'bottom' ? 'bg-system-background text-amber-600 shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Existing Visibility Toggles */}
+            <div className="flex flex-col gap-4 pt-4 border-t border-apple-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Hide Artwork Default</p>
+                </div>
+                <button 
+                  onClick={() => updateSettings({ showArtwork: !settings.showArtwork })}
+                  className={`w-8 h-5 rounded-full relative transition-colors ${!settings.showArtwork ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: !settings.showArtwork ? 12 : 0 }} />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Big Touch Buttons</p>
+                </div>
+                <button 
+                  onClick={() => updateSettings({ bigTouchMode: !settings.bigTouchMode })}
+                  className={`w-8 h-5 rounded-full relative transition-colors ${settings.bigTouchMode ? 'bg-amber-500' : 'bg-system-tertiary-label'}`}
+                >
+                  <motion.div className="absolute top-1 left-1 bg-white w-3 h-3 rounded-full" animate={{ x: settings.bigTouchMode ? 12 : 0 }} />
+                </button>
+              </div>
             </div>
           </div>
         </Section>

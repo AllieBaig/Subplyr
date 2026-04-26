@@ -24,19 +24,54 @@ export const PlaybackControl = ({ isExpanded = false, onToggle = () => {} }: Pla
       onToggle={onToggle}
     >
       <div className="flex flex-col gap-3">
-        {/* Heartbeat Mode */}
+        {/* Playback Mode Selection */}
         <Section
-          id="heartbeat"
-          title="Heartbeat Mode"
-          subtitle="iOS Stable Engine"
+          id="playback-mode"
+          title="Playback Strategy"
+          subtitle={settings.chunking.mode === 'heartbeat' ? 'Heartbeat Mode' : 'Merge Mode'}
           icon={Activity}
           color="bg-red-500/10 text-red-600"
-          isEnabled={settings.chunking.mode === 'heartbeat'}
-          onToggle={(v: boolean) => updateSettings({ chunking: { ...settings.chunking, mode: v ? 'heartbeat' : 'merge' } })}
         >
-          <p className="text-[10px] text-system-secondary-label leading-relaxed">
-            Maintains reliable background playback on iOS. Pure Heartbeat is silent; it supports main audio.
-          </p>
+          <div className="flex flex-col gap-4">
+            <div className="bg-secondary-system-background p-1 rounded-2xl flex items-center h-10 border border-apple-border">
+              <button 
+                onClick={() => updateSettings({ chunking: { ...settings.chunking, mode: 'heartbeat' } })}
+                className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${settings.chunking.mode === 'heartbeat' ? 'bg-system-background text-red-600 shadow-sm' : 'text-system-secondary-label'}`}
+              >
+                Heartbeat
+              </button>
+              <button 
+                onClick={() => updateSettings({ chunking: { ...settings.chunking, mode: 'merge' } })}
+                className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${settings.chunking.mode === 'merge' ? 'bg-system-background text-red-600 shadow-sm' : 'text-system-secondary-label'}`}
+              >
+                Merge
+              </button>
+            </div>
+
+            {settings.chunking.mode === 'heartbeat' ? (
+              <p className="text-[10px] text-system-secondary-label leading-relaxed px-1">
+                Maintains reliable background playback on iOS. Pure Heartbeat is silent; it supports main audio.
+              </p>
+            ) : (
+              <div className="space-y-3 px-1">
+                <p className="text-[10px] text-system-secondary-label leading-relaxed">
+                  Merges playlist tracks into chunks for seamless transitions.
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-system-secondary-label uppercase">Chunk Size</span>
+                  <select
+                    value={settings.chunking.sizeMinutes}
+                    onChange={(e) => updateSettings({ chunking: { ...settings.chunking, sizeMinutes: parseInt(e.target.value) } })}
+                    className="bg-system-background border border-apple-border rounded-lg text-[10px] font-black px-2 py-1 outline-none"
+                  >
+                    {[5, 10, 15, 20].map(mins => (
+                      <option key={mins} value={mins}>{mins} Min</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
         </Section>
 
         {/* Playback Timing */}
@@ -89,6 +124,20 @@ export const PlaybackControl = ({ isExpanded = false, onToggle = () => {} }: Pla
                    <Shuffle size={16} />
                    <span className="text-[9px] font-black uppercase">Shuffle</span>
                  </button>
+              </div>
+              <div className="flex bg-secondary-system-background rounded-2xl p-1 border border-apple-border mt-1">
+                <button 
+                  onClick={() => updateSettings({ playbackMode: 'once' })}
+                  className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${settings.playbackMode === 'once' ? 'bg-system-background text-indigo-600 shadow-sm' : 'text-system-secondary-label'}`}
+                >
+                  Play Once
+                </button>
+                <button 
+                  onClick={() => updateSettings({ playbackMode: 'loop' })}
+                  className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${settings.playbackMode === 'loop' ? 'bg-system-background text-indigo-600 shadow-sm' : 'text-system-secondary-label'}`}
+                >
+                  Loop Playlist
+                </button>
               </div>
             </div>
 

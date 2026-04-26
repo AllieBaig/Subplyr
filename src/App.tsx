@@ -15,6 +15,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { WifiOff, AlertCircle, RefreshCcw, ArrowLeft } from 'lucide-react';
 import { GlobalSafetyManager, LoadingPlaceholder } from './components/Safety';
 import { AnimationStyle } from './types';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 function AppContent() {
   const { activeTab, setActiveTab, isLoading, initError, toast, swStatus, showToast, isOffline, activeTabRequest, clearTabRequest } = useUIState();
@@ -58,7 +64,9 @@ function AppContent() {
     <div 
       className={`fixed inset-0 bg-system-background overflow-hidden flex flex-col pt-safe select-none h-[100dvh] transition-[padding,background] duration-500 ease-in-out ${settings.miniMode ? 'p-1' : ''} ${settings.bigTouchMode ? 'big-touch-mode' : ''}`}
     >
-      <div className="flex-1 w-full max-w-[1400px] mx-auto flex flex-col overflow-hidden relative">
+      <div className={cn("flex-1 w-full max-w-[1400px] mx-auto flex flex-col overflow-hidden relative", 
+        settings.menuPosition === 'top' ? 'pt-24' : 'pb-32'
+      )}>
         <AudioEngine />
         <OfflineIndicator />
         
@@ -104,7 +112,7 @@ function AppContent() {
               {/* Main Tab Views */}
               <div className="h-full relative overflow-hidden">
                 {/* Library View */}
-                <div className={`absolute inset-0 z-10 overflow-y-auto no-scrollbar pt-6 pb-48 transition-all duration-300 ${activeTab === 'library' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <div className={`absolute inset-0 z-10 overflow-y-auto no-scrollbar pt-6 pb-12 transition-all duration-300 ${activeTab === 'library' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                   <LibraryView />
                 </div>
 
@@ -120,7 +128,7 @@ function AppContent() {
                       key="player"
                       {...animationProps}
                       transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                      className={`fixed inset-0 z-[100] bg-system-background overflow-hidden shadow-2xl pb-24`}
+                      className={`fixed inset-0 z-[100] bg-system-background overflow-hidden shadow-2xl pb-32`}
                     >
                       <PlayerView onBack={() => setActiveTab('library')} />
                     </motion.div>
@@ -134,9 +142,9 @@ function AppContent() {
                       key="settings"
                       {...animationProps}
                       transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                      className={`fixed inset-0 z-[110] bg-system-background overflow-y-auto no-scrollbar pb-24`}
+                      className={`fixed inset-0 z-[110] bg-system-background overflow-y-auto no-scrollbar pb-32`}
                     >
-                      <div className="w-full px-6 py-10 min-h-full">
+                      <div className="w-full px-6 py-10 min-h-full pb-32">
                         <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-10">
                           {settings.backButtonPosition === 'top' ? (
                             <button 
@@ -146,22 +154,12 @@ function AppContent() {
                               <ArrowLeft size={20} />
                             </button>
                           ) : (
-                            <div className="w-12" />
+                            <div className="w-12 h-12" />
                           )}
                           <h2 className="text-xl font-black tracking-tight text-system-label">Settings</h2>
-                          <div className="w-12" />
+                          <div className="w-12 h-12" />
                         </div>
                          <SettingsView onBack={() => setActiveTab('library')} />
-                         {settings.backButtonPosition === 'bottom' && (
-                           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200]">
-                             <button 
-                               onClick={() => setActiveTab('library')}
-                               className="w-16 h-16 bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-all text-system-label shadow-xl backdrop-blur-xl"
-                             >
-                               <ArrowLeft size={24} />
-                             </button>
-                           </div>
-                         )}
                       </div>
                     </motion.div>
                   )}
@@ -171,7 +169,9 @@ function AppContent() {
               {/* Mini Player - Always above TabBar. Show when full player is NOT active */}
               <AnimatePresence>
                 {activeTab !== 'player' && (
-                  <div className={`fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[90] transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 bottom-28`}>
+                  <div className={`fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[90] transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 ${
+                    settings.menuPosition === 'bottom' ? 'bottom-28' : 'bottom-10'
+                  }`}>
                     <MiniPlayer onExpand={() => setActiveTab('player')} />
                   </div>
                 )}
@@ -181,7 +181,10 @@ function AppContent() {
         </main>
         
         {!isLoading && !initError && (
-          <div className="fixed bottom-0 left-0 right-0 h-24 bg-system-background/80 backdrop-blur-2xl border-t border-apple-border/5 px-4 pb-6 z-[150] flex items-center justify-center">
+          <div className={cn(
+            "fixed left-0 right-0 h-24 bg-system-background/80 backdrop-blur-2xl px-4 flex items-center justify-center z-[150]",
+            settings.menuPosition === 'top' ? 'top-0 border-b border-apple-border/5 pt-6' : 'bottom-0 border-t border-apple-border/5 pb-6'
+          )}>
             <div className="w-full max-w-md">
               <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
