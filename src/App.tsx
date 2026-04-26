@@ -137,17 +137,31 @@ function AppContent() {
                       className={`fixed inset-0 z-[110] bg-system-background overflow-y-auto no-scrollbar pb-24`}
                     >
                       <div className="w-full px-6 py-10 min-h-full">
-                         <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-10">
-                           <button 
-                             onClick={() => setActiveTab('library')}
-                             className={`w-12 h-12 bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-transform text-system-label`}
-                           >
-                             <ArrowLeft size={20} />
-                           </button>
-                           <h2 className="text-xl font-black tracking-tight text-system-label">Settings</h2>
-                           <div className="w-12" />
-                         </div>
+                        <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-10">
+                          {settings.backButtonPosition === 'top' ? (
+                            <button 
+                              onClick={() => setActiveTab('library')}
+                              className={`w-12 h-12 bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-transform text-system-label`}
+                            >
+                              <ArrowLeft size={20} />
+                            </button>
+                          ) : (
+                            <div className="w-12" />
+                          )}
+                          <h2 className="text-xl font-black tracking-tight text-system-label">Settings</h2>
+                          <div className="w-12" />
+                        </div>
                          <SettingsView onBack={() => setActiveTab('library')} />
+                         {settings.backButtonPosition === 'bottom' && (
+                           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200]">
+                             <button 
+                               onClick={() => setActiveTab('library')}
+                               className="w-16 h-16 bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-all text-system-label shadow-xl backdrop-blur-xl"
+                             >
+                               <ArrowLeft size={24} />
+                             </button>
+                           </div>
+                         )}
                       </div>
                     </motion.div>
                   )}

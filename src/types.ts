@@ -165,6 +165,7 @@ export interface AppSettings {
   subliminalExpanded: boolean;
   showArtwork: boolean;
   alwaysHideArtworkByDefault: boolean;
+  backButtonPosition: 'top' | 'bottom';
   displayAlwaysOn: boolean;
   playbackMode: 'once' | 'loop';
   chunking: {

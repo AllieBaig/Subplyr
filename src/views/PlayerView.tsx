@@ -8,17 +8,18 @@ import { AnimationStyle } from '../types';
 import { 
   Play, Pause, SkipBack, SkipForward, 
   Volume2, Activity, Wind, CloudRain, 
-  Sliders, ChevronDown, Check, X, 
-  Moon, Zap, Focus as FocusIcon, List, Plus,
-  Shuffle, Repeat, Repeat1, MoreHorizontal,
-  ChevronLeft, ChevronRight, Music as MusicIcon, Flame, Droplets, Waves, Trees,
-  Timer, Monitor, Ear
+  ChevronDown, Check, X, 
+  Moon, Sliders, ChevronRight,
+  Zap, Repeat, Repeat1, Shuffle, Monitor,
+  MoreHorizontal, Ear, Focus as FocusIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { ArtworkImage } from '../components/ArtworkImage';
 
 import { PickerWheel } from '../components/PickerWheel';
+
+import { AudioLayerLibrary } from '../components/AudioLayerLibrary';
 
 interface PlayerViewProps {
   onBack?: () => void;
@@ -91,298 +92,6 @@ const PresetButton = ({ icon: Icon, label, color, onClick }: any) => (
   </button>
 );
 
-const LayerProgress = ({ layerId }: { layerId: string }) => {
-  const { layerProgress } = usePlayback();
-  const progress = layerProgress[layerId];
-  
-  if (!progress || progress.duration === 0) return null;
-  
-  const percentage = (progress.currentTime / progress.duration) * 100;
-  
-  return (
-    <div className="w-full h-1 bg-apple-border/30 rounded-full overflow-hidden mt-4">
-      <motion.div 
-        className="h-full bg-apple-blue"
-        initial={{ width: 0 }}
-        animate={{ width: `${percentage}%` }}
-        transition={{ duration: 0.1, ease: "linear" }}
-      />
-    </div>
-  );
-};
-
-const LayerAccordion = ({ 
-  id, icon: Icon, label, isEnabled, onToggle, vol, setVol, 
-  gainDb, setGainDb, normalize, setNormalize, 
-  playInBackground, setPlayInBackground,
-  color, subtitle, children, onApplyPreset 
-}: any) => {
-  const [isToolsExpanded, setIsToolsExpanded] = useState(false);
-
-  return (
-    <div className="bg-secondary-system-background border border-apple-border rounded-[2rem] overflow-hidden transition-all shadow-sm">
-      <div className="p-5 flex items-center justify-between">
-        {/* ... (existing top section) */}
-        <div className="flex items-center gap-4 min-w-0">
-          <div className={`w-10 h-10 ${isEnabled ? 'bg-system-background shadow-sm' : 'bg-system-background/50'} rounded-2xl flex-shrink-0 flex items-center justify-center ${isEnabled ? color : 'text-system-tertiary-label'} transition-all`}>
-            <Icon size={20} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h5 className="text-sm font-black tracking-tight truncate text-system-label">{label}</h5>
-            {subtitle && <p className="text-[9px] text-system-secondary-label uppercase font-black tracking-widest truncate">{subtitle}</p>}
-          </div>
-        </div>
-        <button 
-          onClick={() => onToggle(!isEnabled)}
-          className={`flex-shrink-0 w-10 h-6 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
-        >
-          <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: isEnabled ? 16 : 0 }} />
-        </button>
-      </div>
-
-      {/* Progress Bar for Active Layer */}
-      {isEnabled && <div className="px-5 pb-2"><LayerProgress layerId={id} /></div>}
-      
-      <AnimatePresence>
-        {isEnabled && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="px-5 pb-6 space-y-6"
-          >
-            {/* Background Play Support */}
-            <div className="flex items-center justify-between p-4 bg-system-background rounded-2xl border border-apple-border shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-apple-blue/5 text-apple-blue rounded-xl flex items-center justify-center">
-                  <Activity size={16} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Play in Background</span>
-                  <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Enhanced iOS Support</span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setPlayInBackground(!playInBackground)}
-                className={`w-10 h-6 rounded-full relative transition-colors ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-              >
-                <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: playInBackground ? 16 : 0 }} />
-              </button>
-            </div>
-
-            {/* Volume Section */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center px-1">
-                <span className="text-[10px] font-black text-system-tertiary-label uppercase tracking-widest">Volume (%)</span>
-                <input 
-                  type="number"
-                  value={Math.round(vol * 100)}
-                  onChange={(e) => setVol(Math.min(1, Math.max(0, (parseInt(e.target.value) || 0) / 100)))}
-                  className="w-12 h-6 bg-system-background border border-apple-border rounded-md text-[10px] font-black text-center focus:outline-none tabular-nums"
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                <input 
-                  type="range" min={0} max={1} step={0.01} value={vol}
-                  onChange={(e) => setVol(parseFloat(e.target.value))}
-                  className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-system-label"
-                />
-              </div>
-            </div>
-
-            {/* Gain Section */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center px-1">
-                <span className="text-[10px] font-black text-system-tertiary-label uppercase tracking-widest">Gain (dB)</span>
-                <input 
-                  type="number"
-                  value={gainDb}
-                  onChange={(e) => setGainDb(Math.min(0, Math.max(-60, parseInt(e.target.value) || 0)))}
-                  className="w-12 h-6 bg-system-background border border-apple-border rounded-md text-[10px] font-black text-center focus:outline-none tabular-nums"
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                <input 
-                  type="range" min={-60} max={0} step={1} value={gainDb}
-                  onChange={(e) => setGainDb(parseInt(e.target.value))}
-                  className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-apple-blue"
-                />
-              </div>
-            </div>
-
-            {/* Layer Specific Children (e.g. Hz inputs) */}
-            {children && (
-              <div className="pt-2 border-t border-apple-border/50">
-                {children}
-              </div>
-            )}
-
-            {/* Audio Tools Nested Section */}
-            <div className="pt-2 border-t border-apple-border/50">
-              <button 
-                onClick={() => setIsToolsExpanded(!isToolsExpanded)}
-                className="w-full flex items-center justify-between py-2 group"
-              >
-                <div className="flex items-center gap-3">
-                   <div className="w-6 h-6 bg-apple-blue/10 text-apple-blue rounded-lg flex items-center justify-center">
-                      <Sliders size={12} />
-                   </div>
-                   <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Audio Tools</span>
-                </div>
-                <ChevronRight size={14} className={`text-system-tertiary-label transition-transform ${isToolsExpanded ? 'rotate-90 text-apple-blue' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {isToolsExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden space-y-4 pt-4"
-                  >
-                     <div className="flex items-center justify-between p-3 bg-system-background rounded-xl border border-apple-border">
-                        <div className="flex flex-col">
-                           <span className="text-[9px] font-black text-system-label uppercase">Normalization</span>
-                           <span className="text-[8px] font-bold text-system-secondary-label uppercase">{normalize ? 'Enabled' : 'Disabled'}</span>
-                        </div>
-                        <button 
-                          onClick={() => setNormalize(!normalize)}
-                          className={`w-8 h-5 rounded-full relative transition-colors ${normalize ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-                        >
-                          <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: normalize ? 12 : 0 }} />
-                        </button>
-                     </div>
-
-                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => onApplyPreset('soft')} className="py-2.5 bg-system-background border border-apple-border rounded-xl text-[9px] font-black uppercase text-system-secondary-label active:scale-95 transition-transform">Soft Safe</button>
-                        <button onClick={() => onApplyPreset('night')} className="py-2.5 bg-system-background border border-apple-border rounded-xl text-[9px] font-black uppercase text-system-secondary-label active:scale-95 transition-transform">Night</button>
-                        <button onClick={() => onApplyPreset('focus')} className="py-2.5 bg-system-background border border-apple-border rounded-xl text-[9px] font-black uppercase text-system-secondary-label active:scale-95 transition-transform col-span-2">Focus Preset</button>
-                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-const HzSelector = ({ value, onChange, color }: { value: number, onChange: (v: number) => void, color: string }) => {
-  const { settings, updateSettings } = useSettings();
-  const inputMode = settings.hzInputMode || 'slider';
-  
-  const colorClass = color === 'rose' ? 'text-rose-600' : 
-                     color === 'purple' ? 'text-purple-600' :
-                     color === 'amber' ? 'text-amber-600' :
-                     color === 'indigo' ? 'text-indigo-600' :
-                     'text-apple-blue';
-
-  const bgActiveColorClass = color === 'rose' ? 'bg-rose-500' : 
-                             color === 'purple' ? 'bg-purple-500' :
-                             color === 'amber' ? 'bg-amber-500' :
-                             color === 'indigo' ? 'bg-indigo-500' :
-                             'bg-apple-blue';
-
-  const renderManual = () => (
-    <div className="flex items-center gap-3 justify-center">
-      <div className="relative group">
-        <input 
-          type="number"
-          value={value}
-          onChange={(e) => onChange(Math.min(1900, Math.max(0.1, parseFloat(e.target.value) || 0)))}
-          className="w-32 h-14 bg-system-background border-2 border-apple-border rounded-3xl text-xl font-black text-center focus:border-apple-blue focus:outline-none transition-all tabular-nums shadow-sm"
-          placeholder="0.0"
-        />
-        <div className="absolute -top-2 left-4 bg-system-background px-2">
-          <span className="text-[8px] font-black text-system-tertiary-label uppercase tracking-widest">Frequency</span>
-        </div>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-           <span className="text-[10px] font-black text-system-tertiary-label">Hz</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderSlider = () => (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center px-1">
-         <span className={`text-xl font-black tabular-nums ${colorClass}`}>{value} Hz</span>
-         <div className="flex bg-secondary-system-background rounded-full p-0.5 border border-apple-border">
-            <button onClick={() => onChange(Math.max(0.1, value - 1))} className="w-8 h-6 flex items-center justify-center text-system-label hover:bg-system-background rounded-full transition-colors">-</button>
-            <div className="w-px h-3 bg-apple-border my-auto" />
-            <button onClick={() => onChange(Math.min(1900, value + 1))} className="w-8 h-6 flex items-center justify-center text-system-label hover:bg-system-background rounded-full transition-colors">+</button>
-         </div>
-      </div>
-      <input 
-        type="range" min={20} max={1900} step={1} value={value}
-        onChange={(e) => onChange(parseInt(e.target.value))}
-        className={`w-full h-1 bg-apple-border rounded-full appearance-none ${bgActiveColorClass}`}
-      />
-    </div>
-  );
-
-  const renderPicker = () => {
-    const pickerItems = FREQUENCY_PRESETS.map(hz => ({
-      id: hz,
-      label: `${hz} Hz`
-    }));
-
-    // Find nearest preset if current value is not in presets
-    const currentVal = value;
-    const isPreset = FREQUENCY_PRESETS.includes(currentVal);
-
-    return (
-      <div className="space-y-4">
-        {!isPreset && (
-          <div className="flex items-center justify-between px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-2">
-            <span className="text-[9px] font-bold text-amber-700 uppercase">Custom Hz Active</span>
-            <span className="text-[10px] font-black text-amber-700 tabular-nums">{currentVal}Hz</span>
-          </div>
-        )}
-        <PickerWheel 
-          items={pickerItems}
-          selectedValue={isPreset ? currentVal : -1} // -1 will show nothing selected if not a preset
-          onValueChange={(hz) => onChange(hz)}
-          height={160}
-          itemHeight={40}
-        />
-        <div className="flex justify-center">
-           <button 
-            onClick={() => updateSettings({ hzInputMode: 'manual' })}
-            className="text-[9px] font-black text-apple-blue uppercase tracking-widest hover:underline"
-           >
-             Set Custom Frequency
-           </button>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex bg-secondary-system-background p-1 rounded-2xl h-10 border border-apple-border">
-        {(['picker', 'slider', 'manual'] as const).map(mode => (
-          <button
-            key={mode}
-            onClick={() => updateSettings({ hzInputMode: mode })}
-            className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${inputMode === mode ? 'bg-system-background text-apple-blue shadow-sm' : 'text-system-secondary-label hover:text-system-label'}`}
-          >
-            {mode}
-          </button>
-        ))}
-      </div>
-
-      <div className="pt-2">
-        {inputMode === 'picker' && renderPicker()}
-        {inputMode === 'slider' && renderSlider()}
-        {inputMode === 'manual' && renderManual()}
-      </div>
-    </div>
-  );
-};
-
 export default function PlayerView({ onBack }: PlayerViewProps) {
   const { 
     tracks, 
@@ -404,7 +113,16 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     addTrack
   } = useAudio();
 
-  const { settings, updateSettings, updateSubliminalSettings, updateBinauralSettings, updateNatureSettings, updateNoiseSettings, updateDidgeridooSettings, updatePureHzSettings, updateIsochronicSettings, updateSolfeggioSettings, updateAudioTools, updateSleepTimer } = useSettings();
+  const { 
+    settings, 
+    updateSettings,
+    updateSubliminalSettings,
+    updateBinauralSettings,
+    updateNatureSettings,
+    updateNoiseSettings,
+    updateSleepTimer,
+    updateAudioTools
+  } = useSettings();
   const { showToast } = useUIState();
 
   const { currentTime, duration, progress } = usePlayback();
@@ -501,33 +219,6 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
   const animationProps = useMemo(() => getAnimationProps(settings.animationStyle), [settings.animationStyle]);
   const panelAnimationProps = useMemo(() => getPanelAnimationProps(), [settings.hiddenLayersPosition, settings.animationStyle]);
 
-  // Initial Artwork Visibility Logic
-  React.useEffect(() => {
-    if (settings.alwaysHideArtworkByDefault && settings.showArtwork) {
-      updateSettings({ showArtwork: false });
-    }
-  }, []);
-
-  const applyLayerPreset = (layer: string, preset: 'soft' | 'night' | 'focus') => {
-    const configs = {
-      soft: { volume: 0.1, gainDb: -12, normalize: true },
-      night: { volume: 0.05, gainDb: -24, normalize: true },
-      focus: { volume: 0.15, gainDb: -6, normalize: false }
-    };
-    const config = configs[preset as keyof typeof configs];
-    
-    switch(layer) {
-      case 'subliminal': updateSubliminalSettings(config); break;
-      case 'binaural': updateBinauralSettings(config); break;
-      case 'nature': updateNatureSettings(config); break;
-      case 'noise': updateNoiseSettings(config); break;
-      case 'didgeridoo': updateDidgeridooSettings(config); break;
-      case 'pureHz': updatePureHzSettings(config); break;
-      case 'isochronic': updateIsochronicSettings(config); break;
-      case 'solfeggio': updateSolfeggioSettings(config); break;
-    }
-  };
-
   const hasAnyLayerEnabled = useMemo(() => {
     return settings.subliminal.isEnabled || 
            settings.binaural.isEnabled || 
@@ -545,12 +236,16 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
     <div className={`h-full flex flex-col items-center justify-between select-none relative w-full max-w-2xl mx-auto bg-system-background overflow-hidden ${settings.bigTouchMode ? 'pb-16' : 'pb-12'}`}>
       {/* Top Bar */}
       <header className={`w-full flex items-center justify-between ${settings.bigTouchMode ? 'px-8 h-24' : 'px-6 h-20'} flex-shrink-0`}>
-        <button 
-          onClick={onBack}
-          className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -ml-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}
-        >
-          <ChevronDown size={settings.bigTouchMode ? 32 : 28} />
-        </button>
+        {settings.backButtonPosition === 'top' ? (
+          <button 
+            onClick={onBack}
+            className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -ml-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}
+          >
+            <ChevronDown size={settings.bigTouchMode ? 32 : 28} />
+          </button>
+        ) : (
+          <div className="w-10" />
+        )}
         <div className="flex flex-col items-center">
           <h1 className={`font-bold uppercase tracking-[0.25em] text-system-secondary-label ${settings.bigTouchMode ? 'text-xs' : 'text-[10px]'}`}>
             {currentPlaylist ? currentPlaylist.name : 'Now Playing'}
@@ -563,6 +258,18 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
           <MoreHorizontal size={settings.bigTouchMode ? 28 : 24} />
         </button>
       </header>
+
+      {/* Bottom Back Button */}
+      {settings.backButtonPosition === 'bottom' && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[1001]">
+          <button 
+            onClick={onBack}
+            className={`${settings.bigTouchMode ? 'w-20 h-20 shadow-xl' : 'w-16 h-16 shadow-lg'} bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-all text-system-label`}
+          >
+            <ChevronDown size={settings.bigTouchMode ? 40 : 32} />
+          </button>
+        </div>
+      )}
 
       {/* Main Art & Info */}
       <div className={`flex-1 flex flex-col items-center justify-center w-full px-8 ${settings.bigTouchMode ? 'gap-12' : 'gap-10'} ${!settings.showArtwork ? 'py-4' : ''}`}>
@@ -716,332 +423,15 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                     <ChevronRight size={18} className={`text-system-tertiary-label transition-transform duration-300 ${expandedGroup === 'layers' ? 'rotate-90 text-apple-blue' : ''}`} />
                   </button>
 
-                  <AnimatePresence>
-                    {expandedGroup === 'layers' && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden space-y-3 pt-1"
-                      >
-                        <LayerAccordion 
-                          id="subliminal"
-                          icon={Volume2} 
-                          label="Subliminal Audio" 
-                          isEnabled={settings.subliminal.isEnabled} 
-                          onToggle={(v: boolean) => updateSubliminalSettings({ isEnabled: v })}
-                          vol={settings.subliminal.volume}
-                          setVol={(v: number) => updateSubliminalSettings({ volume: v })}
-                          gainDb={settings.subliminal.gainDb}
-                          setGainDb={(v: number) => updateSubliminalSettings({ gainDb: v })}
-                          normalize={settings.subliminal.normalize}
-                          setNormalize={(v: boolean) => updateSubliminalSettings({ normalize: v })}
-                          playInBackground={settings.subliminal.playInBackground}
-                          setPlayInBackground={(v: boolean) => updateSubliminalSettings({ playInBackground: v })}
-                          color="text-apple-blue"
-                          subtitle={settings.subliminal.isPlaylistMode ? 'Playlist Mode' : 'Track Mode'}
-                          onApplyPreset={(p: any) => applyLayerPreset('subliminal', p)}
+                    <AnimatePresence>
+                      {expandedGroup === 'layers' && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden space-y-3 pt-1 px-1"
                         >
-                          <div className="flex flex-col gap-6">
-                            <div className="bg-secondary-system-background p-1 rounded-xl flex items-center h-8">
-                              <button 
-                                onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
-                                className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                              >
-                                Track
-                              </button>
-                              <button 
-                                onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
-                                className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
-                              >
-                                Playlist
-                              </button>
-                            </div>
-
-                            {!settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId && (
-                              <div className="flex flex-col gap-3">
-                                {(() => {
-                                  const sourcePlaylist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
-                                  if (!sourcePlaylist || sourcePlaylist.trackIds.length === 0) return null;
-
-                                  const pickerItems = sourcePlaylist.trackIds.map(tid => ({
-                                    id: tid,
-                                    label: tracks.find(mt => mt.id === tid)?.name || 'Unknown Track'
-                                  }));
-
-                                  return (
-                                    <PickerWheel 
-                                      items={pickerItems}
-                                      selectedValue={settings.subliminal.selectedTrackId}
-                                      onValueChange={(id) => updateSubliminalSettings({ selectedTrackId: id })}
-                                      height={140}
-                                      itemHeight={36}
-                                    />
-                                  );
-                                })()}
-                              </div>
-                            )}
-                          </div>
-                        </LayerAccordion>
-
-                        <LayerAccordion 
-                          id="binaural"
-                          icon={Activity} 
-                          label="Binaural Beats" 
-                          isEnabled={settings.binaural.isEnabled} 
-                          onToggle={(v: boolean) => updateBinauralSettings({ isEnabled: v })}
-                          vol={settings.binaural.volume}
-                          setVol={(v: number) => updateBinauralSettings({ volume: v })}
-                          gainDb={settings.binaural.gainDb}
-                          setGainDb={(v: number) => updateBinauralSettings({ gainDb: v })}
-                          normalize={settings.binaural.normalize}
-                          setNormalize={(v: boolean) => updateBinauralSettings({ normalize: v })}
-                          playInBackground={settings.binaural.playInBackground}
-                          setPlayInBackground={(v: boolean) => updateBinauralSettings({ playInBackground: v })}
-                          color="text-purple-500"
-                          subtitle={`${settings.binaural.leftFreq}Hz / ${settings.binaural.rightFreq}Hz`}
-                          onApplyPreset={(p: any) => applyLayerPreset('binaural', p)}
-                        >
-                          <div className="flex flex-col gap-6">
-                             <div className="space-y-4">
-                                <div className="space-y-2">
-                                   <div className="flex justify-between items-center px-1">
-                                      <span className="text-[9px] font-black text-system-tertiary-label uppercase">Left Channel (Hz)</span>
-                                   </div>
-                                   <HzSelector 
-                                     value={settings.binaural.leftFreq} 
-                                     onChange={(v) => updateBinauralSettings({ leftFreq: v })} 
-                                     color="purple"
-                                   />
-                                </div>
-                                <div className="space-y-2">
-                                   <div className="flex justify-between items-center px-1">
-                                      <span className="text-[9px] font-black text-system-tertiary-label uppercase">Right Channel (Hz)</span>
-                                   </div>
-                                   <HzSelector 
-                                     value={settings.binaural.rightFreq} 
-                                     onChange={(v) => updateBinauralSettings({ rightFreq: v })} 
-                                     color="purple"
-                                   />
-                                </div>
-                             </div>
-                             <div className="grid grid-cols-3 gap-2">
-                               {[
-                                 { label: 'Theta', l: 200, r: 204 },
-                                 { label: 'Alpha', l: 200, r: 210 },
-                                 { label: 'Gamma', l: 200, r: 240 }
-                               ].map(p => (
-                                 <button 
-                                   key={p.label}
-                                   onClick={() => updateBinauralSettings({ leftFreq: p.l, rightFreq: p.r })}
-                                   className="py-2.5 rounded-xl text-[9px] font-bold uppercase bg-system-background border border-apple-border text-purple-600 active:scale-95 transition-transform shadow-sm"
-                                 >
-                                   {p.label}
-                                 </button>
-                               ))}
-                             </div>
-                          </div>
-                        </LayerAccordion>
-
-                        <LayerAccordion 
-                          id="nature"
-                          icon={CloudRain} 
-                          label="Nature Ambience" 
-                          isEnabled={settings.nature.isEnabled} 
-                          onToggle={(v: boolean) => updateNatureSettings({ isEnabled: v })}
-                          vol={settings.nature.volume}
-                          setVol={(v: number) => updateNatureSettings({ volume: v })}
-                          gainDb={settings.nature.gainDb}
-                          setGainDb={(v: number) => updateNatureSettings({ gainDb: v })}
-                          normalize={settings.nature.normalize}
-                          setNormalize={(v: boolean) => updateNatureSettings({ normalize: v })}
-                          playInBackground={settings.nature.playInBackground}
-                          setPlayInBackground={(v: boolean) => updateNatureSettings({ playInBackground: v })}
-                          color="text-green-500"
-                          subtitle={settings.nature.type}
-                          onApplyPreset={(p: any) => applyLayerPreset('nature', p)}
-                        >
-                          <div className="grid grid-cols-3 gap-2">
-                            {NATURE_SOUNDS.map(sound => (
-                              <button 
-                                key={sound.id}
-                                onClick={() => updateNatureSettings({ type: sound.id as any })}
-                                className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
-                              >
-                                {sound.name}
-                              </button>
-                            ))}
-                          </div>
-                        </LayerAccordion>
-
-                        <LayerAccordion 
-                          id="noise"
-                          icon={Wind} 
-                          label="Noise Colors" 
-                          isEnabled={settings.noise.isEnabled} 
-                          onToggle={(v: boolean) => updateNoiseSettings({ isEnabled: v })}
-                          vol={settings.noise.volume}
-                          setVol={(v: number) => updateNoiseSettings({ volume: v })}
-                          gainDb={settings.noise.gainDb}
-                          setGainDb={(v: number) => updateNoiseSettings({ gainDb: v })}
-                          normalize={settings.noise.normalize}
-                          setNormalize={(v: boolean) => updateNoiseSettings({ normalize: v })}
-                          playInBackground={settings.noise.playInBackground}
-                          setPlayInBackground={(v: boolean) => updateNoiseSettings({ playInBackground: v })}
-                          color="text-orange-500"
-                          subtitle={`${settings.noise.type} noise`}
-                          onApplyPreset={(p: any) => applyLayerPreset('noise', p)}
-                        >
-                          <div className="grid grid-cols-3 gap-2">
-                              {['white', 'pink', 'brown'].map(type => (
-                                <button 
-                                  key={type}
-                                  onClick={() => updateNoiseSettings({ type: type as any })}
-                                  className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
-                                >
-                                  {type}
-                                </button>
-                              ))}
-                            </div>
-                        </LayerAccordion>
-
-                        <LayerAccordion 
-                          id="didgeridoo"
-                          icon={MusicIcon} 
-                          label="Didgeridoo" 
-                          isEnabled={settings.didgeridoo.isEnabled} 
-                          onToggle={(v: boolean) => updateDidgeridooSettings({ isEnabled: v })}
-                          vol={settings.didgeridoo.volume}
-                          setVol={(v: number) => updateDidgeridooSettings({ volume: v })}
-                          gainDb={settings.didgeridoo.gainDb}
-                          setGainDb={(v: number) => updateDidgeridooSettings({ gainDb: v })}
-                          normalize={settings.didgeridoo.normalize}
-                          setNormalize={(v: boolean) => updateDidgeridooSettings({ normalize: v })}
-                          playInBackground={settings.didgeridoo.playInBackground}
-                          setPlayInBackground={(v: boolean) => updateDidgeridooSettings({ playInBackground: v })}
-                          color="text-amber-800"
-                          subtitle={`${Math.round(settings.didgeridoo.frequency)}Hz Drone`}
-                          onApplyPreset={(p: any) => applyLayerPreset('didgeridoo', p)}
-                        >
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                               <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Target Frequency (Hz)</p>
-                               <HzSelector 
-                                 value={settings.didgeridoo.frequency} 
-                                 onChange={(v) => updateDidgeridooSettings({ 
-                                   frequency: v,
-                                   playbackRate: v / 65 // Keep playbackRate in sync for the engine if it relies on rate
-                                 })} 
-                                 color="amber"
-                               />
-                            </div>
-                            
-                            <div className="pt-2 border-t border-apple-border/50 space-y-3">
-                              <div className="flex justify-between items-center px-1">
-                                <p className="text-[9px] font-bold text-system-tertiary-label uppercase tracking-widest">Resonance Depth</p>
-                                <span className="text-[10px] font-black text-amber-800 tabular-nums">{Math.round(settings.didgeridoo.depth * 100)}%</span>
-                              </div>
-                              <input 
-                                type="range" min={0} max={1} step={0.01} 
-                                value={settings.didgeridoo.depth} 
-                                onChange={(e) => updateDidgeridooSettings({ depth: parseFloat(e.target.value) })}
-                                className="w-full h-1 bg-apple-border rounded-full appearance-none accent-amber-800"
-                              />
-                            </div>
-                          </div>
-                        </LayerAccordion>
-
-                        <LayerAccordion 
-                          id="pureHz"
-                          icon={Activity} 
-                          label="Pure Hz" 
-                          isEnabled={settings.pureHz.isEnabled} 
-                          onToggle={(v: boolean) => updatePureHzSettings({ isEnabled: v })}
-                          vol={settings.pureHz.volume}
-                          setVol={(v: number) => updatePureHzSettings({ volume: v })}
-                          gainDb={settings.pureHz.gainDb}
-                          setGainDb={(v: number) => updatePureHzSettings({ gainDb: v })}
-                          normalize={settings.pureHz.normalize}
-                          setNormalize={(v: boolean) => updatePureHzSettings({ normalize: v })}
-                          playInBackground={settings.pureHz.playInBackground}
-                          setPlayInBackground={(v: boolean) => updatePureHzSettings({ playInBackground: v })}
-                          color="text-rose-600"
-                          subtitle={`${settings.pureHz.frequency}Hz`}
-                          onApplyPreset={(p: any) => applyLayerPreset('pureHz', p)}
-                        >
-                          <HzSelector 
-                            value={settings.pureHz.frequency} 
-                            onChange={(v) => updatePureHzSettings({ frequency: v })} 
-                            color="rose"
-                          />
-                        </LayerAccordion>
-
-                        <LayerAccordion 
-                          id="isochronic"
-                          icon={Zap} 
-                          label="Isochronic Tones" 
-                          isEnabled={settings.isochronic.isEnabled} 
-                          onToggle={(v: boolean) => updateIsochronicSettings({ isEnabled: v })}
-                          vol={settings.isochronic.volume}
-                          setVol={(v: number) => updateIsochronicSettings({ volume: v })}
-                          gainDb={settings.isochronic.gainDb}
-                          setGainDb={(v: number) => updateIsochronicSettings({ gainDb: v })}
-                          normalize={settings.isochronic.normalize}
-                          setNormalize={(v: boolean) => updateIsochronicSettings({ normalize: v })}
-                          playInBackground={settings.isochronic.playInBackground}
-                          setPlayInBackground={(v: boolean) => updateIsochronicSettings({ playInBackground: v })}
-                          color="text-amber-500"
-                          subtitle={`${settings.isochronic.frequency}Hz @ ${settings.isochronic.pulseRate}Hz`}
-                          onApplyPreset={(p: any) => applyLayerPreset('isochronic', p)}
-                        >
-                          <div className="space-y-4">
-                             <div className="space-y-2">
-                               <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Carrier Frequency (Hz)</p>
-                               <HzSelector 
-                                 value={settings.isochronic.frequency} 
-                                 onChange={(v) => updateIsochronicSettings({ frequency: v })} 
-                                 color="amber"
-                               />
-                             </div>
-                             <div className="space-y-2">
-                               <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Pulse Rate (Hz)</p>
-                               <div className="flex items-center gap-3">
-                                 <input 
-                                   type="range" min={0.5} max={20} step={0.1} 
-                                   value={settings.isochronic.pulseRate} 
-                                   onChange={(e) => updateIsochronicSettings({ pulseRate: parseFloat(e.target.value) })}
-                                   className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-amber-500"
-                                 />
-                                 <span className="text-[10px] font-mono font-black text-amber-600 w-10 text-right tabular-nums">{settings.isochronic.pulseRate}Hz</span>
-                               </div>
-                             </div>
-                          </div>
-                        </LayerAccordion>
-
-                        <LayerAccordion 
-                          id="solfeggio"
-                          icon={FocusIcon} 
-                          label="Solfeggio Frequencies" 
-                          isEnabled={settings.solfeggio.isEnabled} 
-                          onToggle={(v: boolean) => updateSolfeggioSettings({ isEnabled: v })}
-                          vol={settings.solfeggio.volume}
-                          setVol={(v: number) => updateSolfeggioSettings({ volume: v })}
-                          gainDb={settings.solfeggio.gainDb}
-                          setGainDb={(v: number) => updateSolfeggioSettings({ gainDb: v })}
-                          normalize={settings.solfeggio.normalize}
-                          setNormalize={(v: boolean) => updateSolfeggioSettings({ normalize: v })}
-                          playInBackground={settings.solfeggio.playInBackground}
-                          setPlayInBackground={(v: boolean) => updateSolfeggioSettings({ playInBackground: v })}
-                          color="text-indigo-600"
-                          subtitle={`${settings.solfeggio.frequency}Hz`}
-                          onApplyPreset={(p: any) => applyLayerPreset('solfeggio', p)}
-                        >
-                          <HzSelector 
-                            value={settings.solfeggio.frequency} 
-                            onChange={(v) => updateSolfeggioSettings({ frequency: v })} 
-                            color="indigo"
-                          />
-                        </LayerAccordion>
+                          <AudioLayerLibrary />
                       </motion.div>
                     )}
                   </AnimatePresence>
