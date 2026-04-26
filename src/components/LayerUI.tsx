@@ -45,36 +45,49 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
                             'accent-orange-600';
 
   const renderManual = () => (
-    <div className="flex flex-col gap-3">
-      <div className="relative">
+    <div className="flex flex-col items-center py-6">
+      <div className="bg-system-background border border-apple-border shadow-sm rounded-full px-8 py-4 flex flex-col items-center gap-1 min-w-[160px] relative">
         <input 
           type="number"
           value={value}
           onChange={(e) => onChange(Math.max(0.1, Math.min(1900, parseFloat(e.target.value) || 0.1)))}
-          className="w-full h-12 bg-secondary-system-background border border-apple-border rounded-2xl px-5 text-sm font-black tabular-nums focus:ring-1 focus:ring-apple-blue"
+          className="bg-transparent border-none p-0 text-3xl font-black text-center tabular-nums focus:ring-0 outline-none w-28 text-system-label"
         />
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-           <span className="text-[10px] font-black text-system-tertiary-label">Hz</span>
-        </div>
+        <span className="text-[10px] font-black text-system-tertiary-label uppercase tracking-[0.2em] -mt-1">Hertz (Hz)</span>
       </div>
     </div>
   );
 
   const renderSlider = () => (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center px-1">
-         <span className={`text-xl font-black tabular-nums ${colorClass}`}>{value} Hz</span>
-         <div className="flex bg-secondary-system-background rounded-full p-0.5 border border-apple-border">
-            <button onClick={() => onChange(Math.max(0.1, value - 1))} className="w-8 h-6 flex items-center justify-center text-system-label hover:bg-system-background rounded-full transition-colors">-</button>
-            <div className="w-px h-3 bg-apple-border my-auto" />
-            <button onClick={() => onChange(Math.min(1900, value + 1))} className="w-8 h-6 flex items-center justify-center text-system-label hover:bg-system-background rounded-full transition-colors">+</button>
+    <div className="space-y-6 pt-2">
+      <div className="flex justify-between items-center px-2">
+         <div className="flex flex-col">
+            <span className={`text-2xl font-black tabular-nums tracking-tight ${colorClass}`}>{value}</span>
+            <span className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Selected Frequency</span>
+         </div>
+         <div className="flex bg-system-background rounded-full p-1 border border-apple-border shadow-sm">
+            <button 
+              onClick={() => onChange(Math.max(0.1, value - 1))} 
+              className="w-10 h-8 flex items-center justify-center text-system-label hover:bg-secondary-system-background active:scale-90 rounded-full transition-all font-black text-lg"
+            >
+              -
+            </button>
+            <div className="w-px h-4 bg-apple-border my-auto opacity-50" />
+            <button 
+              onClick={() => onChange(Math.min(1900, value + 1))} 
+              className="w-10 h-8 flex items-center justify-center text-system-label hover:bg-secondary-system-background active:scale-90 rounded-full transition-all font-black text-lg"
+            >
+              +
+            </button>
          </div>
       </div>
-      <input 
-        type="range" min={20} max={1900} step={1} value={value}
-        onChange={(e) => onChange(parseInt(e.target.value))}
-        className={`w-full h-1 bg-apple-border rounded-full appearance-none ${bgActiveColorClass}`}
-      />
+      <div className="relative px-1">
+        <input 
+          type="range" min={20} max={1900} step={1} value={value}
+          onChange={(e) => onChange(parseInt(e.target.value))}
+          className={`w-full h-1.5 bg-apple-border/40 rounded-full appearance-none cursor-pointer ${bgActiveColorClass}`}
+        />
+      </div>
     </div>
   );
 
@@ -84,31 +97,35 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
       label: `${hz} Hz`
     }));
 
-    // Find nearest preset if current value is not in presets
     const currentVal = value;
     const isPreset = FREQUENCY_PRESETS.includes(currentVal);
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-6 pt-2">
         {!isPreset && (
-          <div className="flex items-center justify-between px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-2">
-            <span className="text-[9px] font-bold text-amber-700 uppercase">Custom Hz Active</span>
-            <span className="text-[10px] font-black text-amber-700 tabular-nums">{currentVal}Hz</span>
+          <div className="flex items-center justify-between px-4 py-2.5 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Custom Mode</span>
+              <span className="text-[11px] font-bold text-amber-700/80">Frequency is outside presets</span>
+            </div>
+            <span className="text-sm font-black text-amber-600 tabular-nums bg-amber-500/10 px-3 py-1 rounded-full">{currentVal}Hz</span>
           </div>
         )}
-        <PickerWheel 
-          items={pickerItems}
-          selectedValue={isPreset ? currentVal : -1}
-          onValueChange={(hz) => onChange(hz)}
-          height={160}
-          itemHeight={40}
-        />
+        <div className="bg-system-background border border-apple-border rounded-[2rem] overflow-hidden shadow-sm">
+          <PickerWheel 
+            items={pickerItems}
+            selectedValue={isPreset ? currentVal : -1}
+            onValueChange={(hz) => onChange(hz)}
+            height={160}
+            itemHeight={40}
+          />
+        </div>
         <div className="flex justify-center">
            <button 
             onClick={() => updateSettings({ hzInputMode: 'manual' })}
-            className="text-[9px] font-black text-apple-blue uppercase tracking-widest hover:underline"
+            className="px-6 py-2 bg-apple-blue/5 border border-apple-blue/10 rounded-full text-[9px] font-black text-apple-blue uppercase tracking-widest hover:bg-apple-blue/10 active:scale-95 transition-all"
            >
-             Set Custom Frequency
+             Set Manual Frequency
            </button>
         </div>
       </div>
@@ -117,12 +134,12 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
 
   return (
     <div className="space-y-4">
-      <div className="flex bg-secondary-system-background p-1 rounded-2xl h-10 border border-apple-border">
+      <div className="flex bg-secondary-system-background p-1.5 rounded-[1.25rem] h-11 border border-apple-border shadow-inner">
         {(['picker', 'slider', 'manual'] as const).map(mode => (
           <button
             key={mode}
             onClick={() => updateSettings({ hzInputMode: mode })}
-            className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${inputMode === mode ? 'bg-system-background text-apple-blue shadow-sm' : 'text-system-secondary-label hover:text-system-label'}`}
+            className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-200 ${inputMode === mode ? 'bg-system-background text-apple-blue shadow-md scale-[1.02]' : 'text-system-secondary-label hover:text-system-label'}`}
           >
             {mode}
           </button>
