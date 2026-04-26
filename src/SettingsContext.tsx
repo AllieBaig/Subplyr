@@ -126,8 +126,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   animationStyle: 'slide-up',
   hzInputMode: 'slider',
   subliminalExpanded: false,
-  showArtwork: true,
-  alwaysHideArtworkByDefault: false,
+  showArtwork: false,
+  alwaysHideArtworkByDefault: true,
   displayAlwaysOn: false,
   playbackMode: 'once',
   chunking: {

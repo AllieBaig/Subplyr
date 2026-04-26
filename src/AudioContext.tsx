@@ -42,6 +42,7 @@ interface AudioContextType {
   userPlayNext: () => void;
   userPlayPrevious: () => void;
   userPlayTrack: (index: number, playlistId?: string | null) => void;
+  moveTrackInPlaylist: (playlistId: string, fromIndex: number, toIndex: number) => Promise<void>;
   toggleShuffle: () => void;
   toggleLoop: () => void;
   isPlaying: boolean;
@@ -308,31 +309,41 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     if (!settings.subliminal.selectedTrackId) updateSubliminalSettings({ selectedTrackId: id });
   };
 
-  // Duration Migration
+  // Duration Migration & Verification
   useEffect(() => {
     if (!isLoading && tracks.length > 0) {
-      const tracksToFix = tracks.filter(t => !t.duration);
+      const tracksToFix = tracks.filter(t => !t.duration || t.duration === 0);
       if (tracksToFix.length > 0) {
         async function fixDurations() {
-          console.log(`[AudioContext] Fixing durations for ${tracksToFix.length} tracks...`);
+          console.log(`[AudioContext] Syncing durations for ${tracksToFix.length} tracks...`);
           for (const track of tracksToFix) {
             const blob = await db.getTrackBlob(track.id);
-            if (blob) {
+            if (blob && blob.size > 0) {
               const audio = new Audio();
               const url = URL.createObjectURL(blob);
               await new Promise<void>((resolve) => {
+                const timeout = setTimeout(() => {
+                  URL.revokeObjectURL(url);
+                  resolve();
+                }, 5000);
+                
                 audio.onloadedmetadata = () => {
                   const duration = audio.duration;
-                  db.saveTrack({ ...track, duration } as db.DBTrack, false);
-                  setTracks(prev => prev.map(t => t.id === track.id ? { ...t, duration } : t));
+                  if (duration && !isNaN(duration)) {
+                    db.saveTrack({ ...track, duration } as db.DBTrack, false);
+                    setTracks(prev => prev.map(t => t.id === track.id ? { ...t, duration } : t));
+                  }
+                  clearTimeout(timeout);
                   URL.revokeObjectURL(url);
                   resolve();
                 };
                 audio.onerror = () => {
+                  clearTimeout(timeout);
                   URL.revokeObjectURL(url);
                   resolve();
                 };
                 audio.src = url;
+                audio.load();
               });
             }
           }
@@ -491,6 +502,20 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     } catch (e) { setIsLoading(false); showToast("Import failed"); }
   };
 
+  const moveTrackInPlaylist = async (playlistId: string, fromIndex: number, toIndex: number) => {
+    let updated: Playlist | null = null;
+    setPlaylists(prev => {
+      const p = prev.find(x => x.id === playlistId);
+      if (!p) return prev;
+      const newTrackIds = [...p.trackIds];
+      const [moved] = newTrackIds.splice(fromIndex, 1);
+      newTrackIds.splice(toIndex, 0, moved);
+      updated = { ...p, trackIds: newTrackIds };
+      return prev.map(x => x.id === playlistId ? updated! : x);
+    });
+    if (updated) await db.savePlaylist(updated);
+  };
+
   const relinkTrack = async (id: string, file: File, sub: boolean) => {
     try {
       if (!(await validateAudioFile(file))) return;
@@ -560,7 +585,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       createPlaylist, deletePlaylist, addTrackToPlaylist, addTracksToPlaylist, removeTrackFromPlaylist, removeTracksFromPlaylist, renamePlaylist,
       playingPlaylistId, setPlayingPlaylistId, resumePlaylist, exportAppData, importAppData, relinkTrack, getTrackUrl, revokeTrackUrl, checkTrackPlayable,
       currentTrackIndex, setCurrentTrackIndex, currentPlaybackList, playNext, playPrevious, toggleShuffle, toggleLoop, isPlaying, setIsPlaying: handleSetIsPlaying,
-      userTogglePlayback, userPlayNext, userPlayPrevious, userPlayTrack,
+      userTogglePlayback, userPlayNext, userPlayPrevious, userPlayTrack, moveTrackInPlaylist,
       seekTo: setSeekRequest, seekRequest, clearSeekRequest: () => setSeekRequest(null),
       resetServiceWorker, clearCacheStorage, clearDatabase, fullAppReset, clearAppCache, healSystem
     }}>
