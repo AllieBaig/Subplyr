@@ -46,14 +46,23 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
 
   const renderManual = () => (
     <div className="flex flex-col items-center py-6">
-      <div className="bg-system-background border border-apple-border shadow-sm rounded-full px-8 py-4 flex flex-col items-center gap-1 min-w-[160px] relative">
-        <input 
-          type="number"
-          value={value}
-          onChange={(e) => onChange(Math.max(0.1, Math.min(1900, parseFloat(e.target.value) || 0.1)))}
-          className="bg-transparent border-none p-0 text-3xl font-black text-center tabular-nums focus:ring-0 outline-none w-28 text-system-label"
-        />
-        <span className="text-[10px] font-black text-system-tertiary-label uppercase tracking-[0.2em] -mt-1">Hertz (Hz)</span>
+      <div className="bg-system-background border border-apple-border shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2.5rem] px-10 py-8 flex flex-col items-center gap-2 min-w-[220px] relative animate-in zoom-in-95 duration-300">
+        <div className="flex items-baseline gap-2">
+          <input 
+            type="number"
+            value={value}
+            onChange={(e) => onChange(Math.max(0.1, Math.min(1900, parseFloat(e.target.value) || 0.1)))}
+            className="bg-transparent border-none p-0 text-5xl font-[900] text-center tabular-nums focus:ring-0 outline-none w-32 tracking-tighter"
+            style={{ color: value > 0 ? (color === 'purple' ? '#9333ea' : color === 'blue' ? '#007aff' : color === 'green' ? '#16a34a' : color === 'amber' ? '#92400e' : color === 'rose' ? '#e11d48' : '#ea580c') : 'currentColor' }}
+          />
+          <span className="text-xl font-bold opacity-30 text-system-label">Hz</span>
+        </div>
+        <span className="text-[10px] font-black text-system-tertiary-label uppercase tracking-[0.3em] mt-1 opacity-50">Frequency</span>
+        
+        {/* Decorative Pill Header */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-4 py-1.5 rounded-full border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-tertiary-label shadow-sm">
+          Manual Tuning
+        </div>
       </div>
     </div>
   );

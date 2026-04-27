@@ -853,7 +853,7 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
       "group flex flex-col transition-all duration-200",
       track.isMissing && "opacity-40"
     )}>
-      <div className="flex items-center gap-4 px-4 library-card leading-tight">
+      <div className="flex items-center gap-4 px-4 h-[72px] leading-tight flex-shrink-0 border-b border-apple-border/30">
         {isSelectMode && (
           <button 
             onClick={onSelect}
@@ -893,7 +893,6 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
           )}
         </div>
       </div>
-      <div className="h-[0.5px] bg-apple-border/30 ml-[72px]" />
 
       <AnimatePresence>
         {showActions && !isSelectMode && (
@@ -967,8 +966,8 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
           const isMenuOpen = activeMenuId === playlist.id;
           
           return (
-            <div key={playlist.id} className="group relative">
-              <div className={`flex items-center gap-4 py-4 px-1 transition-opacity ${isSelectMode && !isEditingThis ? 'opacity-40' : 'opacity-100'}`}>
+            <div key={playlist.id} className="group relative h-[88px] flex flex-col justify-center">
+              <div className={`flex items-center gap-4 py-4 px-1 transition-opacity h-[87.5px] ${isSelectMode && !isEditingThis ? 'opacity-40' : 'opacity-100'}`}>
                   <button 
                     onClick={() => !isSelectMode && onOpen(playlist.id)}
                     className="flex-shrink-0 w-12 h-12 rounded-xl bg-secondary-system-background flex items-center justify-center overflow-hidden border border-apple-border active:scale-95 transition-transform"
@@ -1247,8 +1246,8 @@ const PlaylistDetailView = ({
                                    playlist.trackIds[currentTrackIndex] === track.id;
 
           return (
-            <div key={track.id} ref={isActuallyPlaying ? activeTrackRef : null} className="group">
-              <div className="flex items-center gap-3 py-3 px-1 leading-tight">
+            <div key={track.id} ref={isActuallyPlaying ? activeTrackRef : null} className="group h-[64px] flex flex-col justify-center">
+              <div className="flex items-center gap-3 py-3 px-1 leading-tight h-[63.5px]">
                 {isSelectMode && (
                   <button 
                     onClick={() => onToggleSelection(track.id)}

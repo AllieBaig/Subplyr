@@ -34,6 +34,7 @@ export default function AudioEngine() {
   const { settings, updateSettings, updateAudioTools } = useSettings();
   const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
   const [isRenderingChunk, setIsRenderingChunk] = useState(false);
+  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
   const chunkPlanRef = useRef<any>(null);
   const lastBgGenTime = useRef<Record<string, number>>({});
   const activeChunkIdRef = useRef<string | null>(null);
@@ -672,24 +673,85 @@ export default function AudioEngine() {
 
   // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
-    // Initialize elements
+    // 1. Initialize elements
     const mainAudio = new Audio();
     const subAudio = new Audio();
     const natureAudio = new Audio();
+    const heartbeatAudio = new Audio();
     
-    [mainAudio, subAudio, natureAudio].forEach(a => {
+    [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
       (a as any).playsInline = true;
       (a as any).webkitPlaysInline = true;
       a.preload = 'auto';
     });
 
     natureAudio.loop = true;
+    
+    // Heartbeat setup - Silent looping audio to keep session active on iOS 16
+    heartbeatAudio.loop = true;
+    heartbeatAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/wD/"; // Tiny silent WAV
+    heartbeatAudio.volume = 0.001;
 
     mainAudioRef.current = mainAudio;
     subAudioRef.current = subAudio;
     natureAudioRef.current = natureAudio;
+    heartbeatAudioRef.current = heartbeatAudio;
 
-    // iOS Safari Audio Unlock Helper
+    // 2. Audio State & Metadata Listeners (Consolidated for stability)
+    const onTimeUpdate = () => {
+      if (mainAudio.duration) {
+        setCurrentTime(mainAudio.currentTime);
+      }
+      
+      if ('mediaSession' in navigator && (navigator.mediaSession as any).setPositionState && isPlaying) {
+        try {
+          (navigator.mediaSession as any).setPositionState({
+            duration: mainAudio.duration || 0,
+            playbackRate: mainAudio.playbackRate || 1,
+            position: mainAudio.currentTime || 0,
+          });
+        } catch (e) {}
+      }
+    };
+    
+    const onLoadedMetadata = () => {
+      setDuration(mainAudio.duration);
+    };
+
+    const onError = async () => {
+      const error = mainAudio.error;
+      console.warn("[AudioEngine] Main audio error:", error?.code, error?.message);
+      if (!isPlaying) return;
+      
+      // Recovery logic for revoked Blob URLs on iOS 16
+      if (error?.code === 4 || error?.code === 3) {
+         if (currentTrack) {
+           const freshUrl = await getTrackUrl(currentTrack.id, true);
+           if (freshUrl && mainAudioRef.current) {
+             mainAudioRef.current.src = freshUrl;
+             mainAudioRef.current.load();
+             mainAudioRef.current.play().catch(() => {});
+           }
+         }
+      }
+    };
+
+    const onEnded = () => {
+      if (settings.chunking.mode === 'merge') return; // Handled by separate merge logic
+      if (settings.playbackMode === 'loop') {
+        mainAudio.currentTime = 0;
+        mainAudio.play().catch(() => {});
+      } else {
+        playNext(true);
+      }
+    };
+
+    mainAudio.addEventListener('timeupdate', onTimeUpdate);
+    mainAudio.addEventListener('loadedmetadata', onLoadedMetadata);
+    mainAudio.addEventListener('ended', onEnded);
+    mainAudio.addEventListener('error', onError);
+
+    // 3. iOS Safari Audio Unlock Helper
     const initCtx = () => {
       if (!audioCtxRef.current) {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -703,35 +765,26 @@ export default function AudioEngine() {
     const unlockAudio = () => {
       const ctx = initCtx();
       if (ctx && ctx.state === 'suspended') {
-        ctx.resume().then(() => {
-          console.log('[AudioEngine] Context resumed via interaction');
-          const buffer = ctx.createBuffer(1, 1, 22050);
-          const source = ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(ctx.destination);
-          source.start(0);
-        }).catch(err => console.warn('[AudioEngine] Resume failed:', err));
+        ctx.resume();
       }
       
-      // Unlock HTML Audio elements by playing/pausing
-      [mainAudio, subAudio, natureAudio].forEach(a => {
-        a.play().then(() => a.pause()).catch(() => {});
-      });
+      if (isPlaying) {
+        [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
+           if (a.paused) a.play().catch(() => {});
+        });
+      } else {
+        // Pre-warm silently
+        [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
+           a.play().then(() => { if (a !== heartbeatAudio) a.pause(); }).catch(() => {});
+        });
+      }
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setIsForeground(true);
-        console.log('[AudioEngine] System visibility changed to visible - Resuming session');
-        // Pre-emptively resume context if needed
-        if (audioCtxRef.current && needsWebAudio) {
-          audioCtxRef.current.resume().catch(() => {});
-        }
-        
-        // Force sync element state
-        if (isPlaying && mainAudioRef.current && mainAudioRef.current.paused) {
-          mainAudioRef.current.play().catch(err => console.warn('[AudioEngine] Resume-on-visible failed:', err));
-        }
+        if (audioCtxRef.current) audioCtxRef.current.resume().catch(() => {});
+        if (isPlaying && mainAudio.paused) mainAudio.play().catch(() => {});
       } else {
         setIsForeground(false);
       }
@@ -748,38 +801,24 @@ export default function AudioEngine() {
       window.removeEventListener('zen-audio-unlock', unlockAudio);
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       
-      [mainAudio, subAudio, natureAudio].forEach(a => {
+      mainAudio.removeEventListener('timeupdate', onTimeUpdate);
+      mainAudio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      mainAudio.removeEventListener('ended', onEnded);
+      mainAudio.removeEventListener('error', onError);
+
+      [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
         a.pause();
         a.src = '';
       });
 
-      // Cleanup Background Audio
-      Object.entries(bgAudioRefs.current).forEach(([id, a]) => {
-        a.pause();
-        a.src = '';
-        a.load();
-      });
-      Object.values(bgAudioUrls.current).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-      bgAudioRefs.current = {};
-      bgAudioRefs2.current = {};
-      bgAudioUrls.current = {};
-      bgAudioParams.current = {};
-      
-      if (shamanicIntervalRef.current) {
-        window.clearInterval(shamanicIntervalRef.current);
-      }
-
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(console.error);
-      }
+      if (audioCtxRef.current) audioCtxRef.current.close().catch(() => {});
       
       mainAudioRef.current = null;
       subAudioRef.current = null;
       natureAudioRef.current = null;
+      heartbeatAudioRef.current = null;
     };
-  }, []); // Run once on mount
+  }, [playNext, isPlaying, settings.chunking.mode, settings.playbackMode, currentTrack]); // Added dependencies for correct listener context
 
   // Determine if we actually need Web Audio active
   const needsWebAudio = useMemo(() => {
@@ -1451,8 +1490,6 @@ export default function AudioEngine() {
     }
   }, [seekRequest]);
 
-  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
-
   // Resolve Main URL
   useEffect(() => {
     if (currentTrack && !currentTrack.isMissing) {
@@ -1472,11 +1509,11 @@ export default function AudioEngine() {
       if (playlist && playlist.trackIds.length > 0) {
         // Ensure index is within bounds
         const trackId = playlist.trackIds[subPlaylistIndexRef.current % playlist.trackIds.length];
-        return (tracks.find(t => t.id === trackId) || subliminalTracks.find(t => t.id === trackId));
+        return (tracks.find(t => t.id === trackId) || (subliminalTracks || []).find((t: any) => t.id === trackId));
       }
     }
     
-    return subliminalTracks.find(t => t.id === settings.subliminal.selectedTrackId) || 
+    return (subliminalTracks || []).find((t: any) => t.id === settings.subliminal.selectedTrackId) || 
            tracks.find(t => t.id === settings.subliminal.selectedTrackId);
   }, [subliminalTracks, tracks, settings.subliminal.selectedTrackId, settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId, playlists]);
 
@@ -1496,245 +1533,6 @@ export default function AudioEngine() {
     subPlaylistIndexRef.current = 0;
   }, [settings.subliminal.sourcePlaylistId, settings.subliminal.isPlaylistMode]);
 
-  // Initialize main audio element
-  useEffect(() => {
-    const audio = new Audio();
-    (audio as any).playsInline = true;
-    (audio as any).webkitPlaysInline = true;
-    mainAudioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audio.src = '';
-      mainAudioRef.current = null;
-    };
-  }, []);
-
-  // Sync state and duration from main audio
-  useEffect(() => {
-    const audio = mainAudioRef.current;
-    if (!audio) return;
-
-    const onTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      
-      // Update Media Session position state for lock screen parity
-      if ('mediaSession' in navigator && (navigator.mediaSession as any).setPositionState && isPlaying) {
-        try {
-          (navigator.mediaSession as any).setPositionState({
-            duration: audio.duration || 0,
-            playbackRate: audio.playbackRate || 1,
-            position: audio.currentTime || 0,
-          });
-        } catch (e) {
-          // Ignore state sync errors if duration is NaN
-        }
-      }
-    };
-    const onLoadedMetadata = () => setDuration(audio.duration);
-    
-    // Bidirectional sync: If iOS pauses the audio element (e.g. system interrupt), sync state
-    const onPause = () => {
-      if (isPlaying) {
-        console.log('[AudioEngine] System paused audio, syncing state');
-        setIsPlaying(false);
-      }
-    };
-    const onPlay = () => {
-      if (!isPlaying) {
-        console.log('[AudioEngine] System resumed audio, syncing state');
-        setIsPlaying(true);
-      }
-    };
-    
-    audio.addEventListener('timeupdate', onTimeUpdate);
-    audio.addEventListener('loadedmetadata', onLoadedMetadata);
-    audio.addEventListener('pause', onPause);
-    audio.addEventListener('play', onPlay);
-
-    return () => {
-      audio.removeEventListener('timeupdate', onTimeUpdate);
-      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-      audio.removeEventListener('pause', onPause);
-      audio.removeEventListener('play', onPlay);
-    };
-  }, [setCurrentTime, setDuration, isPlaying, setIsPlaying]);
-
-  // Handle track ending and errors
-  useEffect(() => {
-    const audio = mainAudioRef.current;
-    if (!audio) return;
-
-    const onEnded = () => {
-      console.log("AudioEngine: Track ended, advancing...");
-      tracksPlayedInSessionRef.current += 1;
-      
-      // Periodic reset after long sessions (every 10 tracks)
-      if (tracksPlayedInSessionRef.current % 10 === 0) {
-        console.log("[AudioEngine] Long session detected, resetting audio elements for stability");
-        if (mainAudioRef.current) {
-          mainAudioRef.current.src = "";
-          mainAudioRef.current.load();
-        }
-      }
-
-      if (settings.loop === 'one') {
-        if (mainAudioRef.current) {
-          mainAudioRef.current.currentTime = 0;
-          mainAudioRef.current.play().catch(err => {
-            console.warn("Loop one play failed:", err);
-            setIsPlaying(false);
-          });
-        }
-      } else {
-        playNext(true);
-      }
-    };
-
-    const onSubEnded = () => {
-      if (settings.subliminal.isPlaylistMode && settings.subliminal.sourcePlaylistId) {
-        const playlist = playlists.find(p => p.id === settings.subliminal.sourcePlaylistId);
-        if (playlist && playlist.trackIds.length > 0) {
-          let found = false;
-          let attempts = 0;
-          while (!found && attempts < playlist.trackIds.length) {
-            subPlaylistIndexRef.current = (subPlaylistIndexRef.current + 1) % playlist.trackIds.length;
-            const nextTrackId = playlist.trackIds[subPlaylistIndexRef.current];
-            const nextTrack = tracks.find(t => t.id === nextTrackId);
-            if (nextTrack && !nextTrack.isMissing && subAudioRef.current) {
-              if (isPlaying) {
-                // Pre-validate Sub track before assigning src
-                getTrackUrl(nextTrack.id).then(url => {
-                  if (url && subAudioRef.current) {
-                    subAudioRef.current.src = url;
-                    subAudioRef.current.load();
-                    subAudioRef.current.play().catch(console.error);
-                  }
-                });
-              }
-              found = true;
-            }
-            attempts++;
-          }
-        }
-      }
-    };
-
-    let errorCount = 0;
-    let isRecovering = false;
-
-    const onError = async (e: any) => {
-      const error = mainAudioRef.current?.error;
-      console.warn("[AudioEngine] Playback error encountered:", error?.code, error?.message);
-      
-      if (!isPlaying || isRecovering) return;
-
-      const now = Date.now();
-      // Check for rapid skipping within 2 seconds
-      if (now - lastSkipTimeRef.current < 2000) {
-        skipCountRef.current += 1;
-      } else {
-        skipCountRef.current = 0;
-      }
-      lastSkipTimeRef.current = now;
-
-      // Protection against infinite skip loops
-      if (skipCountRef.current > 5) {
-        console.error("[AudioEngine] Extreme skip-loop detected.");
-        // setIsPlaying(false); // DO NOT stop playback, just log and allow recovery
-        // showToast("System stabilized. Please tap play again.");
-        skipCountRef.current = 0;
-        return;
-      }
-
-      // iOS 16 Recovery Logic:
-      // If code is 4 (SRC_NOT_SUPPORTED) or 3 (DECODE), it effectively means the Blob URL was likely revoked
-      if (error?.code === 4 || error?.code === 3) {
-        if (currentTrack && errorCount < 2) {
-          console.log("[AudioEngine] Attempting URL recovery for track:", currentTrack.id);
-          isRecovering = true;
-          errorCount++;
-          
-          try {
-            // Check if file still exists in DB
-            const exists = await checkTrackPlayable(currentTrack.id);
-            if (!exists) {
-              console.error("[AudioEngine] Track file literally missing from database.");
-              showToast("Error: Track file lost. Please re-import.");
-              playNext(true);
-              isRecovering = false;
-              return;
-            }
-
-            const freshUrl = await getTrackUrl(currentTrack.id, true);
-            if (freshUrl && mainAudioRef.current) {
-              console.log("[AudioEngine] Fresh URL obtained, re-injecting source");
-              mainAudioRef.current.pause();
-              mainAudioRef.current.src = "";
-              mainAudioRef.current.load();
-              
-              setTimeout(async () => {
-                if (mainAudioRef.current) {
-                  mainAudioRef.current.src = freshUrl;
-                  mainAudioRef.current.load();
-                  await mainAudioRef.current.play();
-                }
-                isRecovering = false;
-                errorCount = 0; 
-              }, 100);
-              return;
-            }
-          } catch (recoveryErr) {
-            console.error("[AudioEngine] Recovery failed:", recoveryErr);
-          }
-          isRecovering = false;
-        }
-      }
-
-      // If recovery failed or it's another error, do the standard skip
-      errorCount++;
-      if (errorCount > 2) {
-        console.error("[AudioEngine] Multiple playback failures. Initiating system healing.");
-        errorCount = 0;
-        await healSystem();
-        playNext(true);
-      } else {
-        setTimeout(() => {
-          if (isPlaying && mainAudioRef.current) {
-            mainAudioRef.current.play().catch(() => {});
-          }
-        }, 1000);
-      }
-    };
-
-    const handleStalled = () => {
-      console.warn("Main Engine: Playback stalled.");
-      if (isPlaying) {
-        setTimeout(() => {
-          if (isPlaying && mainAudioRef.current && mainAudioRef.current.paused) {
-             mainAudioRef.current.play().catch(() => {});
-          }
-        }, 1500);
-      }
-    };
-
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('error', onError);
-    audio.addEventListener('stalled', handleStalled);
-
-    if (subAudioRef.current) {
-      subAudioRef.current.addEventListener('ended', onSubEnded);
-    }
-
-    return () => {
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('error', onError);
-      audio.removeEventListener('stalled', handleStalled);
-      if (subAudioRef.current) {
-        subAudioRef.current.removeEventListener('ended', onSubEnded);
-      }
-    };
-  }, [playNext, isPlaying, playlists, tracks, settings.subliminal.isPlaylistMode, settings.subliminal.sourcePlaylistId]);
 
   // Handle Subliminal Source Sync
   useEffect(() => {
@@ -2616,8 +2414,13 @@ export default function AudioEngine() {
 
     const interval = setInterval(() => {
       // 1. Recover AudioContext if suspended
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended' && isPlaying) {
         audioCtxRef.current.resume().catch(() => {});
+      }
+
+      // 2. Heartbeat: Keep silent audio playing to prevent iOS from suspending session
+      if (heartbeatAudioRef.current && heartbeatAudioRef.current.paused && isPlaying) {
+        heartbeatAudioRef.current.play().catch(() => {});
       }
 
       // 2. Ensure active background layers are actually playing

@@ -187,12 +187,24 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         delete trackUrlCache.current[id];
       }
   
-      // Aggressive cache management: limit concurrent blobs to 3 for iPhone 8 (Very strict)
-      if (cacheOrder.current.length >= 3) {
-        const oldestId = cacheOrder.current.shift();
-        if (oldestId && trackUrlCache.current[oldestId]) {
-          URL.revokeObjectURL(trackUrlCache.current[oldestId]);
-          delete trackUrlCache.current[oldestId];
+      // Cache management: limit concurrent blobs; increased for more stable buffering while respecting iPhone 8 low RAM
+      if (cacheOrder.current.length >= 6) {
+        // We want to avoid revoking the track that might be playing right now
+        // Find the first index that isn't the current track
+        const currentIdx = cacheOrder.current.indexOf(currentTrack?.id || "");
+        let indexToEvict = 0;
+        
+        if (indexToEvict === currentIdx) {
+          indexToEvict = 1; // Skip current
+        }
+
+        if (indexToEvict < cacheOrder.current.length) {
+          const evictedId = cacheOrder.current.splice(indexToEvict, 1)[0];
+          if (evictedId && trackUrlCache.current[evictedId]) {
+            console.log("[AudioContext] Evicting cached URL to stabilize RAM:", evictedId);
+            URL.revokeObjectURL(trackUrlCache.current[evictedId]);
+            delete trackUrlCache.current[evictedId];
+          }
         }
       }
   
