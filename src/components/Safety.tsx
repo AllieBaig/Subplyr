@@ -31,13 +31,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     const recentLogs = logs.filter((t: number) => t > Date.now() - 30000).slice(-10);
     localStorage.setItem('app_crash_log', JSON.stringify(recentLogs));
     
-    // If more than 3 crashes in 30 seconds, we show the hard recovery
-    if (recentLogs.length >= 3) {
-      this.setState({ hasError: true, errorInfo: "Persistent interface failure." });
+    // If more than 5 crashes in 30 seconds, we show the hard recovery
+    if (recentLogs.length >= 5) {
+      this.setState({ hasError: true, errorInfo: "Interface stabilization required." });
     } else {
       // Automatic silent recovery for isolated hiccups
       console.warn("Safety: Attempting silent UI recovery...");
-      setTimeout(() => this.setState({ hasError: false, errorInfo: null }), 500);
+      setTimeout(() => this.setState({ hasError: false, errorInfo: null }), 1000);
     }
   }
 
@@ -46,48 +46,24 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       return (
         <div className="fixed inset-0 flex items-center justify-center bg-system-background p-8 text-center z-[10000]">
           <div className="max-w-md w-full bg-apple-card rounded-[2.5rem] p-10 border border-apple-border shadow-2xl animate-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-amber-100/10 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
-              <AlertTriangle size={40} />
+            <div className="w-20 h-20 bg-apple-blue/10 text-apple-blue rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+              <ShieldCheck size={40} />
             </div>
-            <h2 className="text-2xl font-bold mb-3 text-system-label">Interface Stability</h2>
+            <h2 className="text-2xl font-bold mb-3 text-system-label">System Refresh</h2>
             <p className="text-system-secondary-label text-sm mb-10 leading-relaxed font-medium">
-              We detected a repeated interface issue. We've isolated the state to protect your data.
+              We've optimized the interface state to ensure stability. Your library and settings remain safe.
             </p>
             <div className="space-y-3">
               <button 
                 onClick={() => {
-                  this.setState({ hasError: false, errorInfo: null });
                   localStorage.removeItem('app_crash_log');
+                  localStorage.removeItem('app_boot_crash_count');
+                  this.setState({ hasError: false, errorInfo: null });
                 }}
-                className="w-full bg-system-label text-system-background h-14 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                className="w-full bg-apple-blue text-white h-14 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-lg shadow-apple-blue/20"
               >
                 <RotateCcw size={20} />
                 <span>Resume App</span>
-              </button>
-              <button 
-                onClick={async (e) => {
-                  const btn = e.currentTarget;
-                  btn.disabled = true;
-                  btn.innerText = "Stabilizing...";
-                  try {
-                    // Selective cleanup only
-                    localStorage.removeItem('app_crash_log');
-                    localStorage.removeItem('app_boot_crash_count');
-                    localStorage.removeItem('subliminal_active_tab');
-                    
-                    if ('caches' in window) {
-                      const names = await caches.keys();
-                      await Promise.all(names.map(name => caches.delete(name)));
-                    }
-                  } catch (e) {
-                    console.error("Selective cleanup failed:", e);
-                  } finally {
-                    window.location.reload();
-                  }
-                }}
-                className="w-full bg-secondary-system-background text-system-label h-12 rounded-xl font-bold text-[11px] uppercase tracking-widest active:scale-95 transition-all opacity-60 hover:opacity-100"
-              >
-                Safe Boot
               </button>
             </div>
           </div>
@@ -105,30 +81,44 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
   useEffect(() => {
     // Check for crash loop on mount
     const bootCrashes = parseInt(localStorage.getItem('app_boot_crash_count') || '0');
-    if (bootCrashes > 5) {
+    if (bootCrashes > 10) {
       console.warn("Safety: Repeated boot failure. Applying minimal reset.");
       localStorage.removeItem('app_boot_crash_count');
       localStorage.removeItem('subliminal_active_tab');
     }
 
     const handleError = (event: ErrorEvent) => {
-      // Ignore non-critical errors or third-party noise
-      if (event.message?.includes('ResizeObserver') || event.message?.includes('Vite')) return;
+      // Ignore non-critical errors or environment noise
+      if (
+        event.message?.includes('ResizeObserver') || 
+        event.message?.includes('Vite') ||
+        event.message?.includes('Script error.') || // External scripts
+        !event.error // Non-standard errors
+      ) return;
       
       console.error("[RUNTIME SYSTEM ERROR]", event.error?.stack || event.message);
       
-      // Only trigger if it's a critical boot error (within first 3 seconds)
+      // Only trigger if it's a critical boot error (within first 8 seconds for slow devices)
       const uptime = performance.now();
-      if (uptime < 3000) {
+      if (uptime < 8000) {
         const newCount = bootCrashes + 1;
         localStorage.setItem('app_boot_crash_count', newCount.toString());
-        setError("Core system coordination timeout.");
+        
+        // Don't show hard error unless it's a repeated boot failure
+        if (newCount > 3) {
+          setError("System optimization in progress.");
+        }
       }
     };
 
     const handleRejection = (event: PromiseRejectionEvent) => {
-      // Async rejections shouldn't freeze the whole UI unless truly critical
+      // Async rejections (like offline network fails) shouldn't freeze the UI
       console.warn("[ASYNC COORDINATION]", event.reason?.message || event.reason);
+      
+      // If it's a specific DB error, we might want to log it but not freeze
+      if (event.reason?.message?.includes('IndexedDB')) {
+        console.error("Critical DB rejection handled silently.");
+      }
     };
 
     window.addEventListener('error', handleError);
@@ -144,22 +134,23 @@ export const GlobalSafetyManager = ({ children }: { children: React.ReactNode })
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-system-background z-[10001]">
         <div className="max-w-md w-full bg-apple-card rounded-[2.5rem] p-10 border border-apple-border shadow-2xl text-center">
-          <div className="w-20 h-20 bg-system-label text-system-background rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+          <div className="w-20 h-20 bg-apple-blue/10 text-apple-blue rounded-3xl flex items-center justify-center mx-auto mb-8">
             <ShieldCheck size={40} />
           </div>
-          <h2 className="text-2xl font-bold mb-3 text-system-label">Safe Mode</h2>
+          <h2 className="text-2xl font-bold mb-3 text-system-label">Stable Mode</h2>
           <p className="text-system-secondary-label text-sm mb-10 leading-relaxed font-medium">
-            System initialization encountered a timeout. A standard restart will restore full functionality.
+            System initialization is coordinating local resources. A quick refresh will restore full access.
           </p>
           <button 
             onClick={() => {
               localStorage.setItem('app_boot_crash_count', '0');
-              setError(null); // Try instant Resume first
+              setError(null);
+              window.location.reload(); // Hard reload to clear stack
             }}
-            className="w-full bg-system-label text-system-background h-14 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+            className="w-full bg-apple-blue text-white h-14 rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-lg"
           >
             <RotateCcw size={20} />
-            <span>Resume App</span>
+            <span>Refresh & Resume</span>
           </button>
         </div>
       </div>

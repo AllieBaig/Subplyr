@@ -34,10 +34,6 @@ export async function initDB() {
           db.createObjectStore(PLAYLISTS_STORE, { keyPath: 'id' });
         }
         
-        if (oldVersion < 2) {
-          // Version 2 introduced in previous turn, but we are jumping to 3 for optimization
-        }
-
         if (oldVersion < 3) {
           // New optimized layout
           if (!db.objectStoreNames.contains(TRACKS_STORE)) {
@@ -49,14 +45,6 @@ export async function initDB() {
           if (!db.objectStoreNames.contains(BLOBS_STORE)) {
             db.createObjectStore(BLOBS_STORE); // key is track id
           }
-          
-          // Migration from old stores to new ones if they exist
-          const oldMain = 'tracks';
-          const oldSub = 'subliminal-tracks';
-          
-          if (db.objectStoreNames.contains(oldMain)) {
-            // Note: In-place migration logic could go here, but for simplicity we'll handle saving
-          }
         }
 
         if (oldVersion < 4) {
@@ -65,10 +53,18 @@ export async function initDB() {
           }
         }
       },
+      blocking() {
+        console.warn("IndexedDB: Database connection blocked by older version.");
+      },
+      terminated() {
+        console.error("IndexedDB: Connection terminated unexpectedly.");
+        window.location.reload(); 
+      }
     });
   } catch (err) {
     console.error("Critical IndexedDB initialization error:", err);
-    throw new Error("Unable to start local database");
+    // Don't throw just yet, return a mock or handle in caller
+    throw err;
   }
 }
 

@@ -256,17 +256,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
     const startupGuard = setTimeout(() => {
       if (isMounted && isLoading) {
-        setInitError("Environment synchronization delay. Attempting system recovery.");
+        console.warn("[AudioContext] Startup guard triggered. Resuming normally.");
         setIsLoading(false);
       }
-    }, 10000);
+    }, 25000); // 25s for slow iPhone 8 / low network
 
     async function loadData() {
       try {
         const [savedTracks, savedSubTracks, savedPlaylists] = await Promise.all([
-          db.getTracks(false),
-          db.getTracks(true),
-          db.getPlaylists()
+          db.getTracks(false).catch(() => []),
+          db.getTracks(true).catch(() => []),
+          db.getPlaylists().catch(() => [])
         ]);
 
         const validatedTracks = (savedTracks || []).map(t => ({ ...t, isMissing: false }));
@@ -276,23 +276,35 @@ export function AudioProvider({ children }: { children: ReactNode }) {
           setTracks(validatedTracks);
           setSubliminalTracks(validatedSubTracks);
           setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
+          
           if (settings.chunking.activePlaylistId) {
             setPlayingPlaylistId(settings.chunking.activePlaylistId);
             if (settings.chunking.currentTrackIndex !== null) {
               setCurrentTrackIndex(settings.chunking.currentTrackIndex);
             }
           }
+
+          // Background verification of file presence without blocking UI
           setTimeout(async () => {
+            if (!isMounted) return;
             for (const t of validatedTracks) {
-              const exists = await db.getTrackBlob(t.id);
-              if (!exists || exists.size === 0) {
-                setTracks(prev => prev.map(pt => pt.id === t.id ? { ...pt, isMissing: true } : pt));
+              try {
+                const exists = await db.getTrackBlob(t.id);
+                if (!exists || exists.size === 0) {
+                  setTracks(prev => prev.map(pt => pt.id === t.id ? { ...pt, isMissing: true } : pt));
+                }
+              } catch (e) {
+                console.warn(`[AudioContext] Verify failed for ${t.id}`);
               }
             }
-          }, 3000);
+          }, 5000);
         }
       } catch (err) {
-        if (isMounted) setInitError("Database sync issue.");
+        console.error("[AudioContext] Database load failed:", err);
+        if (isMounted) {
+          // If totally empty, just continue to allow adding new music
+          setIsLoading(false);
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);

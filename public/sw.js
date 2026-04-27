@@ -94,27 +94,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip other non-GET
-  if (event.request.method !== 'GET') {
-    return;
-  }
+  // Skip other non-GET or cross-origin binary data that safari might choke on
+  if (event.request.method !== 'GET') return;
+  if (url.protocol === 'blob:') return;
 
   // Bypass for dev tools
   if (url.pathname.startsWith('/@vite') || url.pathname.includes('hot-update')) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // CACHE-FIRST strategy for static assets and known URLs
+      // CACHE-FIRST strategy for static assets
       if (cachedResponse) {
-        // Kick off background update if online to keep it fresh
-        if (navigator.onLine && (url.origin === self.location.origin)) {
-           fetch(event.request).then(response => {
-             if (response.ok) {
-               caches.open(CACHE_NAME).then(cache => cache.put(event.request, response));
-             }
-           }).catch(() => {});
-        }
-        return cachedResponse;
+         return cachedResponse;
       }
 
       // NETWORK FALLBACK
@@ -124,9 +115,10 @@ self.addEventListener('fetch', (event) => {
         }
 
         const responseToCache = networkResponse.clone();
-        const isAsset = url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff2|mp3|wav|json)$/);
+        const isStaticAsset = url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff2|json)$/);
+        const isAppRoot = url.origin === self.location.origin && (url.pathname === '/' || url.pathname === '/index.html');
         
-        if (isAsset || url.origin === self.location.origin) {
+        if (isStaticAsset || isAppRoot) {
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
@@ -135,14 +127,12 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       }).catch((err) => {
         // OFFLINE FALLBACK
-        // For navigation requests, return index.html to allow SPA to handle the route
         if (event.request.mode === 'navigate') {
           return caches.match('/');
         }
         
-        // Final fallback for missing images or assets
-        console.warn(`[SW] Resource ${url.pathname} unavailable offline.`);
-        return new Response('', { status: 404, statusText: 'Offline and not cached' });
+        // Return blank/fake response for missing non-critical assets
+        return new Response('', { status: 404, statusText: 'Offline' });
       });
     })
   );
