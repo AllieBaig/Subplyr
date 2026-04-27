@@ -35,6 +35,7 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
                     color === 'green' ? 'text-green-600' : 
                     color === 'amber' ? 'text-amber-800' : 
                     color === 'rose' ? 'text-rose-600' : 
+                    color === 'indigo' ? 'text-indigo-600' : 
                     'text-orange-600';
 
   const bgActiveColorClass = color === 'purple' ? 'accent-purple-600' : 
@@ -42,6 +43,7 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
                             color === 'green' ? 'accent-green-600' : 
                             color === 'amber' ? 'accent-amber-800' : 
                             color === 'rose' ? 'accent-rose-600' : 
+                            color === 'indigo' ? 'accent-indigo-600' : 
                             'accent-orange-600';
 
   const renderManual = () => (
@@ -188,6 +190,7 @@ export const LayerAccordion = ({
                    color.includes('rose') ? '#e11d48' : 
                    color.includes('emerald') ? '#059669' :
                    color.includes('red') ? '#7f1d1d' :
+                   color.includes('indigo') ? '#4f46e5' :
                    '#f97316';
 
   return (

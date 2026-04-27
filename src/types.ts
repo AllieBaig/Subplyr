@@ -147,6 +147,20 @@ export interface ShamanicSettings {
   pitchSafeMode: boolean;
 }
 
+export interface MentalToughnessSettings {
+  isEnabled: boolean;
+  volume: number;
+  gainDb: number;
+  pitch: 'soft' | 'hard' | 'loud' | 'low';
+  texture: 'wood' | 'wall' | 'natural' | 'tribal';
+  intensity: 'light' | 'medium' | 'strong' | 'deep';
+  frequency: number; // Hz Depth
+  isLooping: boolean;
+  normalize: boolean;
+  playInBackground: boolean;
+  pitchSafeMode: boolean;
+}
+
 export interface AppSettings {
   subliminal: SubliminalSettings;
   binaural: BinauralSettings;
@@ -154,6 +168,7 @@ export interface AppSettings {
   noise: NoiseSettings;
   didgeridoo: DidgeridooSettings;
   shamanic: ShamanicSettings;
+  mentalToughness: MentalToughnessSettings;
   pureHz: PureHzSettings;
   isochronic: IsochronicSettings;
   solfeggio: SolfeggioSettings;

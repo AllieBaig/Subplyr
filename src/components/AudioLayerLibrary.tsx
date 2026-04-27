@@ -20,7 +20,8 @@ export const AudioLayerLibrary = () => {
     updatePureHzSettings,
     updateIsochronicSettings,
     updateSolfeggioSettings,
-    updateShamanicSettings
+    updateShamanicSettings,
+    updateMentalToughnessSettings
   } = useSettings();
 
   const { playlists, tracks } = useAudio();
@@ -46,7 +47,8 @@ export const AudioLayerLibrary = () => {
       pureHz: updatePureHzSettings,
       isochronic: updateIsochronicSettings,
       solfeggio: updateSolfeggioSettings,
-      shamanic: updateShamanicSettings
+      shamanic: updateShamanicSettings,
+      mentalToughness: updateMentalToughnessSettings
     };
 
     const updateFn = updateFnMap[layer];
@@ -399,6 +401,84 @@ export const AudioLayerLibrary = () => {
                 </div>
               </div>
            </div>
+        </div>
+      </LayerAccordion>
+
+      {/* 10. Mental Toughness */}
+      <LayerAccordion 
+        id="mentalToughness" icon={Activity} label="Mental Toughness" 
+        isEnabled={settings.mentalToughness.isEnabled} 
+        onToggle={(v: boolean) => updateMentalToughnessSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'mentalToughness'}
+        onAccordionToggle={() => toggleLayer('mentalToughness')}
+        vol={settings.mentalToughness.volume}
+        setVol={(v: number) => updateMentalToughnessSettings({ volume: v })}
+        gainDb={settings.mentalToughness.gainDb}
+        setGainDb={(v: number) => updateMentalToughnessSettings({ gainDb: v })}
+        normalize={settings.mentalToughness.normalize}
+        setNormalize={(v: boolean) => updateMentalToughnessSettings({ normalize: v })}
+        playInBackground={settings.mentalToughness.playInBackground}
+        setPlayInBackground={(v: boolean) => updateMentalToughnessSettings({ playInBackground: v })}
+        pitchSafeMode={settings.mentalToughness.pitchSafeMode}
+        setPitchSafeMode={(v: boolean) => updateMentalToughnessSettings({ pitchSafeMode: v })}
+        color="text-indigo-600"
+        subtitle={`${settings.mentalToughness.pitch} ${settings.mentalToughness.texture}`}
+        onApplyPreset={(p: any) => applyLayerPreset('mentalToughness', p)}
+      >
+        <div className="flex flex-col gap-6">
+          <div className="space-y-4">
+             <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Hz Frequency Depth</p>
+             <HzSelector 
+               value={settings.mentalToughness.frequency} 
+               onChange={(v) => updateMentalToughnessSettings({ frequency: v })} 
+               color="indigo"
+             />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Pitch Style</p>
+            <div className="grid grid-cols-4 gap-2">
+              {['soft', 'hard', 'loud', 'low'].map(p => (
+                <button 
+                  key={p}
+                  onClick={() => updateMentalToughnessSettings({ pitch: p as any })}
+                  className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.mentalToughness.pitch === p ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Impact Texture</p>
+            <div className="grid grid-cols-4 gap-2">
+              {['wood', 'wall', 'natural', 'tribal'].map(t => (
+                <button 
+                  key={t}
+                  onClick={() => updateMentalToughnessSettings({ texture: t as any })}
+                  className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.mentalToughness.texture === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Banging Intensity</p>
+            <div className="grid grid-cols-4 gap-2">
+              {['light', 'medium', 'strong', 'deep'].map(i => (
+                <button 
+                  key={i}
+                  onClick={() => updateMentalToughnessSettings({ intensity: i as any })}
+                  className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.mentalToughness.intensity === i ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                >
+                  {i}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </LayerAccordion>
     </div>

@@ -15,6 +15,7 @@ interface SettingsContextType {
   updatePureHzSettings: (newSettings: Partial<AppSettings['pureHz']>) => void;
   updateIsochronicSettings: (newSettings: Partial<AppSettings['isochronic']>) => void;
   updateSolfeggioSettings: (newSettings: Partial<AppSettings['solfeggio']>) => void;
+  updateMentalToughnessSettings: (newSettings: Partial<AppSettings['mentalToughness']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   updateAppearanceSettings: (newSettings: Partial<AppSettings['appearance']>) => void;
   updateVisibilitySettings: (newSettings: Partial<AppSettings['visibility']>) => void;
@@ -81,6 +82,19 @@ const DEFAULT_SETTINGS: AppSettings = {
     playbackRate: 1.0,
     frequency: 70, // Warm low drum tone
     depth: 0.4,
+    isLooping: true,
+    normalize: false,
+    playInBackground: false,
+    pitchSafeMode: false,
+  },
+  mentalToughness: {
+    isEnabled: false,
+    volume: 0.3,
+    gainDb: -6,
+    pitch: 'hard',
+    texture: 'wood',
+    intensity: 'medium',
+    frequency: 60,
     isLooping: true,
     normalize: false,
     playInBackground: false,
@@ -275,6 +289,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({ ...prev, solfeggio: { ...prev.solfeggio, ...newSol } }));
   }, []);
 
+  const updateMentalToughnessSettings = useCallback((newMT: Partial<AppSettings['mentalToughness']>) => {
+    setSettings(prev => ({ ...prev, mentalToughness: { ...prev.mentalToughness, ...newMT } }));
+  }, []);
+
   const updateLibrarySettings = useCallback((newLib: Partial<AppSettings['library']>) => {
     setSettings(prev => ({ ...prev, library: { ...prev.library, ...newLib } }));
   }, []);
@@ -320,6 +338,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       updatePureHzSettings,
       updateIsochronicSettings,
       updateSolfeggioSettings,
+      updateMentalToughnessSettings,
       updateLibrarySettings,
       updateAppearanceSettings,
       updateVisibilitySettings,

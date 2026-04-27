@@ -598,6 +598,66 @@ export default function AudioEngine() {
 
       outGain.connect(masterGainNode);
     }
+    else if (type === 'mentalToughness') {
+      const bpm = 110; // Rhythmic focus tempo
+      const interval = 60 / bpm;
+      const numHits = Math.floor(duration / interval);
+      const mainGain = ctx.createGain();
+
+      for (let i = 0; i < numHits; i++) {
+        const time = i * interval;
+        
+        // Human Impact: Low fundamental + Noise click
+        const osc = ctx.createOscillator();
+        const noise = ctx.createBufferSource();
+        const g = ctx.createGain();
+        const f = ctx.createBiquadFilter();
+
+        // 1. Fundamental Tone (Hz Depth Integration)
+        let baseFreq = options.frequency || 60;
+        if (options.pitch === 'soft') baseFreq *= 0.8;
+        if (options.pitch === 'low') baseFreq *= 0.6;
+        if (options.pitch === 'hard') baseFreq *= 1.2;
+        if (options.pitch === 'loud') baseFreq *= 1.4;
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(baseFreq * 2, time);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq, time + 0.08);
+
+        // 2. Texture Click (Noise)
+        const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+        const noiseData = noiseBuffer.getChannelData(0);
+        for (let j = 0; j < noiseData.length; j++) noiseData[j] = Math.random() * 2 - 1;
+        noise.buffer = noiseBuffer;
+
+        f.type = options.texture === 'wood' ? 'bandpass' : 'lowpass';
+        f.frequency.setValueAtTime(options.texture === 'wood' ? 1200 : (options.texture === 'wall' ? 400 : 800), time);
+        f.Q.setValueAtTime(options.texture === 'tribal' ? 10 : 2, time);
+
+        // 3. Envelope
+        let peak = 0.4;
+        if (options.intensity === 'light') peak *= 0.6;
+        if (options.intensity === 'strong') peak *= 1.4;
+        if (options.intensity === 'deep') peak *= 1.8;
+
+        g.gain.setValueAtTime(0, time);
+        g.gain.linearRampToValueAtTime(peak, time + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, time + (options.intensity === 'deep' ? 0.4 : 0.2));
+
+        osc.connect(g);
+        noise.connect(f);
+        f.connect(g);
+        g.connect(mainGain);
+
+        osc.start(time);
+        noise.start(time);
+        osc.stop(time + 0.5);
+        noise.stop(time + 0.5);
+      }
+
+      applyFades(mainGain);
+      mainGain.connect(masterGainNode);
+    }
     else if (type === 'noise') {
       const bufferSize = sampleRate * duration;
       const buffer = ctx.createBuffer(1, bufferSize, sampleRate);
@@ -685,6 +745,15 @@ export default function AudioEngine() {
   const solOscRef = useRef<OscillatorNode | null>(null);
   const solGainRef = useRef<GainNode | null>(null);
   const solCompRef = useRef<DynamicsCompressorNode | null>(null);
+
+  // Mental Toughness Refs
+  const mentalToughnessGainRef = useRef<GainNode | null>(null);
+  const mentalToughnessIntervalRef = useRef<number | null>(null);
+  const mentalToughnessSettingsRef = useRef(settings.mentalToughness);
+
+  useEffect(() => {
+    mentalToughnessSettingsRef.current = settings.mentalToughness;
+  }, [settings.mentalToughness]);
 
   // iOS Background Audio & Media Session Setup
   useEffect(() => {
@@ -775,7 +844,7 @@ export default function AudioEngine() {
       } else {
         // Find active Hz layer to show in metadata if no track is playing
         const activeLayer = Object.entries(settings).find(([key, val]: [string, any]) => 
-          val?.isEnabled && val?.playInBackground && ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'didgeridoo', 'shamanic', 'noise', 'nature'].includes(key)
+          val?.isEnabled && val?.playInBackground && ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'didgeridoo', 'shamanic', 'noise', 'nature', 'mentalToughness'].includes(key)
         );
 
         if (activeLayer) {
@@ -820,7 +889,7 @@ export default function AudioEngine() {
       const volume = s.volume * layerGain * masterGainMultiplier;
       natureAudioRef.current.volume = Math.min(1.0, Math.max(0.0, volume));
     }
-  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.didgeridoo, settings.shamanic, settings.noise, settings.nature]);
+  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.didgeridoo, settings.shamanic, settings.noise, settings.nature, settings.mentalToughness]);
 
   // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
@@ -982,7 +1051,8 @@ export default function AudioEngine() {
       !settings.shamanic.playInBackground ||
       !settings.pureHz.playInBackground ||
       !settings.isochronic.playInBackground ||
-      !settings.solfeggio.playInBackground
+      !settings.solfeggio.playInBackground ||
+      !settings.mentalToughness.playInBackground
     )) || false;
   }, [isPlaying, settings]);
 
@@ -1594,6 +1664,95 @@ export default function AudioEngine() {
       }
     } catch (err) {
       console.error("Solfeggio setup failed:", err);
+    }
+  };
+
+  const setupMentalToughness = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      setupAudioTools();
+
+      if (!mentalToughnessGainRef.current) {
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
+
+        mentalToughnessGainRef.current = gain;
+
+        let nextHitTime = ctx.currentTime;
+        const schedule = () => {
+          if (!mentalToughnessGainRef.current) return;
+          const s = mentalToughnessSettingsRef.current;
+          const bpm = 110;
+          const interval = 60 / bpm;
+
+          while (nextHitTime < ctx.currentTime + 0.2) {
+            const time = nextHitTime;
+            const osc = ctx.createOscillator();
+            const noise = ctx.createBufferSource();
+            const g = ctx.createGain();
+            const f = ctx.createBiquadFilter();
+
+            const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+            const noiseData = noiseBuffer.getChannelData(0);
+            for (let j = 0; j < noiseData.length; j++) noiseData[j] = Math.random() * 2 - 1;
+            noise.buffer = noiseBuffer;
+
+            let baseFreq = s.frequency;
+            if (s.pitch === 'soft') baseFreq *= 0.8;
+            if (s.pitch === 'low') baseFreq *= 0.6;
+            if (s.pitch === 'hard') baseFreq *= 1.2;
+            if (s.pitch === 'loud') baseFreq *= 1.4;
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(baseFreq * 2, time);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq, time + 0.08);
+
+            f.type = s.texture === 'wood' ? 'bandpass' : 'lowpass';
+            f.frequency.setValueAtTime(s.texture === 'wood' ? 1200 : (s.texture === 'wall' ? 400 : 800), time);
+            f.Q.setValueAtTime(s.texture === 'tribal' ? 10 : 2, time);
+
+            let peak = 0.4;
+            if (s.intensity === 'light') peak *= 0.6;
+            if (s.intensity === 'strong') peak *= 1.4;
+            if (s.intensity === 'deep') peak *= 1.8;
+
+            g.gain.setValueAtTime(0, time);
+            g.gain.linearRampToValueAtTime(peak, time + 0.005);
+            g.gain.exponentialRampToValueAtTime(0.001, time + (s.intensity === 'deep' ? 0.4 : 0.2));
+
+            osc.connect(g);
+            noise.connect(f);
+            f.connect(g);
+            g.connect(mentalToughnessGainRef.current);
+
+            osc.start(time);
+            noise.start(time);
+            osc.stop(time + 0.5);
+            noise.stop(time + 0.5);
+
+            nextHitTime += interval;
+          }
+        };
+
+        mentalToughnessIntervalRef.current = window.setInterval(schedule, 100);
+      }
+    } catch (err) {
+      console.error("Mental Toughness setup failed:", err);
     }
   };
 
@@ -2412,6 +2571,45 @@ export default function AudioEngine() {
     };
     syncBg();
   }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb, settings.audioTools.gainDb, settings.solfeggio.pitchSafeMode]);
+
+  // Handle Mental Toughness Layer
+  useEffect(() => {
+    const isBg = settings.mentalToughness.playInBackground;
+    const isLayerPlaying = settings.mentalToughness.isEnabled && settings.mentalToughness.isLooping && (isPlaying || isBg);
+
+    if (isLayerPlaying && !isBg) {
+      setupMentalToughness();
+      if (mentalToughnessGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        const gainValue = settings.mentalToughness.volume * Math.pow(10, settings.mentalToughness.gainDb / 20);
+        mentalToughnessGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (mentalToughnessGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        mentalToughnessGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+        
+        if (!isLayerPlaying && mentalToughnessIntervalRef.current) {
+          window.clearInterval(mentalToughnessIntervalRef.current);
+          mentalToughnessIntervalRef.current = null;
+          mentalToughnessGainRef.current = null;
+        }
+      }
+    }
+
+    const syncBg = async () => {
+      syncBgLayer('mentalToughness', isLayerPlaying, isBg, 'mentalToughness', { 
+        frequency: settings.mentalToughness.frequency, 
+        pitch: settings.mentalToughness.pitch,
+        texture: settings.mentalToughness.texture,
+        intensity: settings.mentalToughness.intensity,
+        pitchSafeMode: settings.mentalToughness.pitchSafeMode
+      }, settings.mentalToughness.volume, settings.mentalToughness.gainDb);
+    };
+    syncBg();
+  }, [isPlaying, settings.mentalToughness.isEnabled, settings.mentalToughness.isLooping, settings.mentalToughness.playInBackground, settings.fadeInOut, settings.mentalToughness.volume, settings.mentalToughness.gainDb, settings.mentalToughness.frequency, settings.mentalToughness.pitch, settings.mentalToughness.texture, settings.mentalToughness.intensity, settings.audioTools.gainDb, settings.mentalToughness.pitchSafeMode]);
 
   // Handle Display Always On (WakeLock)
   const wakeLockRef = useRef<any>(null);
