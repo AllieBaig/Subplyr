@@ -325,25 +325,111 @@ export default function AudioEngine() {
     const ctx = new OfflineCtx(numChannels, sampleRate * duration, sampleRate);
     
     // Calculate baked gain (Volume % + Gain dB + Master Gain dB)
-    // This solves the iOS 16 background bug where <audio> volume property is ignored or unreliable
     const bakedGainValue = (options.volume || 1.0) * Math.pow(10, (options.gainDb || 0) / 20);
     const masterGainMultiplier = (options.masterGainDb !== undefined) ? Math.pow(10, options.masterGainDb / 20) : 1.0;
     const finalGainValue = bakedGainValue * masterGainMultiplier;
 
-    // Create a final baked-in gain node for the offline context
     const masterGainNode = ctx.createGain();
     masterGainNode.gain.setValueAtTime(finalGainValue, 0);
     masterGainNode.connect(ctx.destination);
 
+    // Fade In/Out for seamless looping if Pitch Safe Mode is on or active generally
+    const applyFades = (node: GainNode) => {
+      node.gain.setValueAtTime(0, 0);
+      node.gain.linearRampToValueAtTime(1, 1.5); // 1.5s fade in
+      node.gain.setValueAtTime(1, duration - 1.5);
+      node.gain.linearRampToValueAtTime(0, duration); // 1.5s fade out
+    };
+
+    // Reverb Helper
+    const applySoftReverb = (source: AudioNode, dest: AudioNode) => {
+      const reverb = ctx.createConvolver();
+      const length = sampleRate * 3; // 3 second reverb
+      const impulse = ctx.createBuffer(2, length, sampleRate);
+      const impulseL = impulse.getChannelData(0);
+      const impulseR = impulse.getChannelData(1);
+      for (let i = 0; i < length; i++) {
+        const decay = Math.pow(1 - i / length, 2);
+        impulseL[i] = (Math.random() * 2 - 1) * decay;
+        impulseR[i] = (Math.random() * 2 - 1) * decay;
+      }
+      reverb.buffer = impulse;
+      
+      const dryGain = ctx.createGain();
+      const wetGain = ctx.createGain();
+      dryGain.gain.setValueAtTime(0.7, 0);
+      wetGain.gain.setValueAtTime(0.3, 0);
+      
+      source.connect(dryGain);
+      source.connect(reverb);
+      reverb.connect(wetGain);
+      dryGain.connect(dest);
+      wetGain.connect(dest);
+    };
+
+    const isPitchRange = (freq: number) => freq >= 200 && freq <= 1900;
+    const useSoftPitch = options.pitchSafeMode && isPitchRange(options.frequency || (type === 'binaural' ? (options.leftFreq + options.rightFreq) / 2 : 0));
+
     // Setup layer specific offline graph
     if (type === 'pureHz' || type === 'solfeggio') {
       const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(options.frequency, 0);
-      const gain = ctx.createGain();
-      // Base sensitivity for these tones (0.08 was original for headroom)
-      gain.gain.setValueAtTime(0.08, 0); 
-      osc.connect(gain);
+      
+      if (useSoftPitch) {
+        // Soft Meditation Formula
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(options.frequency * 0.8, 0);
+        filter.Q.setValueAtTime(1.0, 0);
+        
+        // Ambient Pad (Sub-harmonics for warmth)
+        const subOsc = ctx.createOscillator();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(options.frequency / 2, 0);
+        const subGain = ctx.createGain();
+        subGain.gain.setValueAtTime(0.15, 0);
+        
+        // Pink Noise Bed
+        const pinkBuffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
+        const pinkData = pinkBuffer.getChannelData(0);
+        let b0, b1, b2, b3, b4, b5, b6;
+        b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+        for (let i = 0; i < sampleRate * duration; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3102503;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          pinkData[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.01; // Very subtle
+          b6 = white * 0.115926;
+        }
+        const pinkSource = ctx.createBufferSource();
+        pinkSource.buffer = pinkBuffer;
+        pinkSource.loop = true;
+        
+        osc.connect(filter);
+        subOsc.connect(subGain);
+        subGain.connect(filter);
+        
+        const preReverbGain = ctx.createGain();
+        preReverbGain.gain.setValueAtTime(0.06, 0);
+        filter.connect(preReverbGain);
+        pinkSource.connect(preReverbGain);
+        
+        applySoftReverb(preReverbGain, gain);
+        applyFades(gain);
+        
+        subOsc.start(0);
+        pinkSource.start(0);
+      } else {
+        gain.gain.setValueAtTime(0.08, 0); 
+        osc.connect(gain);
+      }
+
       gain.connect(masterGainNode);
       osc.start(0);
     } 
@@ -352,15 +438,165 @@ export default function AudioEngine() {
       const right = ctx.createOscillator();
       const merger = ctx.createChannelMerger(2);
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.08, 0);
       left.frequency.setValueAtTime(options.leftFreq, 0);
       right.frequency.setValueAtTime(options.rightFreq, 0);
-      left.connect(merger, 0, 0);
-      right.connect(merger, 0, 1);
-      merger.connect(gain);
+      
+      if (useSoftPitch) {
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(Math.min(options.leftFreq, options.rightFreq) * 0.9, 0);
+        
+        left.connect(merger, 0, 0);
+        right.connect(merger, 0, 1);
+        merger.connect(filter);
+        
+        const preReverbGain = ctx.createGain();
+        preReverbGain.gain.setValueAtTime(0.06, 0);
+        filter.connect(preReverbGain);
+        
+        applySoftReverb(preReverbGain, gain);
+        applyFades(gain);
+      } else {
+        gain.gain.setValueAtTime(0.08, 0);
+        left.connect(merger, 0, 0);
+        right.connect(merger, 0, 1);
+        merger.connect(gain);
+      }
+
       gain.connect(masterGainNode);
       left.start(0);
       right.start(0);
+    }
+    else if (type === 'isochronic') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const outGain = ctx.createGain();
+      const lfo = ctx.createOscillator();
+      osc.frequency.setValueAtTime(options.frequency, 0);
+      lfo.type = options.pitchSafeMode ? 'sine' : 'square'; // Softer LFO if safe mode
+      lfo.frequency.setValueAtTime(options.pulseRate, 0);
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(0.5, 0);
+      const constant = ctx.createConstantSource();
+      constant.offset.setValueAtTime(0.5, 0);
+      lfo.connect(lfoGain);
+      lfoGain.connect(gain.gain);
+      constant.connect(gain.gain);
+      osc.connect(gain);
+      
+      if (useSoftPitch) {
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(options.frequency * 0.85, 0);
+        gain.connect(filter);
+        
+        const preReverbGain = ctx.createGain();
+        preReverbGain.gain.setValueAtTime(0.06, 0);
+        filter.connect(preReverbGain);
+        
+        applySoftReverb(preReverbGain, outGain);
+        applyFades(outGain);
+      } else {
+        outGain.gain.setValueAtTime(0.08, 0);
+        gain.connect(outGain);
+      }
+
+      outGain.connect(masterGainNode);
+      lfo.start(0);
+      constant.start(0);
+      osc.start(0);
+    }
+    else if (type === 'didgeridoo') {
+      const osc = ctx.createOscillator();
+      const sub = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const outGain = ctx.createGain();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      osc.type = 'sawtooth';
+      sub.type = 'sine';
+      osc.frequency.setValueAtTime(options.frequency, 0);
+      sub.frequency.setValueAtTime(options.frequency, 0);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(options.frequency * 2.7 * (1 + options.depth), 0);
+      filter.Q.setValueAtTime(15, 0);
+      lfo.frequency.setValueAtTime(0.15, 0);
+      lfoGain.gain.setValueAtTime(60 * options.depth, 0);
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      osc.connect(filter);
+      sub.connect(filter);
+      
+      if (options.pitchSafeMode) {
+        // Didgeridoo is naturally low, but we can still soften it
+        const softFilter = ctx.createBiquadFilter();
+        softFilter.type = 'lowpass';
+        softFilter.frequency.setValueAtTime(options.frequency * 2, 0);
+        filter.connect(softFilter);
+        
+        const preReverbGain = ctx.createGain();
+        preReverbGain.gain.setValueAtTime(0.05, 0);
+        softFilter.connect(preReverbGain);
+        
+        applySoftReverb(preReverbGain, outGain);
+        applyFades(outGain);
+      } else {
+        outGain.gain.setValueAtTime(0.06, 0);
+        filter.connect(outGain);
+      }
+
+      outGain.connect(masterGainNode);
+      lfo.start(0);
+      osc.start(0);
+      sub.start(0);
+    }
+    else if (type === 'shamanic') {
+      const bpm = 120 * options.playbackRate;
+      const interval = 60 / bpm;
+      const numHits = Math.floor(duration / interval);
+      const drumGain = ctx.createGain();
+      
+      for (let i = 0; i < numHits; i++) {
+        const time = i * interval;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        
+        osc.type = 'triangle';
+        const startFreq = options.frequency * (options.pitchSafeMode ? 1.3 : 1.6);
+        const endFreq = options.frequency;
+        
+        osc.frequency.setValueAtTime(startFreq, time);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.05);
+        
+        g.gain.setValueAtTime(0, time);
+        g.gain.linearRampToValueAtTime(0.35 * (1 + options.depth), time + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+        
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(options.frequency * (options.pitchSafeMode ? 2 : 4), time);
+        filter.Q.setValueAtTime(2, time);
+        
+        osc.connect(g);
+        g.connect(filter);
+        filter.connect(drumGain);
+        
+        osc.start(time);
+        osc.stop(time + 0.6);
+      }
+
+      const outGain = ctx.createGain();
+      if (options.pitchSafeMode) {
+        const preReverbGain = ctx.createGain();
+        preReverbGain.gain.setValueAtTime(1.0, 0);
+        drumGain.connect(preReverbGain);
+        applySoftReverb(preReverbGain, outGain);
+        applyFades(outGain);
+      } else {
+        drumGain.connect(outGain);
+      }
+
+      outGain.connect(masterGainNode);
     }
     else if (type === 'noise') {
       const bufferSize = sampleRate * duration;
@@ -395,97 +631,12 @@ export default function AudioEngine() {
       }
       const source = ctx.createBufferSource();
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.06, 0); // Base sensitivity
+      gain.gain.setValueAtTime(0.06, 0); 
       source.buffer = buffer;
       source.loop = true;
       source.connect(gain);
       gain.connect(masterGainNode);
       source.start(0);
-    }
-    else if (type === 'isochronic') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const outGain = ctx.createGain();
-      const lfo = ctx.createOscillator();
-      outGain.gain.setValueAtTime(0.08, 0); // Base sensitivity
-      osc.frequency.setValueAtTime(options.frequency, 0);
-      lfo.type = 'square';
-      lfo.frequency.setValueAtTime(options.pulseRate, 0);
-      const lfoGain = ctx.createGain();
-      lfoGain.gain.setValueAtTime(0.5, 0);
-      const constant = ctx.createConstantSource();
-      constant.offset.setValueAtTime(0.5, 0);
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      constant.connect(gain.gain);
-      osc.connect(gain);
-      gain.connect(outGain);
-      outGain.connect(masterGainNode);
-      lfo.start(0);
-      constant.start(0);
-      osc.start(0);
-    }
-    else if (type === 'didgeridoo') {
-      const osc = ctx.createOscillator();
-      const sub = ctx.createOscillator();
-      const filter = ctx.createBiquadFilter();
-      const outGain = ctx.createGain();
-      const lfo = ctx.createOscillator();
-      const lfoGain = ctx.createGain();
-      outGain.gain.setValueAtTime(0.06, 0); // Base sensitivity
-      osc.type = 'sawtooth';
-      sub.type = 'sine';
-      osc.frequency.setValueAtTime(options.frequency, 0);
-      sub.frequency.setValueAtTime(options.frequency, 0);
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(options.frequency * 2.7 * (1 + options.depth), 0);
-      filter.Q.setValueAtTime(15, 0);
-      lfo.frequency.setValueAtTime(0.15, 0);
-      lfoGain.gain.setValueAtTime(60 * options.depth, 0);
-      lfo.connect(lfoGain);
-      lfoGain.connect(filter.frequency);
-      osc.connect(filter);
-      sub.connect(filter);
-      filter.connect(outGain);
-      outGain.connect(masterGainNode);
-      lfo.start(0);
-      osc.start(0);
-      sub.start(0);
-    }
-
-    else if (type === 'shamanic') {
-      const bpm = 120 * options.playbackRate;
-      const interval = 60 / bpm;
-      const numHits = Math.floor(duration / interval);
-      
-      for (let i = 0; i < numHits; i++) {
-        const time = i * interval;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
-        
-        osc.type = 'triangle';
-        const startFreq = options.frequency * 1.6;
-        const endFreq = options.frequency;
-        
-        osc.frequency.setValueAtTime(startFreq, time);
-        osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.05);
-        
-        gain.gain.setValueAtTime(0, time);
-        gain.gain.linearRampToValueAtTime(0.35 * (1 + options.depth), time + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-        
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(options.frequency * 4, time);
-        filter.Q.setValueAtTime(2, time);
-        
-        osc.connect(gain);
-        gain.connect(filter);
-        filter.connect(masterGainNode);
-        
-        osc.start(time);
-        osc.stop(time + 0.6);
-      }
     }
 
     const renderedBuffer = await ctx.startRendering();
@@ -2005,7 +2156,8 @@ export default function AudioEngine() {
       
       const params = { 
         leftFreq: settings.binaural.leftFreq, 
-        rightFreq: settings.binaural.rightFreq 
+        rightFreq: settings.binaural.rightFreq,
+        pitchSafeMode: settings.binaural.pitchSafeMode
       };
 
       await syncBgLayer(
@@ -2019,7 +2171,7 @@ export default function AudioEngine() {
       );
     };
     syncBinauralBg();
-  }, [isPlaying, settings.binaural.isEnabled, settings.binaural.playInBackground, settings.fadeInOut, settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume, settings.binaural.gainDb, settings.binaural.normalize, settings.audioTools.gainDb]);
+  }, [isPlaying, settings.binaural.isEnabled, settings.binaural.playInBackground, settings.fadeInOut, settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume, settings.binaural.gainDb, settings.binaural.normalize, settings.audioTools.gainDb, settings.binaural.pitchSafeMode]);
 
   // Handle Binaural Frequency/Volume Updates
   useEffect(() => {
@@ -2126,11 +2278,12 @@ export default function AudioEngine() {
     const syncBg = async () => {
       syncBgLayer('didgeridoo', isLayerPlaying, isBg, 'didgeridoo', { 
         frequency: settings.didgeridoo.frequency, 
-        depth: settings.didgeridoo.depth 
+        depth: settings.didgeridoo.depth,
+        pitchSafeMode: settings.didgeridoo.pitchSafeMode
       }, settings.didgeridoo.volume, settings.didgeridoo.gainDb);
     };
     syncBg();
-  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.didgeridoo.playInBackground, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize, settings.didgeridoo.frequency, settings.didgeridoo.depth, settings.audioTools.gainDb]);
+  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.didgeridoo.playInBackground, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize, settings.didgeridoo.frequency, settings.didgeridoo.depth, settings.audioTools.gainDb, settings.didgeridoo.pitchSafeMode]);
 
   // Handle Shamanic Layer
   useEffect(() => {
@@ -2164,11 +2317,12 @@ export default function AudioEngine() {
       syncBgLayer('shamanic', isLayerPlaying, isBg, 'shamanic', { 
         frequency: settings.shamanic.frequency, 
         depth: settings.shamanic.depth,
-        playbackRate: settings.shamanic.playbackRate
+        playbackRate: settings.shamanic.playbackRate,
+        pitchSafeMode: settings.shamanic.pitchSafeMode
       }, settings.shamanic.volume, settings.shamanic.gainDb);
     };
     syncBg();
-  }, [isPlaying, settings.shamanic.isEnabled, settings.shamanic.isLooping, settings.shamanic.playInBackground, settings.fadeInOut, settings.shamanic.volume, settings.shamanic.gainDb, settings.shamanic.normalize, settings.shamanic.frequency, settings.shamanic.depth, settings.shamanic.playbackRate, settings.audioTools.gainDb]);
+  }, [isPlaying, settings.shamanic.isEnabled, settings.shamanic.isLooping, settings.shamanic.playInBackground, settings.fadeInOut, settings.shamanic.volume, settings.shamanic.gainDb, settings.shamanic.normalize, settings.shamanic.frequency, settings.shamanic.depth, settings.shamanic.playbackRate, settings.audioTools.gainDb, settings.shamanic.pitchSafeMode]);
 
   // Handle Pure Hz Layer
   useEffect(() => {
@@ -2193,10 +2347,10 @@ export default function AudioEngine() {
     }
 
     const syncBg = async () => {
-      syncBgLayer('pureHz', isLayerPlaying, isBg, 'pureHz', { frequency: settings.pureHz.frequency }, settings.pureHz.volume, settings.pureHz.gainDb);
+      syncBgLayer('pureHz', isLayerPlaying, isBg, 'pureHz', { frequency: settings.pureHz.frequency, pitchSafeMode: settings.pureHz.pitchSafeMode }, settings.pureHz.volume, settings.pureHz.gainDb);
     };
     syncBg();
-  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.pureHz.playInBackground, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb, settings.audioTools.gainDb]);
+  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.pureHz.playInBackground, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb, settings.audioTools.gainDb, settings.pureHz.pitchSafeMode]);
 
   // Handle Isochronic Layer
   useEffect(() => {
@@ -2224,11 +2378,12 @@ export default function AudioEngine() {
     const syncBg = async () => {
       syncBgLayer('isochronic', isLayerPlaying, isBg, 'isochronic', { 
         frequency: settings.isochronic.frequency, 
-        pulseRate: settings.isochronic.pulseRate 
+        pulseRate: settings.isochronic.pulseRate,
+        pitchSafeMode: settings.isochronic.pitchSafeMode
       }, settings.isochronic.volume, settings.isochronic.gainDb);
     };
     syncBg();
-  }, [isPlaying, settings.isochronic.isEnabled, settings.isochronic.playInBackground, settings.fadeInOut, settings.isochronic.volume, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.gainDb, settings.audioTools.gainDb]);
+  }, [isPlaying, settings.isochronic.isEnabled, settings.isochronic.playInBackground, settings.fadeInOut, settings.isochronic.volume, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.gainDb, settings.audioTools.gainDb, settings.isochronic.pitchSafeMode]);
 
   // Handle Solfeggio Layer
   useEffect(() => {
@@ -2253,10 +2408,10 @@ export default function AudioEngine() {
     }
 
     const syncBg = async () => {
-      syncBgLayer('solfeggio', isLayerPlaying, isBg, 'solfeggio', { frequency: settings.solfeggio.frequency }, settings.solfeggio.volume, settings.solfeggio.gainDb);
+      syncBgLayer('solfeggio', isLayerPlaying, isBg, 'solfeggio', { frequency: settings.solfeggio.frequency, pitchSafeMode: settings.solfeggio.pitchSafeMode }, settings.solfeggio.volume, settings.solfeggio.gainDb);
     };
     syncBg();
-  }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb, settings.audioTools.gainDb]);
+  }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb, settings.audioTools.gainDb, settings.solfeggio.pitchSafeMode]);
 
   // Handle Display Always On (WakeLock)
   const wakeLockRef = useRef<any>(null);

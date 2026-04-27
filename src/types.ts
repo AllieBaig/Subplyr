@@ -43,6 +43,7 @@ export interface BinauralSettings {
   gainDb: number;
   normalize: boolean;
   playInBackground: boolean;
+  pitchSafeMode: boolean;
 }
 
 export interface NatureSettings {
@@ -73,6 +74,7 @@ export interface DidgeridooSettings {
   isLooping: boolean;
   normalize: boolean;
   playInBackground: boolean;
+  pitchSafeMode: boolean;
 }
 
 export interface PureHzSettings {
@@ -83,6 +85,7 @@ export interface PureHzSettings {
   gainDb: number;
   normalize: boolean;
   playInBackground: boolean;
+  pitchSafeMode: boolean;
 }
 
 export interface IsochronicSettings {
@@ -93,6 +96,7 @@ export interface IsochronicSettings {
   gainDb: number;
   normalize: boolean;
   playInBackground: boolean;
+  pitchSafeMode: boolean;
 }
 
 export interface SolfeggioSettings {
@@ -102,6 +106,7 @@ export interface SolfeggioSettings {
   gainDb: number;
   normalize: boolean;
   playInBackground: boolean;
+  pitchSafeMode: boolean;
 }
 
 export interface AudioTools {
@@ -139,6 +144,7 @@ export interface ShamanicSettings {
   isLooping: boolean;
   normalize: boolean;
   playInBackground: boolean;
+  pitchSafeMode: boolean;
 }
 
 export interface AppSettings {

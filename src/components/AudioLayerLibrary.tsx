@@ -123,6 +123,8 @@ export const AudioLayerLibrary = () => {
         setNormalize={(v: boolean) => updateBinauralSettings({ normalize: v })}
         playInBackground={settings.binaural.playInBackground}
         setPlayInBackground={(v: boolean) => updateBinauralSettings({ playInBackground: v })}
+        pitchSafeMode={settings.binaural.pitchSafeMode}
+        setPitchSafeMode={(v: boolean) => updateBinauralSettings({ pitchSafeMode: v })}
         color="text-purple-500"
         subtitle={`${settings.binaural.leftFreq}Hz / ${settings.binaural.rightFreq}Hz`}
         onApplyPreset={(p: any) => applyLayerPreset('binaural', p)}
@@ -226,6 +228,8 @@ export const AudioLayerLibrary = () => {
         setNormalize={(v: boolean) => updateDidgeridooSettings({ normalize: v })}
         playInBackground={settings.didgeridoo.playInBackground}
         setPlayInBackground={(v: boolean) => updateDidgeridooSettings({ playInBackground: v })}
+        pitchSafeMode={settings.didgeridoo.pitchSafeMode}
+        setPitchSafeMode={(v: boolean) => updateDidgeridooSettings({ pitchSafeMode: v })}
         color="text-amber-800"
         subtitle={`${Math.round(settings.didgeridoo.frequency)}Hz Drone`}
         onApplyPreset={(p: any) => applyLayerPreset('didgeridoo', p)}
@@ -256,6 +260,8 @@ export const AudioLayerLibrary = () => {
         setNormalize={(v: boolean) => updatePureHzSettings({ normalize: v })}
         playInBackground={settings.pureHz.playInBackground}
         setPlayInBackground={(v: boolean) => updatePureHzSettings({ playInBackground: v })}
+        pitchSafeMode={settings.pureHz.pitchSafeMode}
+        setPitchSafeMode={(v: boolean) => updatePureHzSettings({ pitchSafeMode: v })}
         color="text-rose-600"
         subtitle={`${settings.pureHz.frequency}Hz`}
         onApplyPreset={(p: any) => applyLayerPreset('pureHz', p)}
@@ -280,6 +286,8 @@ export const AudioLayerLibrary = () => {
         setNormalize={(v: boolean) => updateIsochronicSettings({ normalize: v })}
         playInBackground={settings.isochronic.playInBackground}
         setPlayInBackground={(v: boolean) => updateIsochronicSettings({ playInBackground: v })}
+        pitchSafeMode={settings.isochronic.pitchSafeMode}
+        setPitchSafeMode={(v: boolean) => updateIsochronicSettings({ pitchSafeMode: v })}
         color="text-blue-600"
         subtitle={`${settings.isochronic.frequency}Hz pulse`}
         onApplyPreset={(p: any) => applyLayerPreset('isochronic', p)}
@@ -306,6 +314,8 @@ export const AudioLayerLibrary = () => {
         setNormalize={(v: boolean) => updateSolfeggioSettings({ normalize: v })}
         playInBackground={settings.solfeggio.playInBackground}
         setPlayInBackground={(v: boolean) => updateSolfeggioSettings({ playInBackground: v })}
+        pitchSafeMode={settings.solfeggio.pitchSafeMode}
+        setPitchSafeMode={(v: boolean) => updateSolfeggioSettings({ pitchSafeMode: v })}
         color="text-emerald-600"
         subtitle={`${settings.solfeggio.frequency}Hz Healing`}
         onApplyPreset={(p: any) => applyLayerPreset('solfeggio', p)}
@@ -330,6 +340,8 @@ export const AudioLayerLibrary = () => {
         setNormalize={(v: boolean) => updateShamanicSettings({ normalize: v })}
         playInBackground={settings.shamanic.playInBackground}
         setPlayInBackground={(v: boolean) => updateShamanicSettings({ playInBackground: v })}
+        pitchSafeMode={settings.shamanic.pitchSafeMode}
+        setPitchSafeMode={(v: boolean) => updateShamanicSettings({ pitchSafeMode: v })}
         color="text-red-900"
         subtitle={`${Math.round(settings.shamanic.frequency)}Hz Tribal`}
         onApplyPreset={(p: any) => applyLayerPreset('shamanic', p)}

@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     gainDb: 0,
     normalize: false,
     playInBackground: false,
+    pitchSafeMode: false,
   },
   nature: {
     isEnabled: false,
@@ -71,6 +72,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     isLooping: true,
     normalize: false,
     playInBackground: false,
+    pitchSafeMode: false,
   },
   shamanic: {
     isEnabled: false,
@@ -82,6 +84,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     isLooping: true,
     normalize: false,
     playInBackground: false,
+    pitchSafeMode: false,
   },
   pureHz: {
     isEnabled: false,
@@ -91,6 +94,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     gainDb: 0,
     normalize: false,
     playInBackground: false,
+    pitchSafeMode: false,
   },
   isochronic: {
     isEnabled: false,
@@ -100,6 +104,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     gainDb: -6,
     normalize: false,
     playInBackground: false,
+    pitchSafeMode: false,
   },
   solfeggio: {
     isEnabled: false,
@@ -108,6 +113,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     gainDb: -6,
     normalize: false,
     playInBackground: false,
+    pitchSafeMode: false,
   },
   audioTools: {
     gainDb: 0,

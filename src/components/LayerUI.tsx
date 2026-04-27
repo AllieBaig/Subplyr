@@ -168,9 +168,19 @@ export const LayerAccordion = ({
   id, icon: Icon, label, isEnabled, onToggle, vol, setVol, 
   gainDb, setGainDb, normalize, setNormalize, 
   playInBackground, setPlayInBackground,
+  pitchSafeMode, setPitchSafeMode,
   color, subtitle, children, onApplyPreset 
 }: any) => {
   const [isToolsExpanded, setIsToolsExpanded] = useState(false);
+
+  const colorHex = color.includes('blue') ? '#007aff' : 
+                   color.includes('purple') ? '#a855f7' : 
+                   color.includes('green') ? '#22c55e' : 
+                   color.includes('amber') ? '#92400e' : 
+                   color.includes('rose') ? '#e11d48' : 
+                   color.includes('emerald') ? '#059669' :
+                   color.includes('red') ? '#7f1d1d' :
+                   '#f97316';
 
   return (
     <div className="bg-secondary-system-background border border-apple-border rounded-[2.5rem] overflow-hidden transition-all shadow-sm">
@@ -202,23 +212,47 @@ export const LayerAccordion = ({
             exit={{ height: 0, opacity: 0 }}
             className="px-5 pb-8 space-y-8"
           >
-            {/* Background Play Support */}
-            <div className="flex items-center justify-between p-5 bg-system-background rounded-[2rem] border border-apple-border shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-apple-blue/5 text-apple-blue rounded-2xl flex items-center justify-center">
-                  <Activity size={18} />
+            {/* Playback Controls Row */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Background Play Support */}
+              <div className="flex flex-col gap-3 p-4 bg-system-background rounded-[2rem] border border-apple-border shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="w-8 h-8 bg-apple-blue/5 text-apple-blue rounded-xl flex items-center justify-center">
+                    <Activity size={14} />
+                  </div>
+                  <button 
+                    onClick={() => setPlayInBackground(!playInBackground)}
+                    className={`w-9 h-5 rounded-full relative transition-colors ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                  >
+                    <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: playInBackground ? 16 : 0 }} />
+                  </button>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Background Mode</span>
-                  <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Stable Playback</span>
+                  <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Background</span>
+                  <span className="text-[7px] font-bold text-system-tertiary-label uppercase">Stable Play</span>
                 </div>
               </div>
-              <button 
-                onClick={() => setPlayInBackground(!playInBackground)}
-                className={`w-10 h-6 rounded-full relative transition-colors ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-              >
-                <motion.div className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full" animate={{ x: playInBackground ? 16 : 0 }} />
-              </button>
+
+              {/* Pitch Safe Mode Toggle */}
+              {setPitchSafeMode !== undefined && (
+                <div className="flex flex-col gap-3 p-4 bg-system-background rounded-[2rem] border border-apple-border shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center`} style={{ backgroundColor: `${colorHex}10`, color: colorHex }}>
+                      <Ear size={14} />
+                    </div>
+                    <button 
+                      onClick={() => setPitchSafeMode(!pitchSafeMode)}
+                      className={`w-9 h-5 rounded-full relative transition-colors ${pitchSafeMode ? (color.includes('emerald') ? 'bg-emerald-600' : color.includes('red') ? 'bg-red-900' : color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
+                    >
+                      <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: pitchSafeMode ? 16 : 0 }} />
+                    </button>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Pitch Safe</span>
+                    <span className="text-[7px] font-bold text-system-tertiary-label uppercase">Meditation Filter</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Volume Section */}
