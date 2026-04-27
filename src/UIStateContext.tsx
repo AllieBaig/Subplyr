@@ -96,11 +96,11 @@ export function UIStateProvider({ children }: { children: ReactNode }) {
     // Defensive: Version Check & Cache Busting
     const lastVersion = localStorage.getItem('app_version');
     if (lastVersion && lastVersion !== CURRENT_VERSION) {
-      console.warn("System Update: Version mismatch detected. Stabilizing environment.");
-      localStorage.clear(); 
-      localStorage.setItem('app_version', CURRENT_VERSION);
-      window.location.reload();
-      return;
+      console.log("System Update: Version migrated to " + CURRENT_VERSION);
+      // We no longer clear localStorage here to prevent data loss of imported audio/settings.
+      // Selective clearing of temp state if needed:
+      localStorage.removeItem('app_boot_crash_count');
+      localStorage.removeItem('app_crash_log');
     }
     localStorage.setItem('app_version', CURRENT_VERSION);
 

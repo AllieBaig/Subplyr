@@ -103,186 +103,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTrack?.id, isPlaying]);
 
-  // Initial Load
-  useEffect(() => {
-    let isMounted = true;
-    const startupGuard = setTimeout(() => {
-      if (isMounted && isLoading) {
-        setInitError("Environment synchronization delay. Attempting system recovery.");
-        setIsLoading(false);
-      }
-    }, 10000);
-
-    async function loadData() {
-      try {
-        const [savedTracks, savedSubTracks, savedPlaylists] = await Promise.all([
-          db.getTracks(false),
-          db.getTracks(true),
-          db.getPlaylists()
-        ]);
-
-        // iOS 16 Persistence Fix: Validate and potentially repair missing track references
-        const validatedTracks = (savedTracks || []).map(t => ({
-          ...t,
-          isMissing: false // Reset flag on startup to re-validate
-        }));
-        
-        const validatedSubTracks = (savedSubTracks || []).map(t => ({
-          ...t,
-          isMissing: false
-        }));
-
-          if (isMounted) {
-            setTracks(validatedTracks);
-            setSubliminalTracks(validatedSubTracks);
-            setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
-            
-            // Restore playback state
-            if (settings.chunking.activePlaylistId) {
-              setPlayingPlaylistId(settings.chunking.activePlaylistId);
-              if (settings.chunking.currentTrackIndex !== null) {
-                setCurrentTrackIndex(settings.chunking.currentTrackIndex);
-              }
-            }
-
-            // Deep check for binary integrity on boot
-            setTimeout(async () => {
-             for (const t of validatedTracks) {
-               const exists = await db.getTrackBlob(t.id);
-               if (!exists || exists.size === 0) {
-                 console.warn(`[AudioContext] Track ${t.id} failed binary durability check.`);
-                 setTracks(prev => prev.map(pt => pt.id === t.id ? { ...pt, isMissing: true } : pt));
-               }
-             }
-          }, 3000);
-        }
-      } catch (err) {
-        console.warn("Defensive Load Trace:", err);
-        if (isMounted) setInitError("Database sync issue.");
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          clearTimeout(startupGuard);
-        }
-      }
-    }
-    loadData();
-    return () => { 
-      isMounted = false; 
-      clearTimeout(startupGuard); 
-      Object.values(trackUrlCache.current).forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [setIsLoading, setInitError]);
-
-  // Handle Share Target processing
-  useEffect(() => {
-    if (isLoading) return;
-
-    const processSharedFiles = async () => {
-      const searchParams = new URLSearchParams(window.location.search);
-      const sharedCount = searchParams.get('shared-count');
-      
-      if (sharedCount) {
-        try {
-          const count = parseInt(sharedCount, 10);
-          showToast(`Processing ${count} shared file${count > 1 ? 's' : ''}...`);
-          
-          const cache = await caches.open('shared-files');
-          const keys = await cache.keys();
-          
-          for (const key of keys) {
-            const response = await cache.match(key);
-            if (response) {
-              const blob = await response.blob();
-              const filename = decodeURIComponent(response.headers.get('x-filename') || 'Shared Audio');
-              const file = new File([blob], filename, { type: blob.type || 'audio/mpeg' });
-              
-              await addTrack(file);
-              await cache.delete(key);
-            }
-          }
-          
-          showToast("Shared files imported successfully");
-          // Clean URL
-          window.history.replaceState({}, '', window.location.pathname);
-        } catch (err) {
-          console.error('[AudioContext] Shared file processing failed:', err);
-          showToast("Failed to process shared files");
-        }
-      }
-    };
-
-    processSharedFiles();
-  }, [isLoading, addTrack, showToast]);
-
-  const getTrackUrl = useCallback(async (id: string, forceRefresh?: boolean) => {
-    try {
-      if (!forceRefresh && trackUrlCache.current[id]) {
-        // Validation: On iOS 16, check if the URL is still likely valid
-        // Actually, we'll trust it unless it fails in the actual audio element
-        return trackUrlCache.current[id];
-      }
-      
-      if (trackUrlCache.current[id]) {
-        URL.revokeObjectURL(trackUrlCache.current[id]);
-        delete trackUrlCache.current[id];
-      }
-  
-      // Cache management: limit concurrent blobs; increased for more stable buffering while respecting iPhone 8 low RAM
-      if (cacheOrder.current.length >= 6) {
-        // We want to avoid revoking the track that might be playing right now
-        // Find the first index that isn't the current track
-        const currentIdx = cacheOrder.current.indexOf(currentTrack?.id || "");
-        let indexToEvict = 0;
-        
-        if (indexToEvict === currentIdx) {
-          indexToEvict = 1; // Skip current
-        }
-
-        if (indexToEvict < cacheOrder.current.length) {
-          const evictedId = cacheOrder.current.splice(indexToEvict, 1)[0];
-          if (evictedId && trackUrlCache.current[evictedId]) {
-            console.log("[AudioContext] Evicting cached URL to stabilize RAM:", evictedId);
-            URL.revokeObjectURL(trackUrlCache.current[evictedId]);
-            delete trackUrlCache.current[evictedId];
-          }
-        }
-      }
-  
-      const blob = await db.getTrackBlob(id);
-      if (blob && blob.size > 0) {
-        const url = URL.createObjectURL(blob);
-        trackUrlCache.current[id] = url;
-        cacheOrder.current.push(id);
-        return url;
-      }
-      
-      // Silent Auto-Repair: Check if it's in tracks but blob is gone (shouldn't happen with IDB but for robustness)
-      console.warn(`[AudioContext] Blob missing for ${id}.`);
-      return null;
-    } catch (err) {
-      console.error(`[AudioContext] getTrackUrl failed for ${id}:`, err);
-      return null;
-    }
-  }, []);
-
-  const revokeTrackUrl = useCallback((id: string) => {
-    if (trackUrlCache.current[id]) {
-      URL.revokeObjectURL(trackUrlCache.current[id]);
-      delete trackUrlCache.current[id];
-      cacheOrder.current = cacheOrder.current.filter(item => item !== id);
-    }
-  }, []);
-
-  const checkTrackPlayable = useCallback(async (id: string) => {
-    try {
-      const blob = await db.getTrackBlob(id);
-      return !!(blob && blob.size > 0);
-    } catch (err) {
-      return false;
-    }
-  }, []);
-
   const validateAudioFile = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
       const ext = file.name.split('.').pop()?.toLowerCase();
@@ -320,7 +140,20 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const addTrack = async (file: File, targetPlaylistId?: string) => {
+  const addTracksToPlaylist = useCallback(async (trackIds: string[], playlistId: string) => {
+    let updated: Playlist | null = null;
+    setPlaylists(prev => {
+      const p = prev.find(x => x.id === playlistId);
+      if (!p) return prev;
+      updated = { ...p, trackIds: Array.from(new Set([...p.trackIds, ...trackIds])) };
+      return prev.map(x => x.id === playlistId ? updated! : x);
+    });
+    if (updated) await db.savePlaylist(updated);
+  }, []);
+
+  const addTrackToPlaylist = useCallback((tid: string, pid: string) => addTracksToPlaylist([tid], pid), [addTracksToPlaylist]);
+
+  const addTrack = useCallback(async (file: File, targetPlaylistId?: string) => {
     if (!(await validateAudioFile(file))) {
       showToast(`Unsupported format: ${file.name}`);
       return null;
@@ -332,7 +165,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       name: file.name.replace(/\.[^/.]+$/, ""),
       url: '', 
       artist: 'Unknown Artist',
-      blob: new Blob([file], { type: file.type }), // Force data copy for IDB durability
+      blob: new Blob([file], { type: file.type }), 
       createdAt: Date.now(),
       duration
     };
@@ -342,9 +175,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     if (targetPlaylistId) await addTrackToPlaylist(id, targetPlaylistId);
     if (currentTrackIndex === null) setCurrentTrackIndex(0);
     return id;
-  };
+  }, [showToast, currentTrackIndex, addTrackToPlaylist]);
 
-  const addSubliminalTrack = async (file: File) => {
+  const addSubliminalTrack = useCallback(async (file: File) => {
     if (!(await validateAudioFile(file))) return;
     const id = Math.random().toString(36).substr(2, 9);
     const duration = await getAudioDuration(file);
@@ -352,7 +185,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       id, 
       name: file.name.replace(/\.[^/.]+$/, ""), 
       url: '', 
-      blob: new Blob([file], { type: file.type }), // Force data copy
+      blob: new Blob([file], { type: file.type }),
       createdAt: Date.now(),
       duration
     };
@@ -360,7 +193,152 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const { blob, ...metadata } = newTrack;
     setSubliminalTracks(prev => [...prev, metadata]);
     if (!settings.subliminal.selectedTrackId) updateSubliminalSettings({ selectedTrackId: id });
-  };
+  }, [settings.subliminal.selectedTrackId, updateSubliminalSettings]);
+
+  const getTrackUrl = useCallback(async (id: string, forceRefresh?: boolean) => {
+    try {
+      if (!forceRefresh && trackUrlCache.current[id]) {
+        return trackUrlCache.current[id];
+      }
+      
+      if (trackUrlCache.current[id]) {
+        URL.revokeObjectURL(trackUrlCache.current[id]);
+        delete trackUrlCache.current[id];
+      }
+  
+      if (cacheOrder.current.length >= 6) {
+        const currentIdx = cacheOrder.current.indexOf(currentTrack?.id || "");
+        let indexToEvict = 0;
+        if (indexToEvict === currentIdx) indexToEvict = 1;
+
+        if (indexToEvict < cacheOrder.current.length) {
+          const evictedId = cacheOrder.current.splice(indexToEvict, 1)[0];
+          if (evictedId && trackUrlCache.current[evictedId]) {
+            URL.revokeObjectURL(trackUrlCache.current[evictedId]);
+            delete trackUrlCache.current[evictedId];
+          }
+        }
+      }
+  
+      const blob = await db.getTrackBlob(id);
+      if (blob && blob.size > 0) {
+        const url = URL.createObjectURL(blob);
+        trackUrlCache.current[id] = url;
+        cacheOrder.current.push(id);
+        return url;
+      }
+      return null;
+    } catch (err) {
+      console.error(`[AudioContext] getTrackUrl failed for ${id}:`, err);
+      return null;
+    }
+  }, [currentTrack?.id]);
+
+  const revokeTrackUrl = useCallback((id: string) => {
+    if (trackUrlCache.current[id]) {
+      URL.revokeObjectURL(trackUrlCache.current[id]);
+      delete trackUrlCache.current[id];
+      cacheOrder.current = cacheOrder.current.filter(item => item !== id);
+    }
+  }, []);
+
+  const checkTrackPlayable = useCallback(async (id: string) => {
+    try {
+      const blob = await db.getTrackBlob(id);
+      return !!(blob && blob.size > 0);
+    } catch (err) {
+      return false;
+    }
+  }, []);
+
+  // Initial Load
+  useEffect(() => {
+    let isMounted = true;
+    const startupGuard = setTimeout(() => {
+      if (isMounted && isLoading) {
+        setInitError("Environment synchronization delay. Attempting system recovery.");
+        setIsLoading(false);
+      }
+    }, 10000);
+
+    async function loadData() {
+      try {
+        const [savedTracks, savedSubTracks, savedPlaylists] = await Promise.all([
+          db.getTracks(false),
+          db.getTracks(true),
+          db.getPlaylists()
+        ]);
+
+        const validatedTracks = (savedTracks || []).map(t => ({ ...t, isMissing: false }));
+        const validatedSubTracks = (savedSubTracks || []).map(t => ({ ...t, isMissing: false }));
+
+        if (isMounted) {
+          setTracks(validatedTracks);
+          setSubliminalTracks(validatedSubTracks);
+          setPlaylists(Array.isArray(savedPlaylists) ? savedPlaylists : []);
+          if (settings.chunking.activePlaylistId) {
+            setPlayingPlaylistId(settings.chunking.activePlaylistId);
+            if (settings.chunking.currentTrackIndex !== null) {
+              setCurrentTrackIndex(settings.chunking.currentTrackIndex);
+            }
+          }
+          setTimeout(async () => {
+            for (const t of validatedTracks) {
+              const exists = await db.getTrackBlob(t.id);
+              if (!exists || exists.size === 0) {
+                setTracks(prev => prev.map(pt => pt.id === t.id ? { ...pt, isMissing: true } : pt));
+              }
+            }
+          }, 3000);
+        }
+      } catch (err) {
+        if (isMounted) setInitError("Database sync issue.");
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          clearTimeout(startupGuard);
+        }
+      }
+    }
+    loadData();
+    return () => { 
+      isMounted = false; 
+      clearTimeout(startupGuard); 
+      Object.values(trackUrlCache.current).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [setIsLoading, setInitError]);
+
+  // Handle Share Target processing
+  useEffect(() => {
+    if (isLoading) return;
+    const processSharedFiles = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const sharedCount = searchParams.get('shared-count');
+      if (sharedCount) {
+        try {
+          const count = parseInt(sharedCount, 10);
+          showToast(`Processing ${count} shared file${count > 1 ? 's' : ''}...`);
+          const cache = await caches.open('shared-files');
+          const keys = await cache.keys();
+          for (const key of keys) {
+            const response = await cache.match(key);
+            if (response) {
+              const blob = await response.blob();
+              const filename = decodeURIComponent(response.headers.get('x-filename') || 'Shared Audio');
+              const file = new File([blob], filename, { type: blob.type || 'audio/mpeg' });
+              await addTrack(file);
+              await cache.delete(key);
+            }
+          }
+          showToast("Shared files imported successfully");
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch (err) {
+          showToast("Failed to process shared files");
+        }
+      }
+    };
+    processSharedFiles();
+  }, [isLoading, addTrack, showToast]);
 
   // Duration Migration & Verification
   useEffect(() => {
@@ -429,19 +407,6 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     await db.deletePlaylist(id);
     setPlaylists(prev => prev.filter(p => p.id !== id));
   };
-
-  const addTracksToPlaylist = async (trackIds: string[], playlistId: string) => {
-    let updated: Playlist | null = null;
-    setPlaylists(prev => {
-      const p = prev.find(x => x.id === playlistId);
-      if (!p) return prev;
-      updated = { ...p, trackIds: Array.from(new Set([...p.trackIds, ...trackIds])) };
-      return prev.map(x => x.id === playlistId ? updated! : x);
-    });
-    if (updated) await db.savePlaylist(updated);
-  };
-
-  const addTrackToPlaylist = (tid: string, pid: string) => addTracksToPlaylist([tid], pid);
 
   const removeTracksFromPlaylist = async (trackIds: string[], playlistId: string) => {
     let updated: Playlist | null = null;
