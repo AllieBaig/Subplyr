@@ -158,7 +158,8 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       settings.didgeridoo.isEnabled && "Didgeridoo",
       settings.pureHz.isEnabled && `${settings.pureHz.frequency}Hz`,
       settings.isochronic.isEnabled && "Isochronic",
-      settings.solfeggio.isEnabled && `${settings.solfeggio.frequency}Hz Solfeggio`
+      settings.solfeggio.isEnabled && `${settings.solfeggio.frequency}Hz Solfeggio`,
+      settings.shamanic.isEnabled && "Shamanic Drumming"
     ].filter(Boolean);
 
     if (layers.length === 0) return "Standard Audio";
@@ -341,6 +342,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                 {settings.pureHz.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />}
                 {settings.isochronic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
                 {settings.solfeggio.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
+                {settings.shamanic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-red-900" />}
               </div>
             <span className={`font-bold uppercase tracking-[0.12em] text-system-secondary-label truncate ${settings.bigTouchMode ? 'text-[10px]' : 'text-[9px]'}`}>{activeLayersLabel}</span>
           </button>

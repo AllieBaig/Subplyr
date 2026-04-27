@@ -11,6 +11,7 @@ interface SettingsContextType {
   updateNatureSettings: (newSettings: Partial<AppSettings['nature']>) => void;
   updateNoiseSettings: (newSettings: Partial<AppSettings['noise']>) => void;
   updateDidgeridooSettings: (newSettings: Partial<AppSettings['didgeridoo']>) => void;
+  updateShamanicSettings: (newSettings: Partial<AppSettings['shamanic']>) => void;
   updatePureHzSettings: (newSettings: Partial<AppSettings['pureHz']>) => void;
   updateIsochronicSettings: (newSettings: Partial<AppSettings['isochronic']>) => void;
   updateSolfeggioSettings: (newSettings: Partial<AppSettings['solfeggio']>) => void;
@@ -67,6 +68,17 @@ const DEFAULT_SETTINGS: AppSettings = {
     playbackRate: 1.0,
     frequency: 65,
     depth: 0.5,
+    isLooping: true,
+    normalize: false,
+    playInBackground: false,
+  },
+  shamanic: {
+    isEnabled: false,
+    volume: 0.4,
+    gainDb: -6,
+    playbackRate: 1.0,
+    frequency: 70, // Warm low drum tone
+    depth: 0.4,
     isLooping: true,
     normalize: false,
     playInBackground: false,
@@ -239,6 +251,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateDidgeridooSettings = useCallback((newDid: Partial<AppSettings['didgeridoo']>) => {
     setSettings(prev => ({ ...prev, didgeridoo: { ...prev.didgeridoo, ...newDid } }));
   }, []);
+  
+  const updateShamanicSettings = useCallback((newSha: Partial<AppSettings['shamanic']>) => {
+    setSettings(prev => ({ ...prev, shamanic: { ...prev.shamanic, ...newSha } }));
+  }, []);
 
   const updatePureHzSettings = useCallback((newHz: Partial<AppSettings['pureHz']>) => {
     setSettings(prev => ({ ...prev, pureHz: { ...prev.pureHz, ...newHz } }));
@@ -293,6 +309,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       updateNatureSettings,
       updateNoiseSettings,
       updateDidgeridooSettings,
+      updateShamanicSettings,
       updatePureHzSettings,
       updateIsochronicSettings,
       updateSolfeggioSettings,

@@ -129,12 +129,25 @@ export interface VersionEntry {
 export type Theme = 'light' | 'dark';
 export type DarkModeStyle = 'soft-purple' | 'soft-blue';
 
+export interface ShamanicSettings {
+  isEnabled: boolean;
+  volume: number;
+  gainDb: number;
+  frequency: number; // Pitch/Tone of drum
+  depth: number; // Resonance/Intensity
+  playbackRate: number; // Tempo/Speed
+  isLooping: boolean;
+  normalize: boolean;
+  playInBackground: boolean;
+}
+
 export interface AppSettings {
   subliminal: SubliminalSettings;
   binaural: BinauralSettings;
   nature: NatureSettings;
   noise: NoiseSettings;
   didgeridoo: DidgeridooSettings;
+  shamanic: ShamanicSettings;
   pureHz: PureHzSettings;
   isochronic: IsochronicSettings;
   solfeggio: SolfeggioSettings;

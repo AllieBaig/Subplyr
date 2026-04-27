@@ -19,7 +19,8 @@ export const AudioLayerLibrary = () => {
     updateDidgeridooSettings,
     updatePureHzSettings,
     updateIsochronicSettings,
-    updateSolfeggioSettings
+    updateSolfeggioSettings,
+    updateShamanicSettings
   } = useSettings();
 
   const { playlists, tracks } = useAudio();
@@ -34,7 +35,8 @@ export const AudioLayerLibrary = () => {
       didgeridoo: updateDidgeridooSettings,
       pureHz: updatePureHzSettings,
       isochronic: updateIsochronicSettings,
-      solfeggio: updateSolfeggioSettings
+      solfeggio: updateSolfeggioSettings,
+      shamanic: updateShamanicSettings
     };
 
     const updateFn = updateFnMap[layer];
@@ -313,6 +315,51 @@ export const AudioLayerLibrary = () => {
           onChange={(v) => updateSolfeggioSettings({ frequency: v })} 
           color="emerald"
         />
+      </LayerAccordion>
+
+      {/* 9. Shamanic Drumming */}
+      <LayerAccordion 
+        id="shamanic" icon={MusicIcon} label="Shamanic Drumming" 
+        isEnabled={settings.shamanic.isEnabled} 
+        onToggle={(v: boolean) => updateShamanicSettings({ isEnabled: v })}
+        vol={settings.shamanic.volume}
+        setVol={(v: number) => updateShamanicSettings({ volume: v })}
+        gainDb={settings.shamanic.gainDb}
+        setGainDb={(v: number) => updateShamanicSettings({ gainDb: v })}
+        normalize={settings.shamanic.normalize}
+        setNormalize={(v: boolean) => updateShamanicSettings({ normalize: v })}
+        playInBackground={settings.shamanic.playInBackground}
+        setPlayInBackground={(v: boolean) => updateShamanicSettings({ playInBackground: v })}
+        color="text-red-900"
+        subtitle={`${Math.round(settings.shamanic.frequency)}Hz Tribal`}
+        onApplyPreset={(p: any) => applyLayerPreset('shamanic', p)}
+      >
+        <div className="space-y-4">
+           <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Drum Tone Frequency (Hz)</p>
+           <HzSelector 
+             value={settings.shamanic.frequency} 
+             onChange={(v) => updateShamanicSettings({ 
+               frequency: v 
+             })} 
+             color="red"
+           />
+           <div className="space-y-2">
+              <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Tempo / Intensity</p>
+              <div className="px-2">
+                <input 
+                  type="range" min={0.5} max={4.0} step={0.1}
+                  value={settings.shamanic.playbackRate}
+                  onChange={(e) => updateShamanicSettings({ playbackRate: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-apple-border rounded-full appearance-none accent-red-900"
+                />
+                <div className="flex justify-between mt-1">
+                  <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Slow</span>
+                  <span className="text-[10px] font-black text-red-900 tabular-nums">{settings.shamanic.playbackRate.toFixed(1)}x</span>
+                  <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Fast</span>
+                </div>
+              </div>
+           </div>
+        </div>
       </LayerAccordion>
     </div>
   );

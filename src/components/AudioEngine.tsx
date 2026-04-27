@@ -452,6 +452,41 @@ export default function AudioEngine() {
       sub.start(0);
     }
 
+    else if (type === 'shamanic') {
+      const bpm = 120 * options.playbackRate;
+      const interval = 60 / bpm;
+      const numHits = Math.floor(duration / interval);
+      
+      for (let i = 0; i < numHits; i++) {
+        const time = i * interval;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        
+        osc.type = 'triangle';
+        const startFreq = options.frequency * 1.6;
+        const endFreq = options.frequency;
+        
+        osc.frequency.setValueAtTime(startFreq, time);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.05);
+        
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(0.35 * (1 + options.depth), time + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+        
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(options.frequency * 4, time);
+        filter.Q.setValueAtTime(2, time);
+        
+        osc.connect(gain);
+        gain.connect(filter);
+        filter.connect(masterGainNode);
+        
+        osc.start(time);
+        osc.stop(time + 0.6);
+      }
+    }
+
     const renderedBuffer = await ctx.startRendering();
     return audioBufferToWav(renderedBuffer);
   };
@@ -473,6 +508,15 @@ export default function AudioEngine() {
   const didgFilterRef = useRef<BiquadFilterNode | null>(null);
   const didgGainRef = useRef<GainNode | null>(null);
   const didgLfoRef = useRef<OscillatorNode | null>(null);
+  const shamanicSettingsRef = useRef(settings.shamanic);
+
+  useEffect(() => {
+    shamanicSettingsRef.current = settings.shamanic;
+  }, [settings.shamanic]);
+
+  // Shamanic Drumming Refs
+  const shamanicGainRef = useRef<GainNode | null>(null);
+  const shamanicIntervalRef = useRef<number | null>(null);
 
   // Pure Hz Refs
   const pureHzOscRef = useRef<OscillatorNode | null>(null);
@@ -579,7 +623,7 @@ export default function AudioEngine() {
       } else {
         // Find active Hz layer to show in metadata if no track is playing
         const activeLayer = Object.entries(settings).find(([key, val]: [string, any]) => 
-          val?.isEnabled && val?.playInBackground && ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'didgeridoo', 'noise', 'nature'].includes(key)
+          val?.isEnabled && val?.playInBackground && ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'didgeridoo', 'shamanic', 'noise', 'nature'].includes(key)
         );
 
         if (activeLayer) {
@@ -624,7 +668,7 @@ export default function AudioEngine() {
       const volume = s.volume * layerGain * masterGainMultiplier;
       natureAudioRef.current.volume = Math.min(1.0, Math.max(0.0, volume));
     }
-  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.didgeridoo, settings.noise, settings.nature]);
+  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.didgeridoo, settings.shamanic, settings.noise, settings.nature]);
 
   // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
@@ -723,6 +767,10 @@ export default function AudioEngine() {
       bgAudioUrls.current = {};
       bgAudioParams.current = {};
       
+      if (shamanicIntervalRef.current) {
+        window.clearInterval(shamanicIntervalRef.current);
+      }
+
       if (audioCtxRef.current) {
         audioCtxRef.current.close().catch(console.error);
       }
@@ -741,6 +789,7 @@ export default function AudioEngine() {
       !settings.noise.playInBackground ||
       !settings.nature.playInBackground ||
       !settings.didgeridoo.playInBackground ||
+      !settings.shamanic.playInBackground ||
       !settings.pureHz.playInBackground ||
       !settings.isochronic.playInBackground ||
       !settings.solfeggio.playInBackground
@@ -1125,6 +1174,76 @@ export default function AudioEngine() {
       }
     } catch (err) {
       console.error("Didgeridoo setup failed:", err);
+    }
+  };
+
+  const setupShamanic = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      setupAudioTools();
+
+      if (!shamanicGainRef.current) {
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
+
+        shamanicGainRef.current = gain;
+
+        let nextHitTime = ctx.currentTime;
+        const scheduleDrum = () => {
+          if (!shamanicGainRef.current) return;
+          const s = shamanicSettingsRef.current;
+          const bpm = 120 * s.playbackRate;
+          const interval = 60 / bpm;
+
+          while (nextHitTime < ctx.currentTime + 0.2) {
+            const time = nextHitTime;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+            
+            osc.type = 'triangle';
+            const f = s.frequency;
+            osc.frequency.setValueAtTime(f * 1.6, time);
+            osc.frequency.exponentialRampToValueAtTime(f, time + 0.05);
+            
+            g.gain.setValueAtTime(0, time);
+            g.gain.linearRampToValueAtTime(0.35 * (1 + s.depth), time + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(f * 4, time);
+            filter.Q.setValueAtTime(2, time);
+            
+            osc.connect(g);
+            g.connect(filter);
+            filter.connect(shamanicGainRef.current);
+            
+            osc.start(time);
+            osc.stop(time + 0.6);
+
+            nextHitTime += interval;
+          }
+        };
+
+        shamanicIntervalRef.current = window.setInterval(scheduleDrum, 100);
+      }
+    } catch (err) {
+      console.error("Shamanic setup failed:", err);
     }
   };
 
@@ -2214,6 +2333,44 @@ export default function AudioEngine() {
     };
     syncBg();
   }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.didgeridoo.playInBackground, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize, settings.didgeridoo.frequency, settings.didgeridoo.depth, settings.audioTools.gainDb]);
+
+  // Handle Shamanic Layer
+  useEffect(() => {
+    const isBg = settings.shamanic.playInBackground;
+    const isLayerPlaying = settings.shamanic.isEnabled && settings.shamanic.isLooping && (isPlaying || isBg);
+
+    if (isLayerPlaying && !isBg) {
+      setupShamanic();
+      if (shamanicGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        const gainValue = settings.shamanic.volume * Math.pow(10, settings.shamanic.gainDb / 20);
+        shamanicGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (shamanicGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.1;
+        shamanicGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+        
+        // Stop scheduler if strictly not playing at all (neither foreground nor background)
+        if (!isLayerPlaying && shamanicIntervalRef.current) {
+          window.clearInterval(shamanicIntervalRef.current);
+          shamanicIntervalRef.current = null;
+          shamanicGainRef.current = null;
+        }
+      }
+    }
+
+    const syncBg = async () => {
+      syncBgLayer('shamanic', isLayerPlaying, isBg, 'shamanic', { 
+        frequency: settings.shamanic.frequency, 
+        depth: settings.shamanic.depth,
+        playbackRate: settings.shamanic.playbackRate
+      }, settings.shamanic.volume, settings.shamanic.gainDb);
+    };
+    syncBg();
+  }, [isPlaying, settings.shamanic.isEnabled, settings.shamanic.isLooping, settings.shamanic.playInBackground, settings.fadeInOut, settings.shamanic.volume, settings.shamanic.gainDb, settings.shamanic.normalize, settings.shamanic.frequency, settings.shamanic.depth, settings.shamanic.playbackRate, settings.audioTools.gainDb]);
 
   // Handle Pure Hz Layer
   useEffect(() => {
