@@ -181,7 +181,9 @@ function AppContent() {
                 {activeTab !== 'player' && activeTab !== 'settings' && (
                   <div className={cn(
                     "fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[90] transition-all duration-500",
-                    settings.menuPosition === 'bottom' ? 'bottom-28 mb-safe' : 'bottom-10 mb-safe'
+                    settings.menuPosition === 'bottom' 
+                      ? (activeTab === 'library' && settings.libraryControlsPosition === 'bottom' ? 'bottom-48 mb-safe' : 'bottom-28 mb-safe') 
+                      : 'bottom-10 mb-safe'
                   )}>
                     <MiniPlayer onExpand={() => setActiveTab('player')} />
                   </div>

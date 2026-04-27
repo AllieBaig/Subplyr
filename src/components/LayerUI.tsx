@@ -4,7 +4,7 @@ import { useSettings } from '../SettingsContext';
 import { usePlayback } from '../PlaybackContext';
 import { FREQUENCY_PRESETS } from '../constants';
 import { PickerWheel } from './PickerWheel';
-import { Activity, Sliders, ChevronDown, ChevronRight } from 'lucide-react';
+import { Activity, Sliders, ChevronDown, ChevronRight, Ear } from 'lucide-react';
 
 export const LayerProgress = ({ layerId }: { layerId: string }) => {
   const { layerProgress } = usePlayback();
@@ -169,9 +169,17 @@ export const LayerAccordion = ({
   gainDb, setGainDb, normalize, setNormalize, 
   playInBackground, setPlayInBackground,
   pitchSafeMode, setPitchSafeMode,
+  isExpanded, onAccordionToggle,
   color, subtitle, children, onApplyPreset 
 }: any) => {
+  const [internalIsExpanded, setInternalIsExpanded] = useState(false);
   const [isToolsExpanded, setIsToolsExpanded] = useState(false);
+
+  const expanded = onAccordionToggle ? isExpanded : internalIsExpanded;
+  const toggleAccordion = () => {
+    if (onAccordionToggle) onAccordionToggle();
+    else setInternalIsExpanded(!internalIsExpanded);
+  };
 
   const colorHex = color.includes('blue') ? '#007aff' : 
                    color.includes('purple') ? '#a855f7' : 
@@ -184,7 +192,10 @@ export const LayerAccordion = ({
 
   return (
     <div className="bg-secondary-system-background border border-apple-border rounded-[2.5rem] overflow-hidden transition-all shadow-sm">
-      <div className="p-5 flex items-center justify-between">
+      <div 
+        className="p-5 flex items-center justify-between cursor-pointer"
+        onClick={toggleAccordion}
+      >
         <div className="flex items-center gap-4 min-w-0">
           <div className={`w-12 h-12 ${isEnabled ? 'bg-system-background shadow-sm' : 'bg-system-background/50'} rounded-2xl flex-shrink-0 flex items-center justify-center ${isEnabled ? color : 'text-system-tertiary-label'} transition-all`}>
             <Icon size={24} />
@@ -194,18 +205,21 @@ export const LayerAccordion = ({
             {subtitle && <p className="text-[9px] text-system-secondary-label uppercase font-black tracking-widest truncate">{subtitle}</p>}
           </div>
         </div>
-        <button 
-          onClick={() => onToggle(!isEnabled)}
-          className={`flex-shrink-0 w-12 h-7 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
-        >
-          <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} />
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={(e) => { e.stopPropagation(); onToggle(!isEnabled); }}
+            className={`flex-shrink-0 w-12 h-7 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
+          >
+            <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} />
+          </button>
+          <ChevronDown size={18} className={`text-system-tertiary-label transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
       </div>
 
       {isEnabled && <div className="px-5 pb-3"><LayerProgress layerId={id} /></div>}
       
       <AnimatePresence>
-        {isEnabled && (
+        {expanded && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}

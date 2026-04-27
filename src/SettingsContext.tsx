@@ -146,7 +146,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   subliminalExpanded: false,
   showArtwork: false,
   alwaysHideArtworkByDefault: true,
-  backButtonPosition: 'top',
+  backButtonPosition: 'bottom',
+  libraryControlsPosition: 'bottom',
   displayAlwaysOn: false,
   playbackMode: 'once',
   chunking: {

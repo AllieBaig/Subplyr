@@ -185,6 +185,7 @@ export interface AppSettings {
   showArtwork: boolean;
   alwaysHideArtworkByDefault: boolean;
   backButtonPosition: 'top' | 'bottom';
+  libraryControlsPosition: 'top' | 'bottom';
   displayAlwaysOn: boolean;
   playbackMode: 'once' | 'loop';
   chunking: {

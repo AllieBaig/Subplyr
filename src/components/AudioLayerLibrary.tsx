@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettings } from '../SettingsContext';
 import { useAudio } from '../AudioContext';
 import { LayerAccordion, HzSelector } from './LayerUI';
@@ -24,6 +24,16 @@ export const AudioLayerLibrary = () => {
   } = useSettings();
 
   const { playlists, tracks } = useAudio();
+  const [expandedLayerId, setExpandedLayerId] = useState<string | null>(() => {
+    return localStorage.getItem('last_expanded_layer_id');
+  });
+
+  const toggleLayer = (id: string) => {
+    const next = expandedLayerId === id ? null : id;
+    setExpandedLayerId(next);
+    if (next) localStorage.setItem('last_expanded_layer_id', next);
+    else localStorage.removeItem('last_expanded_layer_id');
+  };
 
   const applyLayerPreset = (layer: string, preset: 'soft' | 'night' | 'focus') => {
     // Shared preset logic
@@ -56,6 +66,8 @@ export const AudioLayerLibrary = () => {
         id="subliminal" icon={Volume2} label="Subliminal Audio" 
         isEnabled={settings.subliminal.isEnabled} 
         onToggle={(v: boolean) => updateSubliminalSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'subliminal'}
+        onAccordionToggle={() => toggleLayer('subliminal')}
         vol={settings.subliminal.volume}
         setVol={(v: number) => updateSubliminalSettings({ volume: v })}
         gainDb={settings.subliminal.gainDb}
@@ -115,6 +127,8 @@ export const AudioLayerLibrary = () => {
         id="binaural" icon={Activity} label="Binaural Beats" 
         isEnabled={settings.binaural.isEnabled} 
         onToggle={(v: boolean) => updateBinauralSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'binaural'}
+        onAccordionToggle={() => toggleLayer('binaural')}
         vol={settings.binaural.volume}
         setVol={(v: number) => updateBinauralSettings({ volume: v })}
         gainDb={settings.binaural.gainDb}
@@ -160,6 +174,8 @@ export const AudioLayerLibrary = () => {
         id="nature" icon={CloudRain} label="Nature Ambience" 
         isEnabled={settings.nature.isEnabled} 
         onToggle={(v: boolean) => updateNatureSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'nature'}
+        onAccordionToggle={() => toggleLayer('nature')}
         vol={settings.nature.volume}
         setVol={(v: number) => updateNatureSettings({ volume: v })}
         gainDb={settings.nature.gainDb}
@@ -190,6 +206,8 @@ export const AudioLayerLibrary = () => {
         id="noise" icon={Wind} label="Noise Colors" 
         isEnabled={settings.noise.isEnabled} 
         onToggle={(v: boolean) => updateNoiseSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'noise'}
+        onAccordionToggle={() => toggleLayer('noise')}
         vol={settings.noise.volume}
         setVol={(v: number) => updateNoiseSettings({ volume: v })}
         gainDb={settings.noise.gainDb}
@@ -220,6 +238,8 @@ export const AudioLayerLibrary = () => {
         id="didgeridoo" icon={MusicIcon} label="Didgeridoo" 
         isEnabled={settings.didgeridoo.isEnabled} 
         onToggle={(v: boolean) => updateDidgeridooSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'didgeridoo'}
+        onAccordionToggle={() => toggleLayer('didgeridoo')}
         vol={settings.didgeridoo.volume}
         setVol={(v: number) => updateDidgeridooSettings({ volume: v })}
         gainDb={settings.didgeridoo.gainDb}
@@ -252,6 +272,8 @@ export const AudioLayerLibrary = () => {
         id="pureHz" icon={Activity} label="Pure Hz" 
         isEnabled={settings.pureHz.isEnabled} 
         onToggle={(v: boolean) => updatePureHzSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'pureHz'}
+        onAccordionToggle={() => toggleLayer('pureHz')}
         vol={settings.pureHz.volume}
         setVol={(v: number) => updatePureHzSettings({ volume: v })}
         gainDb={settings.pureHz.gainDb}
@@ -278,6 +300,8 @@ export const AudioLayerLibrary = () => {
         id="isochronic" icon={Zap} label="Isochronic Tones" 
         isEnabled={settings.isochronic.isEnabled} 
         onToggle={(v: boolean) => updateIsochronicSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'isochronic'}
+        onAccordionToggle={() => toggleLayer('isochronic')}
         vol={settings.isochronic.volume}
         setVol={(v: number) => updateIsochronicSettings({ volume: v })}
         gainDb={settings.isochronic.gainDb}
@@ -306,6 +330,8 @@ export const AudioLayerLibrary = () => {
         id="solfeggio" icon={Ear} label="Solfeggio Layers" 
         isEnabled={settings.solfeggio.isEnabled} 
         onToggle={(v: boolean) => updateSolfeggioSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'solfeggio'}
+        onAccordionToggle={() => toggleLayer('solfeggio')}
         vol={settings.solfeggio.volume}
         setVol={(v: number) => updateSolfeggioSettings({ volume: v })}
         gainDb={settings.solfeggio.gainDb}
@@ -332,6 +358,8 @@ export const AudioLayerLibrary = () => {
         id="shamanic" icon={MusicIcon} label="Shamanic Drumming" 
         isEnabled={settings.shamanic.isEnabled} 
         onToggle={(v: boolean) => updateShamanicSettings({ isEnabled: v })}
+        isExpanded={expandedLayerId === 'shamanic'}
+        onAccordionToggle={() => toggleLayer('shamanic')}
         vol={settings.shamanic.volume}
         setVol={(v: number) => updateShamanicSettings({ volume: v })}
         gainDb={settings.shamanic.gainDb}

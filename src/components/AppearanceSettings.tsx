@@ -151,6 +151,27 @@ export const AppearanceSettings = ({ isExpanded = false, onToggle = () => {} }: 
                   </button>
                 </div>
               </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-system-label">Library Controls Position</p>
+                  <p className="text-[9px] text-system-secondary-label font-bold uppercase mt-0.5">{settings.libraryControlsPosition === 'top' ? 'Screen Top' : 'Above Menu'}</p>
+                </div>
+                <div className="flex bg-secondary-system-background p-1 rounded-xl border border-apple-border h-8">
+                  <button 
+                    onClick={() => updateSettings({ libraryControlsPosition: 'top' })}
+                    className={`px-3 h-full rounded-lg text-[9px] font-black uppercase transition-all ${settings.libraryControlsPosition === 'top' ? 'bg-system-background text-amber-600 shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Top
+                  </button>
+                  <button 
+                    onClick={() => updateSettings({ libraryControlsPosition: 'bottom' })}
+                    className={`px-3 h-full rounded-lg text-[9px] font-black uppercase transition-all ${settings.libraryControlsPosition === 'bottom' ? 'bg-system-background text-amber-600 shadow-sm' : 'text-system-secondary-label'}`}
+                  >
+                    Bottom
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Existing Visibility Toggles */}

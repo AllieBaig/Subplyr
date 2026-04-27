@@ -310,8 +310,62 @@ export default function LibraryView() {
     return list;
   }, [playlists, searchQuery, playlistSort]);
 
+  const controls = (
+    <div className={cn(
+      "flex items-center gap-2",
+      settings.libraryControlsPosition === 'bottom' && "px-4 py-3 bg-system-background/80 backdrop-blur-2xl border-t border-apple-border fixed bottom-[83px] left-0 right-0 z-[110] safe-area-bottom shadow-[0_-10px_30px_rgba(0,0,0,0.03)]"
+    )}>
+      {(view === 'tracks' || view === 'playlists') && (view === 'tracks' ? tracks.length > 0 : playlists.length > 0) && (
+        <>
+          <button 
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className={cn(
+              "p-2 rounded-full transition-all",
+              showSortMenu ? 'bg-apple-blue/10 text-apple-blue' : 'text-system-tertiary-label',
+              settings.libraryControlsPosition === 'bottom' && "flex-1 flex justify-center bg-secondary-system-background h-11 items-center rounded-2xl"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <SortAsc size={20} />
+              {settings.libraryControlsPosition === 'bottom' && <span className="text-[10px] font-black uppercase tracking-widest">Sort</span>}
+            </div>
+          </button>
+          <button 
+            onClick={() => {
+              if (view === 'playlists') setView('tracks'); // Transition to tracks to allow select
+              setIsSelectMode(!isSelectMode);
+              if (isSelectMode) setSelectedTrackIds(new Set());
+            }}
+            className={cn(
+              "text-[13px] font-bold px-4 py-1.5 rounded-full transition-all",
+              isSelectMode ? 'bg-apple-blue text-white' : 'text-apple-blue',
+              settings.libraryControlsPosition === 'bottom' && "flex-1 flex justify-center bg-secondary-system-background h-11 items-center rounded-2xl"
+            )}
+          >
+            {isSelectMode ? 'Cancel' : 'Select'}
+          </button>
+        </>
+      )}
+      {!isSelectMode && (
+        <label className={cn(
+          "flex items-center justify-center cursor-pointer active:scale-95 transition-transform",
+          settings.libraryControlsPosition === 'bottom' ? "w-auto flex-1 bg-apple-blue text-white h-11 rounded-2xl shadow-sm" : "w-10 h-10 rounded-full"
+        )}>
+          <div className="flex items-center gap-2">
+            <Plus size={settings.libraryControlsPosition === 'bottom' ? 20 : 24} className={settings.libraryControlsPosition === 'bottom' ? "text-white" : "text-apple-blue"} />
+            {settings.libraryControlsPosition === 'bottom' && <span className="text-[10px] font-black uppercase tracking-widest">Import</span>}
+          </div>
+          <input type="file" multiple accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleFileUpload} />
+        </label>
+      )}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col w-full max-w-7xl mx-auto px-4 pb-40">
+    <div className={cn(
+      "flex flex-col w-full max-w-7xl mx-auto px-4 pb-40",
+      settings.libraryControlsPosition === 'bottom' && "pt-6"
+    )}>
       <header className="flex flex-col bg-system-background pb-6 gap-8">
         <div className="flex justify-between items-center px-1">
           <h1 className="text-3xl font-[900] tracking-tight text-system-label flex items-center gap-3">
@@ -322,35 +376,7 @@ export default function LibraryView() {
               </span>
             )}
           </h1>
-          <div className="flex gap-2 items-center">
-            {(view === 'tracks' || view === 'playlists') && (view === 'tracks' ? tracks.length > 0 : playlists.length > 0) && (
-              <>
-                <button 
-                  onClick={() => setShowSortMenu(!showSortMenu)}
-                  className={`p-2 rounded-full transition-all ${showSortMenu ? 'bg-apple-blue/10 text-apple-blue' : 'text-system-tertiary-label'}`}
-                >
-                  <SortAsc size={20} />
-                </button>
-                {view === 'tracks' && (
-                  <button 
-                    onClick={() => {
-                      setIsSelectMode(!isSelectMode);
-                      if (isSelectMode) setSelectedTrackIds(new Set());
-                    }}
-                    className={`text-[13px] font-bold px-4 py-1.5 rounded-full transition-all ${isSelectMode ? 'bg-apple-blue text-white' : 'text-apple-blue'}`}
-                  >
-                    {isSelectMode ? 'Cancel' : 'Select'}
-                  </button>
-                )}
-              </>
-            )}
-            {!isSelectMode && (
-              <label className="w-10 h-10 flex items-center justify-center cursor-pointer active:scale-95 transition-transform rounded-full">
-                <Plus size={24} className="text-apple-blue" />
-                <input type="file" multiple accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleFileUpload} />
-              </label>
-            )}
-          </div>
+          {settings.libraryControlsPosition === 'top' && controls}
         </div>
 
         <div className="flex gap-6 px-1">
@@ -368,6 +394,12 @@ export default function LibraryView() {
           </button>
         </div>
       </header>
+
+      {settings.libraryControlsPosition === 'bottom' && !isSelectMode && (
+        <div className="z-[110]">
+          {controls}
+        </div>
+      )}
 
       {showSortMenu && (view === 'tracks' || view === 'playlists') && !isSelectMode && (
         <div className={`bg-apple-card border border-apple-border flex flex-col shadow-sm animate-in fade-in slide-in-from-top-2 mx-2 mb-6 ${settings.miniMode ? 'rounded-2xl p-3 gap-3' : 'rounded-3xl p-4 gap-4'}`}>
