@@ -76,7 +76,7 @@ function AppContent() {
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               className={cn(
                 "fixed left-1/2 -translate-x-1/2 z-[200] bg-system-label text-system-background px-6 py-3 rounded-2xl text-xs font-bold shadow-2xl border border-apple-border/10 backdrop-blur-xl",
-                settings.menuPosition === 'bottom' ? 'bottom-32' : 'top-28'
+                settings.menuPosition === 'bottom' ? 'bottom-32 pb-safe' : 'top-28 pt-safe'
               )}
             >
               {toast}
@@ -140,7 +140,7 @@ function AppContent() {
                     key="player"
                     {...animationProps}
                     transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className="fixed inset-0 z-[300] bg-system-background ios-scroll-area no-scrollbar"
+                    className="fixed inset-0 z-[300] bg-system-background ios-scroll-area no-scrollbar safe-area-bottom"
                   >
                     <PlayerView onBack={() => setActiveTab('library')} />
                   </motion.div>
@@ -155,7 +155,7 @@ function AppContent() {
                     transition={{ duration: settings.animationStyle === 'off' ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
                     className="fixed inset-0 z-[310] bg-system-background ios-scroll-area no-scrollbar"
                   >
-                    <div className="w-full px-6 py-12 pb-40">
+                    <div className="w-full px-6 py-12 pb-40 safe-area-top">
                       <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-10">
                         {settings.backButtonPosition === 'top' ? (
                           <button 
@@ -181,7 +181,7 @@ function AppContent() {
                 {activeTab !== 'player' && activeTab !== 'settings' && (
                   <div className={cn(
                     "fixed left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[90] transition-all duration-500",
-                    settings.menuPosition === 'bottom' ? 'bottom-28' : 'bottom-10'
+                    settings.menuPosition === 'bottom' ? 'bottom-28 mb-safe' : 'bottom-10 mb-safe'
                   )}>
                     <MiniPlayer onExpand={() => setActiveTab('player')} />
                   </div>
@@ -193,8 +193,8 @@ function AppContent() {
         
         {!isLoading && !initError && (
           <div className={cn(
-            "fixed left-0 right-0 h-24 bg-system-background/80 backdrop-blur-2xl px-4 flex items-center justify-center z-[250] transition-all",
-            settings.menuPosition === 'top' ? "top-0 border-b border-apple-border/5 pt-safe" : "bottom-0 border-t border-apple-border/5 pb-safe"
+            "fixed left-0 right-0 py-4 bg-system-background/80 backdrop-blur-2xl px-4 flex items-center justify-center z-[250] transition-all",
+            settings.menuPosition === 'top' ? "top-0 border-b border-apple-border/5 pt-safe mt-safe" : "bottom-0 border-t border-apple-border/5 pb-safe mb-safe"
           )}>
             <div className="w-full max-w-md">
               <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />

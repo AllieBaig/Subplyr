@@ -70,6 +70,22 @@
     @apply font-sans bg-system-background text-system-label antialiased selection:bg-apple-blue/20 transition-colors duration-500;
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    overscroll-behavior: none; /* Prevent rubber-banding on document body */
+    touch-action: pan-y;
+  }
+
+  /* Handle iOS Safe Areas for PWA Standalone Mode */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-pb {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+  .safe-area-mb {
+    margin-bottom: env(safe-area-inset-bottom);
   }
 
   /* Global Fixed Height Inputs & Standardization */

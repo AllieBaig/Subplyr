@@ -174,6 +174,47 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     };
   }, [setIsLoading, setInitError]);
 
+  // Handle Share Target processing
+  useEffect(() => {
+    if (isLoading) return;
+
+    const processSharedFiles = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const sharedCount = searchParams.get('shared-count');
+      
+      if (sharedCount) {
+        try {
+          const count = parseInt(sharedCount, 10);
+          showToast(`Processing ${count} shared file${count > 1 ? 's' : ''}...`);
+          
+          const cache = await caches.open('shared-files');
+          const keys = await cache.keys();
+          
+          for (const key of keys) {
+            const response = await cache.match(key);
+            if (response) {
+              const blob = await response.blob();
+              const filename = decodeURIComponent(response.headers.get('x-filename') || 'Shared Audio');
+              const file = new File([blob], filename, { type: blob.type || 'audio/mpeg' });
+              
+              await addTrack(file);
+              await cache.delete(key);
+            }
+          }
+          
+          showToast("Shared files imported successfully");
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch (err) {
+          console.error('[AudioContext] Shared file processing failed:', err);
+          showToast("Failed to process shared files");
+        }
+      }
+    };
+
+    processSharedFiles();
+  }, [isLoading, addTrack, showToast]);
+
   const getTrackUrl = useCallback(async (id: string, forceRefresh?: boolean) => {
     try {
       if (!forceRefresh && trackUrlCache.current[id]) {
