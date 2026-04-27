@@ -324,10 +324,11 @@ export default function AudioEngine() {
     const numChannels = type === 'binaural' ? 2 : 1;
     const ctx = new OfflineCtx(numChannels, sampleRate * duration, sampleRate);
     
-    // Calculate baked gain (Volume % + Gain dB + Master Gain dB)
+    // Calculate baked gain (Volume % + Gain dB + Master Gain dB + Safety Headroom)
     const bakedGainValue = (options.volume || 1.0) * Math.pow(10, (options.gainDb || 0) / 20);
     const masterGainMultiplier = (options.masterGainDb !== undefined) ? Math.pow(10, options.masterGainDb / 20) : 1.0;
-    const finalGainValue = bakedGainValue * masterGainMultiplier;
+    const parallelSafety = options.safetyMultiplier || 1.0;
+    const finalGainValue = bakedGainValue * masterGainMultiplier * parallelSafety;
 
     const masterGainNode = ctx.createGain();
     masterGainNode.gain.setValueAtTime(finalGainValue, 0);
@@ -710,9 +711,71 @@ export default function AudioEngine() {
   const didgCompRef = useRef<DynamicsCompressorNode | null>(null);
   const pureHzCompRef = useRef<DynamicsCompressorNode | null>(null);
 
+  const getSafetyMultiplier = () => {
+    let activeCount = 0;
+    if (isPlaying) activeCount++;
+    if (settings.subliminal.isEnabled && (isPlaying || settings.subliminal.playInBackground)) activeCount++;
+    if (settings.binaural.isEnabled && (isPlaying || settings.binaural.playInBackground)) activeCount++;
+    if (settings.nature.isEnabled && (isPlaying || settings.nature.playInBackground)) activeCount++;
+    if (settings.noise.isEnabled && (isPlaying || settings.noise.playInBackground)) activeCount++;
+    if (settings.didgeridoo.isEnabled && (isPlaying || settings.didgeridoo.playInBackground)) activeCount++;
+    if (settings.pureHz.isEnabled && (isPlaying || settings.pureHz.playInBackground)) activeCount++;
+    if (settings.isochronic.isEnabled && (isPlaying || settings.isochronic.playInBackground)) activeCount++;
+    if (settings.solfeggio.isEnabled && (isPlaying || settings.solfeggio.playInBackground)) activeCount++;
+    if (settings.shamanic.isEnabled && (isPlaying || settings.shamanic.playInBackground)) activeCount++;
+    if (settings.mentalToughness.isEnabled && (isPlaying || settings.mentalToughness.playInBackground)) activeCount++;
+    
+    if (activeCount <= 2) return 1.0;
+    if (activeCount <= 4) return 0.75;
+    if (activeCount <= 7) return 0.55;
+    return 0.4; // Safety for 8-11 layers
+  };
+
+  const safetyMultiplier = useMemo(getSafetyMultiplier, [
+    isPlaying, 
+    settings.subliminal.isEnabled, settings.subliminal.playInBackground,
+    settings.binaural.isEnabled, settings.binaural.playInBackground,
+    settings.nature.isEnabled, settings.nature.playInBackground,
+    settings.noise.isEnabled, settings.noise.playInBackground,
+    settings.didgeridoo.isEnabled, settings.didgeridoo.playInBackground,
+    settings.pureHz.isEnabled, settings.pureHz.playInBackground,
+    settings.isochronic.isEnabled, settings.isochronic.playInBackground,
+    settings.solfeggio.isEnabled, settings.solfeggio.playInBackground,
+    settings.shamanic.isEnabled, settings.shamanic.playInBackground,
+    settings.mentalToughness.isEnabled, settings.mentalToughness.playInBackground
+  ]);
+
   // Master Gain & Limiter for Stable Parallel Mixing
   const masterGainRef = useRef<GainNode | null>(null);
   const masterLimiterRef = useRef<DynamicsCompressorNode | null>(null);
+
+  // Recovery: Periodically ensure enabled background layers are playing
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      Object.entries(bgAudioRefs.current).forEach(([id, el]) => {
+        const s = (settings as any)[id];
+        if (s?.isEnabled && (isPlaying || s?.playInBackground)) {
+           if (el.paused) {
+             const otherEl = bgAudioRefs2.current[id];
+             if (!otherEl || otherEl.paused) {
+                console.log(`[AudioEngine] Auto-recovering parallel layer: ${id}`);
+                el.play().catch(() => {});
+             }
+           }
+        }
+      });
+      
+      if (natureAudioRef.current && settings.nature.isEnabled && (isPlaying || settings.nature.playInBackground)) {
+        if (natureAudioRef.current.paused) natureAudioRef.current.play().catch(() => {});
+      }
+      
+      if (subAudioRef.current && settings.subliminal.isEnabled && (isPlaying || settings.subliminal.playInBackground)) {
+        if (subAudioRef.current.paused) subAudioRef.current.play().catch(() => {});
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPlaying, settings]);
 
   // Didgeridoo Refs
   const didgOscRef = useRef<OscillatorNode | null>(null);
@@ -1207,12 +1270,13 @@ export default function AudioEngine() {
     const masterGainDb = settings.audioTools.gainDb;
     const masterGainMultiplier = masterGainDb !== 0 ? Math.pow(10, masterGainDb / 20) : 1.0;
 
-    // Trigger regeneration if Hz, Volume, or Gain changes
+    // Trigger regeneration if Hz, Volume, Gain, or Safety Multiplier changes
     const extendedParams = { 
       ...params, 
       volume, 
       gainDb, 
-      masterGainDb 
+      masterGainDb,
+      safetyMultiplier
     };
     const paramKey = JSON.stringify(extendedParams);
     
@@ -2248,12 +2312,12 @@ export default function AudioEngine() {
         }
         audio.loop = settings.subliminal.isPlaylistMode ? false : settings.subliminal.isLooping;
         
-        // Background support for Subliminal
-        if (settings.subliminal.playInBackground) {
+        // Background support for Subliminal - Parallel Stable Mode
+        if (settings.subliminal.playInBackground || isPlaying) {
           if (subSourceRef.current) {
              try { subSourceRef.current.disconnect(); } catch (e) {}
           }
-          const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20);
+          const gainValue = settings.subliminal.volume * Math.pow(10, settings.subliminal.gainDb / 20) * safetyMultiplier;
           audio.volume = Math.min(1, Math.max(0, gainValue));
         } else {
           setupAudioTools();
@@ -2288,27 +2352,12 @@ export default function AudioEngine() {
     const isBg = settings.binaural.playInBackground;
     const isLayerPlaying = settings.binaural.isEnabled && (isPlaying || isBg);
 
-    // 1. Manage Web Audio State
-    if (isLayerPlaying && !isBg) {
-      setupBinaural();
-      if (binauralGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        const gainValue = settings.binaural.volume * Math.pow(10, settings.binaural.gainDb / 20);
-        const threshold = settings.binaural.normalize ? -24 : 0;
-        
-        if (binCompRef.current) binCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
-        binauralGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (binauralGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        binauralGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-      }
+    // 1. Manage Web Audio State (Foreground only if not in background mode)
+    if (isLayerPlaying && !isBg && !isForeground) { // Only stop if it's already playing via <audio> or we are purely foreground
+       // No-op, syncBgLayer handles it
     }
 
-    // 2. Manage HTML Background Audio State (Binaural)
+    // 2. Manage HTML Background Audio State (Binaural) - Unified stable parallel path
     const syncBinauralBg = async () => {
       const isBg = settings.binaural.playInBackground;
       const isLayerPlaying = settings.binaural.isEnabled && (isPlaying || isBg);
@@ -2661,6 +2710,12 @@ export default function AudioEngine() {
         if (audioCtxRef.current.state === 'suspended') {
           audioCtxRef.current.resume().catch(() => {});
         }
+        // Force resume all <audio> elements too
+        Object.values(bgAudioRefs.current).forEach(a => a.play().catch(() => {}));
+        Object.values(bgAudioRefs2.current).forEach(a => a.play().catch(() => {}));
+        if (natureAudioRef.current) natureAudioRef.current.play().catch(() => {});
+        if (subAudioRef.current) subAudioRef.current.play().catch(() => {});
+        if (mainAudioRef.current) mainAudioRef.current.play().catch(() => {});
       }
     };
 
@@ -2723,7 +2778,7 @@ export default function AudioEngine() {
           if (natureSourceRef.current) {
             try { natureSourceRef.current.disconnect(); } catch (e) {}
           }
-          const gainValue = settings.nature.volume * Math.pow(10, settings.nature.gainDb / 20);
+          const gainValue = settings.nature.volume * Math.pow(10, settings.nature.gainDb / 20) * safetyMultiplier;
           audio.volume = Math.min(1, Math.max(0, gainValue));
         } else {
           // Normal mode: Reconnect to Web Audio graph
@@ -2735,7 +2790,7 @@ export default function AudioEngine() {
           if (natureGainRef.current && audioCtxRef.current) {
             const ctx = audioCtxRef.current;
             const fadeTime = settings.fadeInOut ? 3 : 0.1;
-            const gainValue = settings.nature.volume * Math.pow(10, settings.nature.gainDb / 20);
+            const gainValue = settings.nature.volume * Math.pow(10, settings.nature.gainDb / 20) * safetyMultiplier;
             const threshold = settings.nature.normalize ? -24 : 0;
             if (natureCompRef.current) natureCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
             natureGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
@@ -2821,7 +2876,7 @@ export default function AudioEngine() {
 
     if (mainAudioRef.current) {
       if (settings.audioTools.playInBackground) {
-        const finalVolume = settings.mainVolume * masterGainMultiplier;
+        const finalVolume = settings.mainVolume * masterGainMultiplier * safetyMultiplier;
         mainAudioRef.current.volume = Math.min(1.0, Math.max(0.0, finalVolume));
       } else {
         // Use 1.0 because volume is handled by WebAudio gain node
@@ -2832,7 +2887,7 @@ export default function AudioEngine() {
     if (subAudioRef.current) {
       const subGainMultiplier = Math.pow(10, settings.subliminal.gainDb / 20);
       if (settings.subliminal.playInBackground) {
-        const finalVolume = settings.subliminal.volume * subGainMultiplier * masterGainMultiplier;
+        const finalVolume = settings.subliminal.volume * subGainMultiplier * masterGainMultiplier * safetyMultiplier;
         subAudioRef.current.volume = Math.min(1.0, Math.max(0.0, finalVolume));
       } else {
         subAudioRef.current.volume = 1.0;
