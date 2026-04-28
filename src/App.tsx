@@ -195,7 +195,7 @@ function AppContent() {
         
         {!isLoading && !initError && (
           <div className={cn(
-            "fixed left-0 right-0 py-4 bg-system-background/80 backdrop-blur-2xl px-4 flex items-center justify-center z-[250] transition-all",
+            "fixed left-0 right-0 py-4 bg-system-background/80 backdrop-blur-2xl px-4 flex items-center justify-center z-[400] transition-all",
             settings.menuPosition === 'top' ? "top-0 border-b border-apple-border/5 pt-safe mt-safe" : "bottom-0 border-t border-apple-border/5 pb-safe mb-safe"
           )}>
             <div className="w-full max-w-md">

@@ -240,9 +240,12 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
   if (!currentTrack && !hasAnyLayerEnabled) return null;
 
   return (
-    <div className={`h-full flex flex-col select-none relative w-full max-w-2xl mx-auto bg-system-background overflow-hidden ${settings.bigTouchMode ? 'pb-10' : 'pb-8'}`}>
-      {/* Top Bar - Fixed Height */}
-      <header className={`w-full flex items-center justify-between ${settings.bigTouchMode ? 'px-8 h-24' : 'px-6 h-20'} flex-shrink-0 z-10 bg-system-background`}>
+    <div className={cn(
+      "h-full flex flex-col select-none relative w-full max-w-2xl mx-auto bg-system-background overflow-hidden",
+      settings.menuPosition === 'bottom' ? (settings.bigTouchMode ? 'pb-28' : 'pb-24') : (settings.bigTouchMode ? 'pb-8' : 'pb-6')
+    )}>
+      {/* 1. Header (Fixed Height) */}
+      <header className={`w-full flex items-center justify-between ${settings.bigTouchMode ? 'px-8 h-20' : 'px-6 h-16'} flex-shrink-0 z-10 bg-system-background`}>
         {settings.backButtonPosition === 'top' ? (
           <button 
             onClick={onBack}
@@ -254,11 +257,11 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
           <div className="w-10" />
         )}
         <div className="flex flex-col items-center">
-          <h1 className={`font-bold uppercase tracking-[0.25em] text-system-secondary-label ${settings.bigTouchMode ? 'text-xs' : 'text-[10px]'}`}>
+          <h1 className={`font-bold uppercase tracking-[0.25em] text-system-secondary-label ${settings.bigTouchMode ? 'text-[10px]' : 'text-[9px]'}`}>
             {currentPlaylist ? currentPlaylist.name : 'Now Playing'}
           </h1>
           {currentPlaylist && (
-            <span className="text-[9px] font-bold text-apple-blue mt-1 uppercase tracking-widest">{currentPosition}</span>
+            <span className="text-[8px] font-bold text-apple-blue mt-0.5 uppercase tracking-widest">{currentPosition}</span>
           )}
         </div>
         <button className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}>
@@ -266,22 +269,11 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         </button>
       </header>
 
-      {/* Bottom Back Button */}
-      {settings.backButtonPosition === 'bottom' && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[1001]">
-          <button 
-            onClick={onBack}
-            className={`${settings.bigTouchMode ? 'w-20 h-20 shadow-xl' : 'w-16 h-16 shadow-lg'} bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center active:scale-95 transition-all text-system-label`}
-          >
-            <ChevronDown size={settings.bigTouchMode ? 40 : 32} />
-          </button>
-        </div>
-      )}
-
-      {/* Main Content Area - Scrollable if needed, internally stable */}
-      <div className="flex-1 w-full overflow-y-auto no-scrollbar flex flex-col items-center py-4 px-6 gap-6">
-        {/* Album Art / Waveform Container - Fixed Sizing */}
-        <div className={`w-full flex items-center justify-center ${settings.bigTouchMode ? 'h-[400px]' : 'h-[340px]'} flex-shrink-0 relative`}>
+      {/* Main Container - Non-Scrolling flex column */}
+      <main className="flex-1 flex flex-col items-center px-8 overflow-hidden">
+        
+        {/* 2. Visual Area (Flexible) */}
+        <div className="flex-1 w-full flex items-center justify-center relative min-h-[200px] py-4">
           <AnimatePresence mode="wait">
             {settings.showArtwork ? (
               <motion.div 
@@ -290,120 +282,149 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
                 animate={{ opacity: 1, scale: isPlaying ? 1 : 0.92 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-                className={`w-full ${settings.bigTouchMode ? 'max-w-[360px]' : 'max-w-[300px]'} aspect-square bg-apple-card rounded-[2.5rem] shadow-[0_24px_48px_rgba(0,0,0,0.08)] border border-apple-border overflow-hidden relative shadow-2xl transition-all duration-500`}
+                className={cn(
+                  "aspect-square bg-apple-card rounded-[2.5rem] shadow-[0_24px_48px_rgba(0,0,0,0.12)] border border-apple-border overflow-hidden relative shadow-2xl transition-all duration-500",
+                  settings.bigTouchMode ? 'w-full max-w-[320px]' : 'w-full max-w-[260px]'
+                )}
               >
                 <ArtworkImage 
                   src={artworkSrc} 
                   className="w-full h-full" 
-                  iconSize={settings.bigTouchMode ? 140 : 120} 
+                  iconSize={settings.bigTouchMode ? 120 : 100} 
                 />
               </motion.div>
             ) : (
-              <div key="waveform-holder" className="flex items-center justify-center">
+              <div key="waveform-holder" className="flex items-center justify-center h-full">
                 <WaveformAnimation isPlaying={isPlaying} />
               </div>
             )}
           </AnimatePresence>
         </div>
-        
-        {/* Track Title & Artist - Locked Height to prevent shift */}
-        <div className="text-center w-full max-w-sm h-36 flex flex-col items-center justify-center flex-shrink-0">
+
+        {/* 3, 4, 5. Title Area (Fixed Height to prevent shift) */}
+        <div className={cn(
+          "w-full flex flex-col items-center justify-center text-center flex-shrink-0 mb-6",
+          settings.bigTouchMode ? "h-36" : "h-32"
+        )}>
           <div className="w-full overflow-hidden mb-1">
             <h2 className={cn(
-              "font-[900] tracking-tight text-system-label truncate px-4 transition-all duration-300",
-              !settings.showArtwork 
-                ? (settings.bigTouchMode ? 'text-5xl' : 'text-4xl') 
-                : (settings.bigTouchMode ? 'text-3xl' : 'text-2xl')
+              "font-[900] tracking-tight text-system-label truncate px-2 transition-all duration-300",
+              settings.bigTouchMode ? "text-3xl" : "text-2xl"
             )}>
               {trackName}
             </h2>
           </div>
-          <div className="w-full overflow-hidden mb-6">
+          <div className="w-full overflow-hidden mb-4">
             <p className={cn(
-              "text-system-secondary-label font-bold truncate px-4 transition-all duration-300",
-              !settings.showArtwork 
-                ? (settings.bigTouchMode ? 'text-xl' : 'text-lg') 
-                : (settings.bigTouchMode ? 'text-lg' : 'text-base')
+              "text-system-secondary-label font-bold truncate px-2 transition-all duration-300",
+              settings.bigTouchMode ? "text-lg" : "text-base"
             )}>
               {artistName}
             </p>
           </div>
-  
+          
           <button 
             onClick={() => setIsPanelOpen(true)}
-            className={`inline-flex items-center gap-3 bg-secondary-system-background hover:bg-secondary-system-background/80 rounded-full transition-all active:scale-95 border border-apple-border max-w-[85%] flex-shrink-0 ${settings.bigTouchMode ? 'px-8 py-3.5' : 'px-6 py-2.5'}`}
+            className={cn(
+              "inline-flex items-center gap-2.5 bg-secondary-system-background hover:bg-secondary-system-background/80 rounded-full transition-all active:scale-95 border border-apple-border max-w-[90%] flex-shrink-0",
+              settings.bigTouchMode ? 'px-6 py-3' : 'px-5 py-2'
+            )}
           >
-              <div className="flex gap-1.5 flex-shrink-0">
-                {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
-                {settings.binaural.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
-                {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
-                {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
-                {settings.didgeridoo.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-800" />}
-                {settings.pureHz.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />}
-                {settings.isochronic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
-                {settings.solfeggio.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
-                {settings.shamanic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-red-900" />}
-              </div>
-            <span className={`font-bold uppercase tracking-[0.12em] text-system-secondary-label truncate ${settings.bigTouchMode ? 'text-[10px]' : 'text-[9px]'}`}>{activeLayersLabel}</span>
+            <div className="flex gap-1 flex-shrink-0">
+              {settings.subliminal.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-apple-blue" />}
+              {settings.binaural.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
+              {settings.nature.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+              {settings.noise.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+              {settings.didgeridoo.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-800" />}
+              {settings.pureHz.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />}
+              {settings.isochronic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+              {settings.solfeggio.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
+              {settings.schumann.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+              {settings.shamanic.isEnabled && <div className="w-1.5 h-1.5 rounded-full bg-red-900" />}
+            </div>
+            <span className={cn("font-black uppercase tracking-wider text-system-secondary-label truncate", settings.bigTouchMode ? "text-[10px]" : "text-[8px]")}>
+              {activeLayersLabel}
+            </span>
           </button>
         </div>
-      </div>
 
-      {/* Playback Controls Area - Stable Fixed Bottom Section */}
-      <div className={`w-full max-w-xl mx-auto px-8 flex flex-col items-center flex-shrink-0 bg-system-background/80 backdrop-blur-xl border-t border-apple-border/5 ${settings.bigTouchMode ? 'pb-24 pt-10 gap-12' : 'pb-20 pt-8 gap-8'}`}>
-        <div className="w-full max-w-md">
+        {/* 6, 7. Progress Area (Fixed Bottom Focus) */}
+        <div className="w-full max-w-md flex-shrink-0 mb-8">
           <PlaybackControls settings={settings} seekTo={seekTo} />
         </div>
 
-        <div className="flex items-center justify-center gap-10">
-          <div className="flex flex-col items-center">
-            <button 
-              onClick={() => updateSettings({ playbackMode: settings.playbackMode === 'once' ? 'loop' : 'once' })}
-              className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${settings.playbackMode === 'loop' ? 'bg-apple-blue/10 text-apple-blue border border-apple-blue/20' : 'bg-secondary-system-background text-system-secondary-label border border-apple-border'}`}
-            >
-              {settings.playbackMode === 'loop' ? <Repeat size={20} /> : <Repeat1 size={20} />}
-              <span className="text-[8px] font-black uppercase tracking-widest leading-none mt-0.5">
-                {settings.playbackMode === 'loop' ? 'Loop' : 'Once'}
-              </span>
-            </button>
-          </div>
-
+        {/* 8. Controls Area (Fixed Height Bottom) */}
+        <div className={cn(
+          "w-full flex items-center justify-between flex-shrink-0 mb-4",
+          settings.bigTouchMode ? "px-2" : "px-0"
+        )}>
           <button 
-            onClick={() => userPlayPrevious()} 
-            className="p-4 text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all flex-shrink-0"
-          >
-            <SkipBack size={settings.bigTouchMode ? 44 : 36} fill="currentColor" stroke="none" />
-          </button>
-          
-          <button 
-            onClick={() => userTogglePlayback()}
-            className={`${settings.bigTouchMode ? 'w-24 h-24' : 'w-20 h-20'} bg-system-label text-system-background rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all outline-none border-none flex-shrink-0`}
-          >
-            {isPlaying ? (
-              <Pause size={settings.bigTouchMode ? 44 : 36} fill="currentColor" stroke="none" />
-            ) : (
-              <Play size={settings.bigTouchMode ? 44 : 36} fill="currentColor" stroke="none" className="ml-1" />
+            onClick={() => updateSettings({ playbackMode: settings.playbackMode === 'once' ? 'loop' : 'once' })}
+            className={cn(
+              "flex flex-col items-center gap-1 transition-all",
+              settings.playbackMode === 'loop' ? 'text-apple-blue' : 'text-system-tertiary-label'
             )}
-          </button>
-          
-          <button 
-            onClick={() => userPlayNext()} 
-            className="p-4 text-system-label hover:bg-secondary-system-background rounded-full active:scale-90 transition-all flex-shrink-0"
           >
-            <SkipForward size={settings.bigTouchMode ? 44 : 36} fill="currentColor" stroke="none" />
+            {settings.playbackMode === 'loop' ? <Repeat size={20} /> : <Repeat1 size={20} />}
+            <span className="text-[7px] font-black uppercase tracking-widest leading-none">
+              {settings.playbackMode === 'loop' ? 'Loop' : 'Once'}
+            </span>
           </button>
 
-          <div className="flex flex-col items-center">
+          <div className="flex items-center gap-8">
             <button 
-              onClick={() => toggleShuffle()}
-              className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${settings.shuffle ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'bg-secondary-system-background text-system-secondary-label border border-apple-border'}`}
+              onClick={() => userPlayPrevious()} 
+              className="p-2 text-system-label active:scale-90 transition-all"
             >
-              <Shuffle size={20} />
-              <span className="text-[8px] font-black uppercase tracking-widest leading-none mt-0.5">Shuf</span>
+              <SkipBack size={settings.bigTouchMode ? 40 : 32} fill="currentColor" stroke="none" />
+            </button>
+            
+            <button 
+              onClick={() => userTogglePlayback()}
+              className={cn(
+                "bg-system-label text-system-background rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all outline-none border-none",
+                settings.bigTouchMode ? 'w-20 h-20' : 'w-16 h-16'
+              )}
+            >
+              {isPlaying ? (
+                <Pause size={settings.bigTouchMode ? 36 : 28} fill="currentColor" stroke="none" />
+              ) : (
+                <Play size={settings.bigTouchMode ? 36 : 28} fill="currentColor" stroke="none" className="ml-1" />
+              )}
+            </button>
+            
+            <button 
+              onClick={() => userPlayNext()} 
+              className="p-2 text-system-label active:scale-90 transition-all"
+            >
+              <SkipForward size={settings.bigTouchMode ? 40 : 32} fill="currentColor" stroke="none" />
             </button>
           </div>
+
+          <button 
+            onClick={() => toggleShuffle()}
+            className={cn(
+              "flex flex-col items-center gap-1 transition-all",
+              settings.shuffle ? 'text-orange-500' : 'text-system-tertiary-label'
+            )}
+          >
+            <Shuffle size={20} />
+            <span className="text-[7px] font-black uppercase tracking-widest leading-none">Shuf</span>
+          </button>
         </div>
-      </div>
+      </main>
+
+      {/* Bottom Back Button Overlay (Fixed) */}
+      {settings.backButtonPosition === 'bottom' && (
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center z-[50]">
+          <button 
+            onClick={onBack}
+            className={`${settings.bigTouchMode ? 'w-16 h-16' : 'w-12 h-12'} bg-secondary-system-background border border-apple-border rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all text-system-label`}
+          >
+            <ChevronDown size={settings.bigTouchMode ? 32 : 24} />
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {isPanelOpen && (
