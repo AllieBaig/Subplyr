@@ -23,7 +23,8 @@ export const AudioLayerLibrary = () => {
     updateSolfeggioSettings,
     updateSchumannSettings,
     updateShamanicSettings,
-    updateMentalToughnessSettings
+    updateMentalToughnessSettings,
+    updateSettings
   } = useSettings();
 
   const { playlists, tracks } = useAudio();
@@ -33,7 +34,7 @@ export const AudioLayerLibrary = () => {
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('expanded_audio_groups');
-    return saved ? JSON.parse(saved) : { frequency: false, soundscape: true };
+    return saved ? JSON.parse(saved) : { main: true, frequency: false, soundscape: true };
   });
 
   const toggleGroup = (groupId: string) => {
@@ -54,6 +55,7 @@ export const AudioLayerLibrary = () => {
   const applyLayerPreset = (layer: string, preset: 'soft' | 'night' | 'focus') => {
     // Shared preset logic
     const updateFnMap: any = {
+      main: (s: any) => updateSettings({ mainVolume: s.volume, mainGainDb: s.gainDb }),
       subliminal: updateSubliminalSettings,
       binaural: updateBinauralSettings,
       nature: updateNatureSettings,
@@ -79,6 +81,49 @@ export const AudioLayerLibrary = () => {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* GROUP 0: MAIN AUDIO */}
+      <div className="space-y-3">
+        <button 
+          onClick={() => toggleGroup('main')}
+          className="flex items-center gap-3 w-full px-1 py-1 group active:opacity-70 transition-opacity"
+        >
+          <div className="w-8 h-8 rounded-lg bg-apple-blue/10 flex items-center justify-center text-apple-blue group-hover:scale-105 transition-transform">
+            <MusicIcon size={16} />
+          </div>
+          <div className="flex-1 text-left">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-system-label">Main Audio</h3>
+            <p className="text-[9px] font-bold text-system-tertiary-label uppercase">Primary Playlist Channel</p>
+          </div>
+          {expandedGroups.main ? <ChevronDown size={14} className="text-system-tertiary-label" /> : <ChevronRight size={14} className="text-system-tertiary-label" />}
+        </button>
+
+        {expandedGroups.main && (
+          <div className="flex flex-col gap-3 pl-1 animate-in slide-in-from-top-2 duration-300">
+            <LayerAccordion 
+              id="main_channel" icon={Sliders} label="Output Master" 
+              isEnabled={true} 
+              onToggle={() => {}} // Always enabled
+              isExpanded={expandedLayerId === 'main_channel'}
+              onAccordionToggle={() => toggleLayer('main_channel')}
+              vol={settings.mainVolume}
+              setVol={(v: number) => updateSettings({ mainVolume: v })}
+              gainDb={settings.mainGainDb}
+              setGainDb={(v: number) => updateSettings({ mainGainDb: v })}
+              color="text-apple-blue"
+              subtitle="Main Stream"
+              onApplyPreset={(p: any) => applyLayerPreset('main', p)}
+              hideToggle
+            >
+              <div className="space-y-4">
+                <p className="text-[10px] font-medium text-system-secondary-label leading-relaxed">
+                  Controls the primary playback volume and gain for your main playlist tracks.
+                </p>
+              </div>
+            </LayerAccordion>
+          </div>
+        )}
+      </div>
+
       {/* GROUP 1: FREQUENCY */}
       <div className="space-y-3">
         <button 

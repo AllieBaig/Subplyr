@@ -76,10 +76,10 @@ export class ChunkManager {
     });
   }
 
-  static async renderChunk(playlistId: string, chunkIndex: number, trackIds: string[]): Promise<{ blob: Blob; duration: number } | null> {
+  static async renderChunk(playlistId: string, chunkIndex: number, trackIds: string[], volume: number = 1.0, gainDb: number = 0): Promise<{ blob: Blob; duration: number } | null> {
     try {
       const chunkId = `chunk_${playlistId}_${chunkIndex}`;
-      console.log(`[ChunkManager] Rendering ${chunkId}...`);
+      console.log(`[ChunkManager] Rendering ${chunkId} with vol:${volume}, gain:${gainDb}dB...`);
 
       const buffers: AudioBuffer[] = [];
       let totalDuration = 0;
@@ -99,11 +99,16 @@ export class ChunkManager {
       const OfflineCtx = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext;
       const offlineCtx = new OfflineCtx(2, Math.ceil(totalDuration * SAMPLE_RATE), SAMPLE_RATE);
 
+      const mainGain = offlineCtx.createGain();
+      const dbMultiplier = Math.pow(10, gainDb / 20);
+      mainGain.gain.setValueAtTime(volume * dbMultiplier, 0);
+      mainGain.connect(offlineCtx.destination);
+
       let offset = 0;
       for (const buffer of buffers) {
         const source = offlineCtx.createBufferSource();
         source.buffer = buffer;
-        source.connect(offlineCtx.destination);
+        source.connect(mainGain);
         source.start(offset);
         offset += buffer.duration;
       }

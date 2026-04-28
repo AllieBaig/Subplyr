@@ -186,6 +186,7 @@ export interface AppSettings {
   schumann: SchumannSettings;
   audioTools: AudioTools;
   mainVolume: number;
+  mainGainDb: number;
   playbackRate: number;
   fadeInOut: boolean;
   syncPlayback: boolean;

@@ -172,7 +172,8 @@ export const LayerAccordion = ({
   playInBackground, setPlayInBackground,
   pitchSafeMode, setPitchSafeMode,
   isExpanded, onAccordionToggle,
-  color, subtitle, children, onApplyPreset 
+  color, subtitle, children, onApplyPreset,
+  hideToggle = false
 }: any) => {
   const [internalIsExpanded, setInternalIsExpanded] = useState(false);
   const [isToolsExpanded, setIsToolsExpanded] = useState(false);
@@ -200,7 +201,7 @@ export const LayerAccordion = ({
         onClick={toggleAccordion}
       >
         <div className="flex items-center gap-4 min-w-0">
-          <div className={`w-12 h-12 ${isEnabled ? 'bg-system-background shadow-sm' : 'bg-system-background/50'} rounded-2xl flex-shrink-0 flex items-center justify-center ${isEnabled ? color : 'text-system-tertiary-label'} transition-all`}>
+          <div className={`w-12 h-12 ${isEnabled || hideToggle ? 'bg-system-background shadow-sm' : 'bg-system-background/50'} rounded-2xl flex-shrink-0 flex items-center justify-center ${isEnabled || hideToggle ? color : 'text-system-tertiary-label'} transition-all`}>
             <Icon size={24} />
           </div>
           <div className="min-w-0 flex-1">
@@ -209,17 +210,19 @@ export const LayerAccordion = ({
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onToggle(!isEnabled); }}
-            className={`flex-shrink-0 w-12 h-7 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
-          >
-            <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} />
-          </button>
+          {!hideToggle && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onToggle(!isEnabled); }}
+              className={`flex-shrink-0 w-12 h-7 rounded-full relative transition-colors ${isEnabled ? (color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
+            >
+              <motion.div className="absolute top-1 left-1 bg-white w-5 h-5 rounded-full" animate={{ x: isEnabled ? 20 : 0 }} />
+            </button>
+          )}
           <ChevronDown size={18} className={`text-system-tertiary-label transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
 
-      {isEnabled && <div className="px-5 pb-3"><LayerProgress layerId={id} /></div>}
+      {(isEnabled || hideToggle) && <div className="px-5 pb-3"><LayerProgress layerId={id} /></div>}
       
       <AnimatePresence>
         {expanded && (
@@ -232,23 +235,25 @@ export const LayerAccordion = ({
             {/* Playback Controls Row */}
             <div className="grid grid-cols-2 gap-3">
               {/* Background Play Support */}
-              <div className="flex flex-col gap-3 p-4 bg-system-background rounded-[2rem] border border-apple-border shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 bg-apple-blue/5 text-apple-blue rounded-xl flex items-center justify-center">
-                    <Activity size={14} />
+              {setPlayInBackground !== undefined && (
+                <div className="flex flex-col gap-3 p-4 bg-system-background rounded-[2rem] border border-apple-border shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 bg-apple-blue/5 text-apple-blue rounded-xl flex items-center justify-center">
+                      <Activity size={14} />
+                    </div>
+                    <button 
+                      onClick={() => setPlayInBackground(!playInBackground)}
+                      className={`w-9 h-5 rounded-full relative transition-colors ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                    >
+                      <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: playInBackground ? 16 : 0 }} />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => setPlayInBackground(!playInBackground)}
-                    className={`w-9 h-5 rounded-full relative transition-colors ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-                  >
-                    <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: playInBackground ? 16 : 0 }} />
-                  </button>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Background</span>
+                    <span className="text-[7px] font-bold text-system-tertiary-label uppercase">Stable Play</span>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Background</span>
-                  <span className="text-[7px] font-bold text-system-tertiary-label uppercase">Stable Play</span>
-                </div>
-              </div>
+              )}
 
               {/* Pitch Safe Mode Toggle */}
               {setPitchSafeMode !== undefined && (
@@ -284,11 +289,13 @@ export const LayerAccordion = ({
                 />
               </div>
               <div className="flex items-center gap-4">
-                <input 
-                  type="range" min={0} max={1} step={0.01} value={vol}
-                  onChange={(e) => setVol(parseFloat(e.target.value))}
-                  className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-system-label"
-                />
+                <div className="flex-1 px-1">
+                  <input 
+                    type="range" min={0} max={1} step={0.01} value={vol}
+                    onChange={(e) => setVol(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-apple-border rounded-full appearance-none accent-system-label"
+                  />
+                </div>
               </div>
             </div>
 
@@ -296,19 +303,24 @@ export const LayerAccordion = ({
             <div className="space-y-4">
               <div className="flex justify-between items-center px-1">
                 <span className="text-[10px] font-black text-system-tertiary-label uppercase tracking-widest">Gain (dB)</span>
-                <input 
-                  type="number"
-                  value={gainDb}
-                  onChange={(e) => setGainDb(Math.min(0, Math.max(-60, parseInt(e.target.value) || 0)))}
-                  className="w-12 h-7 bg-system-background border border-apple-border rounded-lg text-[10px] font-black text-center focus:outline-none tabular-nums"
-                />
+                <div className="flex items-center gap-2">
+                   {gainDb < 0 && <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Reduction</span>}
+                   <input 
+                    type="number"
+                    value={gainDb}
+                    onChange={(e) => setGainDb(Math.min(0, Math.max(-60, parseInt(e.target.value) || 0)))}
+                    className="w-12 h-7 bg-system-background border border-apple-border rounded-lg text-[10px] font-black text-center focus:outline-none tabular-nums"
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-4">
-                <input 
-                  type="range" min={-60} max={0} step={1} value={gainDb}
-                  onChange={(e) => setGainDb(parseInt(e.target.value))}
-                  className="flex-1 h-1 bg-apple-border rounded-full appearance-none accent-apple-blue"
-                />
+                <div className="flex-1 px-1">
+                  <input 
+                    type="range" min={-60} max={0} step={1} value={gainDb}
+                    onChange={(e) => setGainDb(parseInt(e.target.value))}
+                    className="w-full h-1 bg-apple-border rounded-full appearance-none accent-apple-blue"
+                  />
+                </div>
               </div>
             </div>
 
@@ -318,60 +330,64 @@ export const LayerAccordion = ({
               </div>
             )}
 
-            <div className="pt-2 border-t border-apple-border/50">
-              <button 
-                onClick={() => setIsToolsExpanded(!isToolsExpanded)}
-                className="w-full flex items-center justify-between py-3 group"
-              >
-                <div className="flex items-center gap-4">
-                   <div className="w-8 h-8 bg-apple-blue/10 text-apple-blue rounded-xl flex items-center justify-center">
-                      <Sliders size={14} />
-                   </div>
-                   <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Audio Optimization</span>
-                </div>
-                <ChevronRight size={16} className={`text-system-tertiary-label transition-transform ${isToolsExpanded ? 'rotate-90 text-apple-blue' : ''}`} />
-              </button>
+            {(setNormalize || onApplyPreset) && (
+              <div className="pt-2 border-t border-apple-border/50">
+                <button 
+                  onClick={() => setIsToolsExpanded(!isToolsExpanded)}
+                  className="w-full flex items-center justify-between py-3 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 bg-apple-blue/10 text-apple-blue rounded-xl flex items-center justify-center">
+                        <Sliders size={14} />
+                    </div>
+                    <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Audio Optimization</span>
+                  </div>
+                  <ChevronRight size={16} className={`text-system-tertiary-label transition-transform ${isToolsExpanded ? 'rotate-90 text-apple-blue' : ''}`} />
+                </button>
 
-              <AnimatePresence>
-                {isToolsExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden space-y-5 pt-5"
-                  >
-                     <div className="flex items-center justify-between p-4 bg-system-background rounded-2xl border border-apple-border shadow-sm">
-                        <div className="flex flex-col">
-                           <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Normalization</span>
-                           <span className="text-[8px] font-bold text-system-secondary-label uppercase">{normalize ? 'Perfect Balance' : 'Raw Output'}</span>
+                <AnimatePresence>
+                  {isToolsExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden space-y-5 pt-5"
+                    >
+                      {setNormalize && (
+                        <div className="flex items-center justify-between p-4 bg-system-background rounded-2xl border border-apple-border shadow-sm">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Normalization</span>
+                              <span className="text-[8px] font-bold text-system-secondary-label uppercase">{normalize ? 'Perfect Balance' : 'Raw Output'}</span>
+                            </div>
+                            <button 
+                              onClick={() => setNormalize(!normalize)}
+                              className={`w-8 h-5 rounded-full relative transition-colors ${normalize ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                            >
+                              <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: normalize ? 12 : 0 }} />
+                            </button>
                         </div>
-                        <button 
-                          onClick={() => setNormalize(!normalize)}
-                          className={`w-8 h-5 rounded-full relative transition-colors ${normalize ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
-                        >
-                          <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: normalize ? 12 : 0 }} />
-                        </button>
-                     </div>
-                     {onApplyPreset && (
-                       <div className="grid grid-cols-2 gap-3">
-                         <button 
-                           onClick={() => onApplyPreset('soft')}
-                           className="py-3 rounded-2xl bg-system-background border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label hover:bg-secondary-system-background transition-all"
-                         >
-                           Soft Mix
-                         </button>
-                         <button 
-                           onClick={() => onApplyPreset('night')}
-                           className="py-3 rounded-2xl bg-system-background border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label hover:bg-secondary-system-background transition-all"
-                         >
-                           Binaural Night
-                         </button>
-                       </div>
-                     )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                      )}
+                      {onApplyPreset && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <button 
+                            onClick={() => onApplyPreset('soft')}
+                            className="py-3 rounded-2xl bg-system-background border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label hover:bg-secondary-system-background transition-all"
+                          >
+                            Soft Mix
+                          </button>
+                          <button 
+                            onClick={() => onApplyPreset('night')}
+                            className="py-3 rounded-2xl bg-system-background border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label hover:bg-secondary-system-background transition-all"
+                          >
+                            Binaural Night
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

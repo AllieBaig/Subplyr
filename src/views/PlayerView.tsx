@@ -158,8 +158,10 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
       settings.didgeridoo.isEnabled && "Didgeridoo",
       settings.pureHz.isEnabled && `${settings.pureHz.frequency}Hz`,
       settings.isochronic.isEnabled && "Isochronic",
-      settings.solfeggio.isEnabled && `${settings.solfeggio.frequency}Hz Solfeggio`,
-      settings.shamanic.isEnabled && "Shamanic Drumming"
+      settings.solfeggio.isEnabled && "Solfeggio",
+      settings.schumann.isEnabled && "Schumann",
+      settings.shamanic.isEnabled && "Shamanic",
+      settings.mentalToughness.isEnabled && "Mental Toughness"
     ].filter(Boolean);
 
     if (layers.length === 0) return "Standard Audio";

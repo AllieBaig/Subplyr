@@ -41,6 +41,7 @@ export default function AudioEngine() {
   const nextChunkIdRef = useRef<string | null>(null);
   const chunkUrlsRef = useRef<Record<string, string>>({});
   const chunkCleanupRef = useRef<Set<string>>(new Set());
+  const trackOffsetsRef = useRef<{start: number, duration: number}[]>([]);
 
   // Detect Foreground/Background
   const [isForeground, setIsForeground] = useState(document.visibilityState === 'visible');
@@ -159,7 +160,13 @@ export default function AudioEngine() {
       const currentMeta = await db.getChunkMetadata(currentId);
       if (!currentMeta) {
         setIsRenderingChunk(true);
-        const rendered = await ChunkManager.renderChunk(activePlaylistId!, currentChunkIndex, plan.chunks[currentChunkIndex].trackIds);
+        const rendered = await ChunkManager.renderChunk(
+          activePlaylistId!, 
+          currentChunkIndex, 
+          plan.chunks[currentChunkIndex].trackIds,
+          settings.mainVolume,
+          settings.mainGainDb
+        );
         if (rendered) {
           await db.saveChunk({
             id: currentId,
@@ -180,7 +187,13 @@ export default function AudioEngine() {
         const nextMeta = await db.getChunkMetadata(nextId);
         if (!nextMeta) {
           setIsRenderingChunk(true);
-          const rendered = await ChunkManager.renderChunk(activePlaylistId!, nextIdx, plan.chunks[nextIdx].trackIds);
+          const rendered = await ChunkManager.renderChunk(
+            activePlaylistId!, 
+            nextIdx, 
+            plan.chunks[nextIdx].trackIds,
+            settings.mainVolume,
+            settings.mainGainDb
+          );
           if (rendered) {
             await db.saveChunk({
               id: nextId,
@@ -2189,10 +2202,38 @@ export default function AudioEngine() {
   // Handle Seek Request
   useEffect(() => {
     if (seekRequest !== null && mainAudioRef.current) {
-      mainAudioRef.current.currentTime = seekRequest;
-      clearSeekRequest();
+      if (settings.chunking.mode === 'merge' && chunkPlanRef.current) {
+        const plan = chunkPlanRef.current;
+        const chunk = plan.chunks[settings.chunking.currentChunkIndex];
+        
+        let offset = 0;
+        // Find offset of the current track within the chunk
+        // This is a bit complex because we need to know WHICH track the user is seeking on
+        // But usually seekTo is called on the CURRENTLY displayed track.
+        // So we can use currentTrackIndex to find the current track's offset in the chunk.
+        
+        let tracksBeforeChunk = 0;
+        for (let i = 0; i < settings.chunking.currentChunkIndex; i++) {
+          tracksBeforeChunk += plan.chunks[i].trackIds.length;
+        }
+        const indexInChunk = currentTrackIndex! - tracksBeforeChunk;
+        
+        const calcOffset = async () => {
+          let trackOffset = 0;
+          for (let i = 0; i < indexInChunk; i++) {
+            trackOffset += await ChunkManager.getAudioDuration(chunk.trackIds[i]);
+          }
+          console.log(`[AudioEngine] Seeking in merged chunk. Track offset: ${trackOffset}, Seek val: ${seekRequest}`);
+          mainAudioRef.current!.currentTime = trackOffset + seekRequest;
+          clearSeekRequest();
+        };
+        calcOffset();
+      } else {
+        mainAudioRef.current.currentTime = seekRequest;
+        clearSeekRequest();
+      }
     }
-  }, [seekRequest]);
+  }, [seekRequest, settings.chunking]);
 
   // Resolve Main URL
   useEffect(() => {
@@ -2425,6 +2466,24 @@ export default function AudioEngine() {
     }
   }, [settings.subliminal.playInBackground]);
 
+  // Invalidate chunks if critical settings change
+  useEffect(() => {
+    // We only invalidate if in merge mode
+    if (settings.chunking.mode === 'merge') {
+      const invalidate = async () => {
+        console.log("[AudioEngine] Invaliding chunks due to gainDb change");
+        const chunks = await db.getAllChunkMetadata();
+        for (const c of chunks) await db.deleteChunk(c.id);
+        
+        // If we were playing, we need to reload the current chunk source
+        if (isPlaying && mainAudioRef.current) {
+          activeChunkIdRef.current = null; // Force reload in applySources effect
+        }
+      };
+      invalidate();
+    }
+  }, [settings.mainGainDb]);
+
   // Main Audio Playback Loop - Chunk or Direct Path
   useEffect(() => {
     if (!mainAudioRef.current) return;
@@ -2465,6 +2524,18 @@ export default function AudioEngine() {
             newTrackIdx += plan.chunks[i].trackIds.length;
           }
           setCurrentTrackIndex(newTrackIdx);
+          activeChunkIdRef.current = nextId;
+
+          // Re-calculate track offsets for the next chunk
+          const nextChunk = plan.chunks[nextIdx];
+          const offsets = [];
+          let currentOffset = 0;
+          for (const tid of nextChunk.trackIds) {
+            const d = await ChunkManager.getAudioDuration(tid);
+            offsets.push({ start: currentOffset, duration: d });
+            currentOffset += d;
+          }
+          trackOffsetsRef.current = offsets;
 
           updateSettings({
             chunking: {
@@ -2479,38 +2550,61 @@ export default function AudioEngine() {
         }
       }
 
-      setCurrentTime(audio.currentTime);
-      setDuration(audio.duration);
-
-      // Sync currentTrackIndex within chunk (if Merge Mode)
       if (settings.chunking.mode === 'merge') {
-        const plan = chunkPlanRef.current;
-        if (plan && settings.chunking.activePlaylistId === plan.playlistId) {
-          if (Math.floor(audio.currentTime) !== Math.floor(currentTime)) {
-            const chunk = plan.chunks[settings.chunking.currentChunkIndex];
-            let offset = 0;
-            let foundIdxInChunk = 0;
-            for (let i = 0; i < chunk.trackIds.length; i++) {
-              const d = await ChunkManager.getAudioDuration(chunk.trackIds[i]);
-              if (audio.currentTime >= offset && audio.currentTime < offset + d) {
-                foundIdxInChunk = i;
-                break;
-              }
-              offset += d;
-              if (i === chunk.trackIds.length - 1) foundIdxInChunk = i;
-            }
-            
-            let absoluteIdx = 0;
-            for (let i = 0; i < settings.chunking.currentChunkIndex; i++) {
-              absoluteIdx += plan.chunks[i].trackIds.length;
-            }
-            absoluteIdx += foundIdxInChunk;
-            
-            if (absoluteIdx !== currentTrackIndex) {
-              setCurrentTrackIndex(absoluteIdx);
-            }
+        const offsets = trackOffsetsRef.current;
+        if (offsets.length === 0 && chunkPlanRef.current) {
+          const chunk = chunkPlanRef.current.chunks[settings.chunking.currentChunkIndex];
+          if (chunk) {
+             const calc = async () => {
+               const newOffsets = [];
+               let currentOffset = 0;
+               for (const tid of chunk.trackIds) {
+                 const d = await ChunkManager.getAudioDuration(tid);
+                 newOffsets.push({ start: currentOffset, duration: d });
+                 currentOffset += d;
+               }
+               trackOffsetsRef.current = newOffsets;
+             };
+             calc();
           }
         }
+
+        if (offsets.length > 0) {
+          let found = false;
+          for (let i = 0; i < offsets.length; i++) {
+            const { start, duration: d } = offsets[i];
+            if (audio.currentTime >= start && audio.currentTime < start + d) {
+              setCurrentTime(audio.currentTime - start);
+              setDuration(d);
+              found = true;
+              
+              // Also sync track index if changed
+              const plan = chunkPlanRef.current;
+              if (plan) {
+                let absoluteIdx = 0;
+                for (let j = 0; j < settings.chunking.currentChunkIndex; j++) {
+                  absoluteIdx += plan.chunks[j].trackIds.length;
+                }
+                absoluteIdx += i;
+                if (absoluteIdx !== currentTrackIndex) {
+                  setCurrentTrackIndex(absoluteIdx);
+                }
+              }
+              break;
+            }
+          }
+          if (!found && offsets.length > 0) {
+             const last = offsets[offsets.length - 1];
+             setCurrentTime(audio.currentTime - last.start);
+             setDuration(last.duration);
+          }
+        } else {
+          setCurrentTime(audio.currentTime);
+          setDuration(audio.duration);
+        }
+      } else {
+        setCurrentTime(audio.currentTime);
+        setDuration(audio.duration);
       }
     };
 
@@ -2524,11 +2618,21 @@ export default function AudioEngine() {
     };
     audio.addEventListener('ended', handleEnded);
 
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+
+    // Initial volume
+    audio.volume = settings.mainVolume;
+
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
     };
-  }, [isPlaying, settings.chunking, settings.playbackMode, settings.loop, playNext]);
+  }, [isPlaying, settings.chunking, settings.playbackMode, settings.loop, playNext, settings.mainVolume]);
 
   // Handle Main Track Source Change (Mode Aware)
   useEffect(() => {
@@ -2557,6 +2661,21 @@ export default function AudioEngine() {
           audio.load();
           if (isPlaying) audio.play().catch(console.error);
           activeChunkIdRef.current = chunkId;
+
+          // Pre-calculate track offsets for this chunk
+          const plan = chunkPlanRef.current;
+          if (plan) {
+            const chunk = plan.chunks[currentChunkIndex];
+            const offsets = [];
+            let currentOffset = 0;
+            for (const tid of chunk.trackIds) {
+              const d = await ChunkManager.getAudioDuration(tid);
+              offsets.push({ start: currentOffset, duration: d });
+              currentOffset += d;
+            }
+            trackOffsetsRef.current = offsets;
+            console.log(`[AudioEngine] Calculated ${offsets.length} track offsets for chunk ${currentChunkIndex}`);
+          }
         }
       } else {
         // Heartbeat / Standard Mode: Use track URLs directly

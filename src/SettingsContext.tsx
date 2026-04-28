@@ -146,6 +146,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     playInBackground: false,
   },
   mainVolume: 1.0,
+  mainGainDb: 0,
   playbackRate: 1.0,
   fadeInOut: true,
   syncPlayback: true,
