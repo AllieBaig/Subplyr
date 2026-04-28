@@ -897,8 +897,16 @@ export default function AudioEngine() {
     };
 
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => withResume(() => setIsPlaying(true)));
-      navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
+      navigator.mediaSession.setActionHandler('play', () => withResume(() => {
+        setIsPlaying(true);
+        if (mainAudioRef.current && mainAudioRef.current.paused) {
+          mainAudioRef.current.play().catch(() => {});
+        }
+      }));
+      navigator.mediaSession.setActionHandler('pause', () => {
+        setIsPlaying(false);
+        if (mainAudioRef.current) mainAudioRef.current.pause();
+      });
       navigator.mediaSession.setActionHandler('nexttrack', () => withResume(() => playNext()));
       navigator.mediaSession.setActionHandler('previoustrack', () => withResume(() => playPrevious()));
       navigator.mediaSession.setActionHandler('seekto', (details) => {
@@ -959,19 +967,40 @@ export default function AudioEngine() {
     return () => clearTimeout(timer);
   }, [playingPlaylistId, currentTrackIndex, Math.floor(currentTime / 5), isPlaying, isLoading, updateSettings, settings.playlistMemory, playlists]);
 
-  // Sync Media Session Metadata
+  // Sync Media Session Metadata & Playback State
   useEffect(() => {
     if ('mediaSession' in navigator) {
+      // Sync Playback State for iPhone Lock Screen Widget
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
       if (currentTrackIndex !== null && tracks[currentTrackIndex]) {
         const track = tracks[currentTrackIndex];
+        const artworkUrl = track.artwork || `https://picsum.photos/seed/${track.id}/512/512`;
+        
         navigator.mediaSession.metadata = new MediaMetadata({
           title: track.name,
-          artist: track.artist || 'Unknown Artist',
-          album: 'Subliminal Journey',
+          artist: track.artist || 'Subliminal Artist',
+          album: 'Zen Journey',
           artwork: [
-            { src: track.artwork || 'https://picsum.photos/seed/music/512/512', sizes: '512x512', type: 'image/png' }
+            { src: artworkUrl, sizes: '96x96', type: 'image/png' },
+            { src: artworkUrl, sizes: '128x128', type: 'image/png' },
+            { src: artworkUrl, sizes: '192x192', type: 'image/png' },
+            { src: artworkUrl, sizes: '256x256', type: 'image/png' },
+            { src: artworkUrl, sizes: '384x384', type: 'image/png' },
+            { src: artworkUrl, sizes: '512x512', type: 'image/png' },
           ]
         });
+
+        // Initialize Position State
+        if (mainAudioRef.current && (navigator.mediaSession as any).setPositionState) {
+          try {
+            (navigator.mediaSession as any).setPositionState({
+              duration: mainAudioRef.current.duration || 0,
+              playbackRate: settings.playbackRate || 1,
+              position: mainAudioRef.current.currentTime || 0,
+            });
+          } catch (e) {}
+        }
       } else {
         // Find active Hz layer to show in metadata if no track is playing
         const activeLayer = Object.entries(settings).find(([key, val]: [string, any]) => 
@@ -993,14 +1022,19 @@ export default function AudioEngine() {
           else if (id === 'binaural') subtitle = `Binaural: ${s.leftFreq}Hz / ${s.rightFreq}Hz`;
           else if (id === 'isochronic') subtitle = `Isochronic: ${s.pulseRate}Hz Pulse`;
           
+          const ambientArtwork = `https://picsum.photos/seed/meditation/512/512`;
+          
           navigator.mediaSession.metadata = new MediaMetadata({
             title: title,
             artist: subtitle,
             album: 'Silent Journey',
             artwork: [
-              { src: 'https://picsum.photos/seed/meditation/512/512', sizes: '512x512', type: 'image/png' }
+              { src: ambientArtwork, sizes: '512x512', type: 'image/png' }
             ]
           });
+        } else {
+          // Clear metadata if nothing is active
+          navigator.mediaSession.metadata = null;
         }
       }
     }
@@ -1054,18 +1088,22 @@ export default function AudioEngine() {
     heartbeatAudioRef.current = heartbeatAudio;
 
     // 2. Audio State & Metadata Listeners (Consolidated for stability)
+    let lastPositionUpdate = 0;
     const onTimeUpdate = () => {
+      const now = Date.now();
       if (mainAudio.duration) {
         setCurrentTime(mainAudio.currentTime);
       }
       
-      if ('mediaSession' in navigator && (navigator.mediaSession as any).setPositionState && isPlaying) {
+      // Throttle Media Session position updates for iPhone 8 / iOS 16 stability
+      if ('mediaSession' in navigator && (navigator.mediaSession as any).setPositionState && isPlaying && (now - lastPositionUpdate > 1000)) {
         try {
           (navigator.mediaSession as any).setPositionState({
             duration: mainAudio.duration || 0,
             playbackRate: mainAudio.playbackRate || 1,
             position: mainAudio.currentTime || 0,
           });
+          lastPositionUpdate = now;
         } catch (e) {}
       }
     };
@@ -1124,13 +1162,16 @@ export default function AudioEngine() {
         ctx.resume();
       }
       
+      // Prioritize main audio for session focus
       if (isPlaying) {
-        [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
+        mainAudio.play().catch(() => {});
+        [subAudio, natureAudio, heartbeatAudio].forEach(a => {
            if (a.paused) a.play().catch(() => {});
         });
       } else {
-        // Pre-warm silently
-        [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
+        // Pre-warm main audio first
+        mainAudio.play().then(() => { mainAudio.pause(); }).catch(() => {});
+        [subAudio, natureAudio, heartbeatAudio].forEach(a => {
            a.play().then(() => { if (a !== heartbeatAudio) a.pause(); }).catch(() => {});
         });
       }
