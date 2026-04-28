@@ -15,6 +15,7 @@ interface SettingsContextType {
   updatePureHzSettings: (newSettings: Partial<AppSettings['pureHz']>) => void;
   updateIsochronicSettings: (newSettings: Partial<AppSettings['isochronic']>) => void;
   updateSolfeggioSettings: (newSettings: Partial<AppSettings['solfeggio']>) => void;
+  updateSchumannSettings: (newSettings: Partial<AppSettings['schumann']>) => void;
   updateMentalToughnessSettings: (newSettings: Partial<AppSettings['mentalToughness']>) => void;
   updateLibrarySettings: (newSettings: Partial<AppSettings['library']>) => void;
   updateAppearanceSettings: (newSettings: Partial<AppSettings['appearance']>) => void;
@@ -124,6 +125,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   solfeggio: {
     isEnabled: false,
     frequency: 528,
+    volume: 0.1,
+    gainDb: -6,
+    normalize: false,
+    playInBackground: false,
+    pitchSafeMode: false,
+  },
+  schumann: {
+    isEnabled: false,
+    frequency: 7.83,
     volume: 0.1,
     gainDb: -6,
     normalize: false,
@@ -290,6 +300,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({ ...prev, solfeggio: { ...prev.solfeggio, ...newSol } }));
   }, []);
 
+  const updateSchumannSettings = useCallback((newSch: Partial<AppSettings['schumann']>) => {
+    setSettings(prev => ({ ...prev, schumann: { ...prev.schumann, ...newSch } }));
+  }, []);
+
   const updateMentalToughnessSettings = useCallback((newMT: Partial<AppSettings['mentalToughness']>) => {
     setSettings(prev => ({ ...prev, mentalToughness: { ...prev.mentalToughness, ...newMT } }));
   }, []);
@@ -339,6 +353,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       updatePureHzSettings,
       updateIsochronicSettings,
       updateSolfeggioSettings,
+      updateSchumannSettings,
       updateMentalToughnessSettings,
       updateLibrarySettings,
       updateAppearanceSettings,

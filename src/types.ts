@@ -109,6 +109,16 @@ export interface SolfeggioSettings {
   pitchSafeMode: boolean;
 }
 
+export interface SchumannSettings {
+  isEnabled: boolean;
+  frequency: number;
+  volume: number;
+  gainDb: number;
+  normalize: boolean;
+  playInBackground: boolean;
+  pitchSafeMode: boolean;
+}
+
 export interface AudioTools {
   gainDb: number;
   normalizeTargetDb: number | null;
@@ -173,6 +183,7 @@ export interface AppSettings {
   pureHz: PureHzSettings;
   isochronic: IsochronicSettings;
   solfeggio: SolfeggioSettings;
+  schumann: SchumannSettings;
   audioTools: AudioTools;
   mainVolume: number;
   playbackRate: number;

@@ -402,7 +402,7 @@ export default function AudioEngine() {
     const useSoftPitch = options.pitchSafeMode && isPitchRange(options.frequency || (type === 'binaural' ? (options.leftFreq + options.rightFreq) / 2 : 0));
 
     // Setup layer specific offline graph
-    if (type === 'pureHz' || type === 'solfeggio') {
+    if (type === 'pureHz' || type === 'solfeggio' || type === 'schumann') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -784,6 +784,7 @@ export default function AudioEngine() {
     if (settings.pureHz.isEnabled && (isPlaying || settings.pureHz.playInBackground)) activeCount++;
     if (settings.isochronic.isEnabled && (isPlaying || settings.isochronic.playInBackground)) activeCount++;
     if (settings.solfeggio.isEnabled && (isPlaying || settings.solfeggio.playInBackground)) activeCount++;
+    if (settings.schumann.isEnabled && (isPlaying || settings.schumann.playInBackground)) activeCount++;
     if (settings.shamanic.isEnabled && (isPlaying || settings.shamanic.playInBackground)) activeCount++;
     if (settings.mentalToughness.isEnabled && (isPlaying || settings.mentalToughness.playInBackground)) activeCount++;
     
@@ -803,6 +804,7 @@ export default function AudioEngine() {
     settings.pureHz.isEnabled, settings.pureHz.playInBackground,
     settings.isochronic.isEnabled, settings.isochronic.playInBackground,
     settings.solfeggio.isEnabled, settings.solfeggio.playInBackground,
+    settings.schumann.isEnabled, settings.schumann.playInBackground,
     settings.shamanic.isEnabled, settings.shamanic.playInBackground,
     settings.mentalToughness.isEnabled, settings.mentalToughness.playInBackground
   ]);
@@ -870,6 +872,10 @@ export default function AudioEngine() {
   const solOscRef = useRef<OscillatorNode | null>(null);
   const solGainRef = useRef<GainNode | null>(null);
   const solCompRef = useRef<DynamicsCompressorNode | null>(null);
+
+  const schumannOscRef = useRef<OscillatorNode | null>(null);
+  const schumannGainRef = useRef<GainNode | null>(null);
+  const schumannCompRef = useRef<DynamicsCompressorNode | null>(null);
 
   // Mental Toughness Refs
   const mentalToughnessGainRef = useRef<GainNode | null>(null);
@@ -969,16 +975,21 @@ export default function AudioEngine() {
       } else {
         // Find active Hz layer to show in metadata if no track is playing
         const activeLayer = Object.entries(settings).find(([key, val]: [string, any]) => 
-          val?.isEnabled && val?.playInBackground && ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'didgeridoo', 'shamanic', 'noise', 'nature', 'mentalToughness'].includes(key)
+          val?.isEnabled && val?.playInBackground && ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'schumann', 'didgeridoo', 'shamanic', 'noise', 'nature', 'mentalToughness'].includes(key)
         );
 
         if (activeLayer) {
           const [id, s] = activeLayer;
           let title = id.charAt(0).toUpperCase() + id.slice(1);
+          if (id === 'pureHz') title = 'Pure Hz';
+          if (id === 'solfeggio') title = 'Solfeggio';
+          if (id === 'schumann') title = 'Schumann Resonance';
+          
           let subtitle = 'Active Ambient Layer';
           
           if (id === 'pureHz') subtitle = `${s.frequency}Hz Pure Tone`;
           else if (id === 'solfeggio') subtitle = `${s.frequency}Hz Solfeggio`;
+          else if (id === 'schumann') subtitle = `${s.frequency}Hz Resonance`;
           else if (id === 'binaural') subtitle = `Binaural: ${s.leftFreq}Hz / ${s.rightFreq}Hz`;
           else if (id === 'isochronic') subtitle = `Isochronic: ${s.pulseRate}Hz Pulse`;
           
@@ -1014,7 +1025,7 @@ export default function AudioEngine() {
       const volume = s.volume * layerGain * masterGainMultiplier;
       natureAudioRef.current.volume = Math.min(1.0, Math.max(0.0, volume));
     }
-  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.didgeridoo, settings.shamanic, settings.noise, settings.nature, settings.mentalToughness]);
+  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.schumann, settings.didgeridoo, settings.shamanic, settings.noise, settings.nature, settings.mentalToughness]);
 
   // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
@@ -1900,6 +1911,65 @@ export default function AudioEngine() {
       }
     } catch (err) {
       console.error("Solfeggio setup failed:", err);
+    }
+  };
+
+  const setupSchumann = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+      setupAudioTools();
+
+      if (!schumannOscRef.current) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const comp = ctx.createDynamicsCompressor();
+
+        comp.threshold.setValueAtTime(-24, ctx.currentTime);
+        comp.ratio.setValueAtTime(12, ctx.currentTime);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(settings.schumann.frequency, ctx.currentTime);
+
+        // Always use a soft meditational setup for Schumann to prevent harshness in low end
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(settings.schumann.frequency * 8, ctx.currentTime); // Allow harmonics but keep it warm
+        
+        const preReverbGain = ctx.createGain();
+        preReverbGain.gain.setValueAtTime(1.0, ctx.currentTime);
+        
+        osc.connect(filter);
+        filter.connect(preReverbGain);
+        
+        applySoftReverbEffect(ctx, preReverbGain, comp);
+        
+        comp.connect(gain);
+        
+        // Connect to Master Gain
+        if (masterGainRef.current) {
+          gain.connect(masterGainRef.current);
+        } else {
+          gain.connect(ctx.destination);
+        }
+
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        osc.start();
+
+        schumannOscRef.current = osc;
+        schumannGainRef.current = gain;
+        schumannCompRef.current = comp;
+      }
+    } catch (err) {
+      console.error("Schumann setup failed:", err);
     }
   };
 
@@ -2839,6 +2909,34 @@ export default function AudioEngine() {
     };
     syncBg();
   }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb, settings.audioTools.gainDb, settings.solfeggio.pitchSafeMode]);
+
+  // Handle Schumann Layer
+  useEffect(() => {
+    const isBg = settings.schumann.playInBackground;
+    const isLayerPlaying = settings.schumann.isEnabled && (isPlaying || isBg);
+
+    if (isLayerPlaying && !isBg) {
+      setupSchumann();
+      if (schumannGainRef.current && schumannOscRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
+        const gainValue = settings.schumann.volume * Math.pow(10, settings.schumann.gainDb / 20);
+        schumannOscRef.current.frequency.setTargetAtTime(settings.schumann.frequency, ctx.currentTime, 0.1);
+        schumannGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
+      }
+    } else {
+      if (schumannGainRef.current && audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const fadeTime = settings.fadeInOut ? 3 : 0.4;
+        schumannGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
+      }
+    }
+
+    const syncBg = async () => {
+      syncBgLayer('schumann', isLayerPlaying, isBg, 'pureHz', { frequency: settings.schumann.frequency, pitchSafeMode: settings.schumann.pitchSafeMode }, settings.schumann.volume, settings.schumann.gainDb);
+    };
+    syncBg();
+  }, [isPlaying, settings.schumann.isEnabled, settings.schumann.playInBackground, settings.fadeInOut, settings.schumann.volume, settings.schumann.frequency, settings.schumann.gainDb, settings.audioTools.gainDb, settings.schumann.pitchSafeMode]);
 
   // Handle Mental Toughness Layer
   useEffect(() => {

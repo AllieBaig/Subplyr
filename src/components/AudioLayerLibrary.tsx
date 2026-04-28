@@ -21,6 +21,7 @@ export const AudioLayerLibrary = () => {
     updatePureHzSettings,
     updateIsochronicSettings,
     updateSolfeggioSettings,
+    updateSchumannSettings,
     updateShamanicSettings,
     updateMentalToughnessSettings
   } = useSettings();
@@ -61,6 +62,7 @@ export const AudioLayerLibrary = () => {
       pureHz: updatePureHzSettings,
       isochronic: updateIsochronicSettings,
       solfeggio: updateSolfeggioSettings,
+      schumann: updateSchumannSettings,
       shamanic: updateShamanicSettings,
       mentalToughness: updateMentalToughnessSettings
     };
@@ -235,6 +237,47 @@ export const AudioLayerLibrary = () => {
                 onChange={(v) => updateSolfeggioSettings({ frequency: v })} 
                 color="emerald"
               />
+            </LayerAccordion>
+
+            {/* Schumann Resonance */}
+            <LayerAccordion 
+              id="schumann" icon={Waves} label="Schumann Resonance" 
+              isEnabled={settings.schumann.isEnabled} 
+              onToggle={(v: boolean) => updateSchumannSettings({ isEnabled: v })}
+              isExpanded={expandedLayerId === 'schumann'}
+              onAccordionToggle={() => toggleLayer('schumann')}
+              vol={settings.schumann.volume}
+              setVol={(v: number) => updateSchumannSettings({ volume: v })}
+              gainDb={settings.schumann.gainDb}
+              setGainDb={(v: number) => updateSchumannSettings({ gainDb: v })}
+              normalize={settings.schumann.normalize}
+              setNormalize={(v: boolean) => updateSchumannSettings({ normalize: v })}
+              playInBackground={settings.schumann.playInBackground}
+              setPlayInBackground={(v: boolean) => updateSchumannSettings({ playInBackground: v })}
+              pitchSafeMode={settings.schumann.pitchSafeMode}
+              setPitchSafeMode={(v: boolean) => updateSchumannSettings({ pitchSafeMode: v })}
+              color="text-blue-500"
+              subtitle={`${settings.schumann.frequency}Hz Resonance`}
+              onApplyPreset={(p: any) => applyLayerPreset('schumann', p)}
+            >
+              <div className="space-y-4">
+                <HzSelector 
+                  value={settings.schumann.frequency} 
+                  onChange={(v) => updateSchumannSettings({ frequency: v })} 
+                  color="blue"
+                />
+                <div className="grid grid-cols-5 gap-1 pt-2">
+                  {[7.83, 14.3, 20.8, 27.3, 33.8].map(hz => (
+                    <button 
+                      key={hz}
+                      onClick={() => updateSchumannSettings({ frequency: hz })}
+                      className={`py-1.5 rounded-lg text-[8px] font-black tracking-tight transition-all border ${settings.schumann.frequency === hz ? 'bg-blue-500 text-white border-blue-500' : 'bg-secondary-system-background text-system-secondary-label border-transparent'}`}
+                    >
+                      {hz}Hz
+                    </button>
+                  ))}
+                </div>
+              </div>
             </LayerAccordion>
           </div>
         )}
