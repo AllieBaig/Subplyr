@@ -152,8 +152,9 @@ export interface MentalToughnessSettings {
   volume: number;
   gainDb: number;
   pitch: 'soft' | 'hard' | 'loud' | 'low';
-  texture: 'wood' | 'wall' | 'natural' | 'tribal';
+  texture: 'empty_wood' | 'thin_wood' | 'double_thin' | 'hollow_wood' | 'tribal_wood';
   intensity: 'light' | 'medium' | 'strong' | 'deep';
+  playbackRate: number; // Tempo/Speed
   frequency: number; // Hz Depth
   isLooping: boolean;
   normalize: boolean;

@@ -266,6 +266,22 @@ export const AudioLayerLibrary = () => {
              })} 
              color="amber"
            />
+           <div className="space-y-2">
+              <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Resonance Depth</p>
+              <div className="px-2">
+                <input 
+                  type="range" min={0.0} max={1.0} step={0.05}
+                  value={settings.didgeridoo.depth}
+                  onChange={(e) => updateDidgeridooSettings({ depth: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-apple-border rounded-full appearance-none accent-amber-800"
+                />
+                <div className="flex justify-between mt-1">
+                  <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Narrow</span>
+                  <span className="text-[10px] font-black text-amber-800 tabular-nums">{(settings.didgeridoo.depth * 100).toFixed(0)}%</span>
+                  <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Deep</span>
+                </div>
+              </div>
+           </div>
         </div>
       </LayerAccordion>
 
@@ -319,11 +335,20 @@ export const AudioLayerLibrary = () => {
         onApplyPreset={(p: any) => applyLayerPreset('isochronic', p)}
       >
         <div className="space-y-4">
+           <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Carrier Frequency (Hz)</p>
            <HzSelector 
              value={settings.isochronic.frequency} 
              onChange={(v) => updateIsochronicSettings({ frequency: v })} 
              color="blue"
            />
+           <div className="space-y-2">
+              <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Pulse Rate (Hz)</p>
+              <HzSelector 
+                value={settings.isochronic.pulseRate} 
+                onChange={(v) => updateIsochronicSettings({ pulseRate: v })} 
+                color="blue"
+              />
+           </div>
         </div>
       </LayerAccordion>
 
@@ -452,16 +477,39 @@ export const AudioLayerLibrary = () => {
 
           <div className="space-y-3">
             <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Impact Texture</p>
-            <div className="grid grid-cols-4 gap-2">
-              {['wood', 'wall', 'natural', 'tribal'].map(t => (
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'empty_wood', label: 'Empty Wood' },
+                { id: 'thin_wood', label: 'Thin Wood' },
+                { id: 'double_thin', label: 'Double Thin' },
+                { id: 'hollow_wood', label: 'Hollow Wood' },
+                { id: 'tribal_wood', label: 'Tribal Wood' }
+              ].map(t => (
                 <button 
-                  key={t}
-                  onClick={() => updateMentalToughnessSettings({ texture: t as any })}
-                  className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.mentalToughness.texture === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                  key={t.id}
+                  onClick={() => updateMentalToughnessSettings({ texture: t.id as any })}
+                  className={`py-2 px-1 rounded-xl text-[8px] font-bold uppercase transition-all border ${settings.mentalToughness.texture === t.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
                 >
-                  {t}
+                  {t.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1">Tempo / Speed</p>
+            <div className="px-2">
+              <input 
+                type="range" min={0.5} max={4.0} step={0.1}
+                value={settings.mentalToughness.playbackRate}
+                onChange={(e) => updateMentalToughnessSettings({ playbackRate: parseFloat(e.target.value) })}
+                className="w-full h-1 bg-apple-border rounded-full appearance-none accent-indigo-600"
+              />
+              <div className="flex justify-between mt-1">
+                <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Slow</span>
+                <span className="text-[10px] font-black text-indigo-600 tabular-nums">{settings.mentalToughness.playbackRate.toFixed(1)}x</span>
+                <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Fast</span>
+              </div>
             </div>
           </div>
 

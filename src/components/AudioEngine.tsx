@@ -212,6 +212,36 @@ export default function AudioEngine() {
   // Track current URL to revoke it later
   const lastMainUrlRef = useRef<string | null>(null);
 
+  // Helper Functions for Sound Design
+  const createReverb = (ctx: BaseAudioContext, duration: number, sampleRate: number) => {
+    const reverb = ctx.createConvolver();
+    const length = sampleRate * 3; // 3 second reverb
+    const impulse = ctx.createBuffer(2, length, sampleRate);
+    const impulseL = impulse.getChannelData(0);
+    const impulseR = impulse.getChannelData(1);
+    for (let i = 0; i < length; i++) {
+      const decay = Math.pow(1 - i / length, 2);
+      impulseL[i] = (Math.random() * 2 - 1) * decay;
+      impulseR[i] = (Math.random() * 2 - 1) * decay;
+    }
+    reverb.buffer = impulse;
+    return reverb;
+  };
+
+  const applySoftReverbEffect = (ctx: BaseAudioContext, source: AudioNode, dest: AudioNode) => {
+    const reverb = createReverb(ctx, 3, ctx.sampleRate);
+    const dryGain = ctx.createGain();
+    const wetGain = ctx.createGain();
+    dryGain.gain.setValueAtTime(0.7, ctx.currentTime);
+    wetGain.gain.setValueAtTime(0.3, ctx.currentTime);
+    
+    source.connect(dryGain);
+    source.connect(reverb);
+    reverb.connect(wetGain);
+    dryGain.connect(dest);
+    wetGain.connect(dest);
+  };
+
   const cleanupLastUrl = () => {
     if (lastMainUrlRef.current) {
       URL.revokeObjectURL(lastMainUrlRef.current);
@@ -600,7 +630,7 @@ export default function AudioEngine() {
       outGain.connect(masterGainNode);
     }
     else if (type === 'mentalToughness') {
-      const bpm = 110; // Rhythmic focus tempo
+      const bpm = 110 * (options.playbackRate || 1.0); // Rhythmic focus tempo
       const interval = 60 / bpm;
       const numHits = Math.floor(duration / interval);
       const mainGain = ctx.createGain();
@@ -625,25 +655,57 @@ export default function AudioEngine() {
         osc.frequency.setValueAtTime(baseFreq * 2, time);
         osc.frequency.exponentialRampToValueAtTime(baseFreq, time + 0.08);
 
-        // 2. Texture Click (Noise)
-        const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+        // 2. Texture Click (Noise) + Realistic Wooden Resonance
+        const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
         const noiseData = noiseBuffer.getChannelData(0);
         for (let j = 0; j < noiseData.length; j++) noiseData[j] = Math.random() * 2 - 1;
         noise.buffer = noiseBuffer;
 
-        f.type = options.texture === 'wood' ? 'bandpass' : 'lowpass';
-        f.frequency.setValueAtTime(options.texture === 'wood' ? 1200 : (options.texture === 'wall' ? 400 : 800), time);
-        f.Q.setValueAtTime(options.texture === 'tribal' ? 10 : 2, time);
+        f.type = 'bandpass';
+        let filterFreq = 400;
+        let filterQ = 5;
+        let decayTime = 0.25;
+
+        switch(options.texture) {
+          case 'empty_wood':
+            filterFreq = 180;
+            filterQ = 14; // High resonance for deep echo
+            decayTime = 0.5;
+            break;
+          case 'thin_wood':
+            filterFreq = 850;
+            filterQ = 6; // Sharper resonance
+            decayTime = 0.18;
+            break;
+          case 'double_thin':
+            filterFreq = 450;
+            filterQ = 10; // Richer resonance
+            decayTime = 0.35;
+            break;
+          case 'hollow_wood':
+            filterFreq = 220;
+            filterQ = 12; // Deep hollow resonance
+            decayTime = 0.45;
+            break;
+          case 'tribal_wood':
+            filterFreq = 380;
+            filterQ = 8;
+            decayTime = 0.3;
+            break;
+        }
+
+        f.frequency.setValueAtTime(filterFreq, time);
+        f.Q.setValueAtTime(filterQ, time);
 
         // 3. Envelope
         let peak = 0.4;
         if (options.intensity === 'light') peak *= 0.6;
         if (options.intensity === 'strong') peak *= 1.4;
-        if (options.intensity === 'deep') peak *= 1.8;
+        if (options.intensity === 'deep') peak *= 1.9;
 
         g.gain.setValueAtTime(0, time);
         g.gain.linearRampToValueAtTime(peak, time + 0.005);
-        g.gain.exponentialRampToValueAtTime(0.001, time + (options.intensity === 'deep' ? 0.4 : 0.2));
+        g.gain.exponentialRampToValueAtTime(0.001, time + (options.intensity === 'deep' ? decayTime * 1.5 : decayTime));
 
         osc.connect(g);
         noise.connect(f);
@@ -652,8 +714,8 @@ export default function AudioEngine() {
 
         osc.start(time);
         noise.start(time);
-        osc.stop(time + 0.5);
-        noise.stop(time + 0.5);
+        osc.stop(time + 0.6);
+        noise.stop(time + 0.6);
       }
 
       applyFades(mainGain);
@@ -1398,11 +1460,28 @@ export default function AudioEngine() {
         leftOsc.frequency.setValueAtTime(settings.binaural.leftFreq, ctx.currentTime);
         rightOsc.frequency.setValueAtTime(settings.binaural.rightFreq, ctx.currentTime);
 
+        const isPitchRange = (freq: number) => freq >= 200 && freq <= 1900;
+        const useSoftPitch = settings.binaural.pitchSafeMode && isPitchRange((settings.binaural.leftFreq + settings.binaural.rightFreq) / 2);
+
         // Route: Left -> Channel 0, Right -> Channel 1 (Explicit Stereo)
         leftOsc.connect(merger, 0, 0);
         rightOsc.connect(merger, 0, 1);
 
-        merger.connect(comp);
+        if (useSoftPitch) {
+           const filter = ctx.createBiquadFilter();
+           filter.type = 'lowpass';
+           filter.frequency.setValueAtTime(Math.min(settings.binaural.leftFreq, settings.binaural.rightFreq) * 0.9, ctx.currentTime);
+           merger.connect(filter);
+           
+           const preReverbGain = ctx.createGain();
+           preReverbGain.gain.setValueAtTime(1.0, ctx.currentTime);
+           filter.connect(preReverbGain);
+           
+           applySoftReverbEffect(ctx, preReverbGain, comp);
+        } else {
+           merger.connect(comp);
+        }
+        
         comp.connect(gainNode);
         
         // Connect to Master Gain instead of direct destination
@@ -1474,7 +1553,22 @@ export default function AudioEngine() {
 
         osc.connect(filter);
         subOsc.connect(filter);
-        filter.connect(comp);
+
+        if (settings.didgeridoo.pitchSafeMode) {
+          const softFilter = ctx.createBiquadFilter();
+          softFilter.type = 'lowpass';
+          softFilter.frequency.setValueAtTime(settings.didgeridoo.frequency * 2, ctx.currentTime);
+          filter.connect(softFilter);
+          
+          const preReverbGain = ctx.createGain();
+          preReverbGain.gain.setValueAtTime(1.0, ctx.currentTime);
+          softFilter.connect(preReverbGain);
+          
+          applySoftReverbEffect(ctx, preReverbGain, comp);
+        } else {
+          filter.connect(comp);
+        }
+
         comp.connect(gain);
         
         // Connect to Master Gain
@@ -1555,7 +1649,15 @@ export default function AudioEngine() {
             
             osc.connect(g);
             g.connect(filter);
-            filter.connect(shamanicGainRef.current);
+
+            if (s.pitchSafeMode) {
+              const preRev = ctx.createGain();
+              preRev.gain.setValueAtTime(1.0, time);
+              filter.connect(preRev);
+              applySoftReverbEffect(ctx, preRev, shamanicGainRef.current!);
+            } else {
+              filter.connect(shamanicGainRef.current!);
+            }
             
             osc.start(time);
             osc.stop(time + 0.6);
@@ -1596,7 +1698,34 @@ export default function AudioEngine() {
         osc.type = 'sine'; // Always sine for pure tones
         osc.frequency.setValueAtTime(settings.pureHz.frequency, ctx.currentTime);
 
-        osc.connect(comp);
+        const isPitchRange = (freq: number) => freq >= 200 && freq <= 1900;
+        const useSoftPitch = settings.pureHz.pitchSafeMode && isPitchRange(settings.pureHz.frequency);
+
+        if (useSoftPitch) {
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(settings.pureHz.frequency * 0.8, ctx.currentTime);
+          
+          const subOsc = ctx.createOscillator();
+          subOsc.type = 'sine';
+          subOsc.frequency.setValueAtTime(settings.pureHz.frequency / 2, ctx.currentTime);
+          const subGain = ctx.createGain();
+          subGain.gain.setValueAtTime(0.15, ctx.currentTime);
+          
+          osc.connect(filter);
+          subOsc.connect(subGain);
+          subGain.connect(filter);
+          
+          const preReverbGain = ctx.createGain();
+          preReverbGain.gain.setValueAtTime(1.0, ctx.currentTime);
+          filter.connect(preReverbGain);
+          
+          applySoftReverbEffect(ctx, preReverbGain, comp);
+          subOsc.start();
+        } else {
+          osc.connect(comp);
+        }
+        
         comp.connect(gain);
         
         // Connect to Master Gain
@@ -1645,12 +1774,11 @@ export default function AudioEngine() {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(settings.isochronic.frequency, ctx.currentTime);
 
-        // Isochronic pulse (square wave LFO on gain)
-        lfo.type = 'square';
+        // Isochronic pulse (LFO on gain)
+        lfo.type = settings.isochronic.pitchSafeMode ? 'sine' : 'square'; // Softer LFO if safe mode
         lfo.frequency.setValueAtTime(settings.isochronic.pulseRate, ctx.currentTime);
         
         // Connect LFO to Gain.gain via an offset
-        // In Web Audio, LFO on gain usually goes 0 to 1
         lfoGain.gain.setValueAtTime(0.5, ctx.currentTime);
         const constantSource = ctx.createConstantSource();
         constantSource.offset.setValueAtTime(0.5, ctx.currentTime);
@@ -1660,7 +1788,24 @@ export default function AudioEngine() {
         lfoGain.connect(gain.gain);
         constantSource.connect(gain.gain);
 
-        osc.connect(comp);
+        const isPitchRange = (freq: number) => freq >= 200 && freq <= 1900;
+        const useSoftPitch = settings.isochronic.pitchSafeMode && isPitchRange(settings.isochronic.frequency);
+
+        if (useSoftPitch) {
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(settings.isochronic.frequency * 0.85, ctx.currentTime);
+          osc.connect(filter);
+          
+          const preReverbGain = ctx.createGain();
+          preReverbGain.gain.setValueAtTime(1.0, ctx.currentTime);
+          filter.connect(preReverbGain);
+          
+          applySoftReverbEffect(ctx, preReverbGain, comp);
+        } else {
+          osc.connect(comp);
+        }
+        
         comp.connect(gain);
         
         // Connect to Master Gain
@@ -1709,7 +1854,34 @@ export default function AudioEngine() {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(settings.solfeggio.frequency, ctx.currentTime);
 
-        osc.connect(comp);
+        const isPitchRange = (freq: number) => freq >= 200 && freq <= 1900;
+        const useSoftPitch = settings.solfeggio.pitchSafeMode && isPitchRange(settings.solfeggio.frequency);
+
+        if (useSoftPitch) {
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(settings.solfeggio.frequency * 0.8, ctx.currentTime);
+          
+          const subOsc = ctx.createOscillator();
+          subOsc.type = 'sine';
+          subOsc.frequency.setValueAtTime(settings.solfeggio.frequency / 2, ctx.currentTime);
+          const subGain = ctx.createGain();
+          subGain.gain.setValueAtTime(0.15, ctx.currentTime);
+          
+          osc.connect(filter);
+          subOsc.connect(subGain);
+          subGain.connect(filter);
+          
+          const preReverbGain = ctx.createGain();
+          preReverbGain.gain.setValueAtTime(1.0, ctx.currentTime);
+          filter.connect(preReverbGain);
+          
+          applySoftReverbEffect(ctx, preReverbGain, comp);
+          subOsc.start();
+        } else {
+          osc.connect(comp);
+        }
+        
         comp.connect(gain);
         
         // Connect to Master Gain
@@ -1761,7 +1933,7 @@ export default function AudioEngine() {
         const schedule = () => {
           if (!mentalToughnessGainRef.current) return;
           const s = mentalToughnessSettingsRef.current;
-          const bpm = 110;
+          const bpm = 110 * s.playbackRate;
           const interval = 60 / bpm;
 
           while (nextHitTime < ctx.currentTime + 0.2) {
@@ -1771,7 +1943,7 @@ export default function AudioEngine() {
             const g = ctx.createGain();
             const f = ctx.createBiquadFilter();
 
-            const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+            const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
             const noiseData = noiseBuffer.getChannelData(0);
             for (let j = 0; j < noiseData.length; j++) noiseData[j] = Math.random() * 2 - 1;
             noise.buffer = noiseBuffer;
@@ -1786,28 +1958,75 @@ export default function AudioEngine() {
             osc.frequency.setValueAtTime(baseFreq * 2, time);
             osc.frequency.exponentialRampToValueAtTime(baseFreq, time + 0.08);
 
-            f.type = s.texture === 'wood' ? 'bandpass' : 'lowpass';
-            f.frequency.setValueAtTime(s.texture === 'wood' ? 1200 : (s.texture === 'wall' ? 400 : 800), time);
-            f.Q.setValueAtTime(s.texture === 'tribal' ? 10 : 2, time);
+            // Use Realistic Wooden Impact Logic for Foreground scheduler
+            const isWood = ['empty_wood', 'thin_wood', 'double_thin', 'hollow_wood', 'tribal_wood'].includes(s.texture);
+            f.type = isWood ? 'bandpass' : 'lowpass';
+            
+            let filterFreq = s.frequency;
+            let filterQ = 2;
+            let decayTime = 0.25;
 
-            let peak = 0.4;
-            if (s.intensity === 'light') peak *= 0.6;
-            if (s.intensity === 'strong') peak *= 1.4;
-            if (s.intensity === 'deep') peak *= 1.8;
+            switch(s.texture as any) {
+              case 'empty_wood':
+                filterFreq = 180;
+                filterQ = 14;
+                decayTime = 0.55;
+                break;
+              case 'thin_wood':
+                filterFreq = 850;
+                filterQ = 6;
+                decayTime = 0.2;
+                break;
+              case 'double_thin':
+                filterFreq = 450;
+                filterQ = 10;
+                decayTime = 0.38;
+                break;
+              case 'hollow_wood':
+                filterFreq = 220;
+                filterQ = 12;
+                decayTime = 0.48;
+                break;
+              case 'tribal_wood':
+                filterFreq = 120;
+                filterQ = 8;
+                decayTime = 0.65;
+                break;
+              default:
+                filterFreq = 400;
+                filterQ = 4;
+                decayTime = 0.25;
+            }
+
+            f.frequency.setValueAtTime(filterFreq, time);
+            f.Q.setValueAtTime(filterQ, time);
+
+            let peak = 0.45;
+            if (s.intensity === 'light') { peak = 0.25; decayTime *= 0.7; }
+            if (s.intensity === 'strong') { peak = 0.75; decayTime *= 1.2; }
+            if (s.intensity === 'deep') { peak = 0.95; decayTime *= 1.5; }
 
             g.gain.setValueAtTime(0, time);
             g.gain.linearRampToValueAtTime(peak, time + 0.005);
-            g.gain.exponentialRampToValueAtTime(0.001, time + (s.intensity === 'deep' ? 0.4 : 0.2));
+            g.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
             osc.connect(g);
             noise.connect(f);
             f.connect(g);
-            g.connect(mentalToughnessGainRef.current);
+
+            if (s.pitchSafeMode) {
+              const preRev = ctx.createGain();
+              preRev.gain.setValueAtTime(1.0, time);
+              g.connect(preRev);
+              applySoftReverbEffect(ctx, preRev, mentalToughnessGainRef.current!);
+            } else {
+              g.connect(mentalToughnessGainRef.current!);
+            }
 
             osc.start(time);
             noise.start(time);
-            osc.stop(time + 0.5);
-            noise.stop(time + 0.5);
+            osc.stop(time + decayTime);
+            noise.stop(time + decayTime);
 
             nextHitTime += interval;
           }
