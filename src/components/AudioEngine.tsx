@@ -1057,22 +1057,39 @@ export default function AudioEngine() {
   useEffect(() => {
     const masterGainMultiplier = settings.audioTools.gainDb !== 0 ? Math.pow(10, settings.audioTools.gainDb / 20) : 1.0;
 
-    Object.entries(bgAudioRefs.current).forEach(([id, el]) => {
+    const layers = ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'schumann', 'didgeridoo', 'shamanic', 'noise', 'mentalToughness'];
+    layers.forEach(id => {
+      const el1 = bgAudioRefs.current[id];
+      const el2 = bgAudioRefs2.current[id];
       const s = (settings as any)[id];
-      if (s) {
-        const layerGain = Math.pow(10, (s.gainDb || 0) / 20);
-        const volume = s.volume * layerGain * masterGainMultiplier;
-        el.volume = Math.min(1.0, Math.max(0.0, volume));
+      if (s && el1 && el2) {
+         // Background tones are BAKED with gain/volume, so we keep HTML volume at 1.0 for stability
+         // However, we ensure they are initialized
+         el1.volume = 1.0;
+         el2.volume = 1.0;
       }
     });
 
     if (natureAudioRef.current) {
       const s = settings.nature;
       const layerGain = Math.pow(10, (s.gainDb || 0) / 20);
-      const volume = s.volume * layerGain * masterGainMultiplier;
+      const volume = s.volume * layerGain * masterGainMultiplier * safetyMultiplier;
       natureAudioRef.current.volume = Math.min(1.0, Math.max(0.0, volume));
     }
-  }, [settings.audioTools.gainDb, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.schumann, settings.didgeridoo, settings.shamanic, settings.noise, settings.nature, settings.mentalToughness]);
+    
+    if (subAudioRef.current) {
+      const s = settings.subliminal;
+      const layerGain = Math.pow(10, (s.gainDb || 0) / 20);
+      const volume = s.volume * layerGain * masterGainMultiplier * safetyMultiplier;
+      subAudioRef.current.volume = Math.min(1.0, Math.max(0.0, volume));
+    }
+
+    if (mainAudioRef.current) {
+      const layerGain = Math.pow(10, (settings.audioTools.gainDb || 0) / 20);
+      const volume = settings.mainVolume * layerGain * safetyMultiplier;
+      mainAudioRef.current.volume = Math.min(1.0, Math.max(0.0, volume));
+    }
+  }, [settings.audioTools.gainDb, settings.mainVolume, settings.pureHz, settings.binaural, settings.isochronic, settings.solfeggio, settings.schumann, settings.didgeridoo, settings.shamanic, settings.noise, settings.nature, settings.mentalToughness, safetyMultiplier]);
 
   // Consolidate Audio Elements Lifecycle & iOS Unlock
   useEffect(() => {
@@ -1316,8 +1333,8 @@ export default function AudioEngine() {
   };
 
   // Helper: Sync Background Layer with Gapless Looping (Double Buffering)
-  const syncBgLayer = async (layerId: string, isLayerPlaying: boolean, isBg: boolean, type: string, params: any, volume: number, gainDb: number) => {
-    if (isLayerPlaying && isBg) {
+  const syncBgLayer = async (layerId: string, isLayerPlaying: boolean, type: string, params: any, volume: number, gainDb: number) => {
+    if (isLayerPlaying) {
       if (!bgAudioRefs.current[layerId]) {
         const createEl = () => {
           const el = new Audio();
@@ -2807,326 +2824,110 @@ export default function AudioEngine() {
     }
 
     // 2. Manage HTML Background Audio State (Binaural) - Unified stable parallel path
-    const syncBinauralBg = async () => {
-      const isBg = settings.binaural.playInBackground;
-      const isLayerPlaying = settings.binaural.isEnabled && (isPlaying || isBg);
-      
-      const params = { 
+  // Handle Binaural Layer
+  useEffect(() => {
+    const isBg = settings.binaural.playInBackground;
+    const isLayerPlaying = settings.binaural.isEnabled && (isPlaying || isBg);
+    const sync = async () => {
+      await syncBgLayer('binaural', isLayerPlaying, 'binaural', { 
         leftFreq: settings.binaural.leftFreq, 
         rightFreq: settings.binaural.rightFreq,
         pitchSafeMode: settings.binaural.pitchSafeMode
-      };
-
-      await syncBgLayer(
-        'binaural', 
-        isLayerPlaying, 
-        isBg, 
-        'binaural', 
-        params, 
-        settings.binaural.volume, 
-        settings.binaural.gainDb
-      );
+      }, settings.binaural.volume, settings.binaural.gainDb);
     };
-    syncBinauralBg();
-  }, [isPlaying, settings.binaural.isEnabled, settings.binaural.playInBackground, settings.fadeInOut, settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume, settings.binaural.gainDb, settings.binaural.normalize, settings.audioTools.gainDb, settings.binaural.pitchSafeMode]);
-
-  // Handle Binaural Frequency/Volume Updates
-  useEffect(() => {
-    if (leftOscRef.current && rightOscRef.current && audioCtxRef.current && !settings.binaural.playInBackground) {
-      const ctx = audioCtxRef.current;
-      // Safety: Difference <= 30Hz
-      const diff = Math.abs(settings.binaural.leftFreq - settings.binaural.rightFreq);
-      let lFreq = settings.binaural.leftFreq;
-      let rFreq = settings.binaural.rightFreq;
-      
-      if (diff > 30) {
-        rFreq = lFreq + 30; // Force limit
-      }
-
-      leftOscRef.current.frequency.setTargetAtTime(lFreq, ctx.currentTime, 0.1);
-      rightOscRef.current.frequency.setTargetAtTime(rFreq, ctx.currentTime, 0.1);
-    }
-    
-    if (binauralGainRef.current && audioCtxRef.current && isPlaying && settings.binaural.isEnabled) {
-      const ctx = audioCtxRef.current;
-      const gainValue = settings.binaural.volume * Math.pow(10, settings.binaural.gainDb / 20);
-      const threshold = settings.binaural.normalize ? -24 : 0;
-      
-      if (binCompRef.current) binCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
-      binauralGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, 0.1);
-    }
-  }, [settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume, settings.binaural.gainDb, settings.binaural.normalize]);
+    sync();
+  }, [isPlaying, settings.binaural.isEnabled, settings.binaural.playInBackground, settings.binaural.leftFreq, settings.binaural.rightFreq, settings.binaural.volume, settings.binaural.gainDb, settings.fadeInOut, settings.binaural.pitchSafeMode]);
 
   // Handle Noise Layer
   useEffect(() => {
     const isBg = settings.noise.playInBackground;
     const isLayerPlaying = settings.noise.isEnabled && (isPlaying || isBg);
 
-    if (isLayerPlaying && !isBg) {
-      setupNoise();
-      const ctx = audioCtxRef.current!;
-      
-      // Stop old noise if type changed
-      if (noiseNodeRef.current) {
-        noiseNodeRef.current.stop();
-        noiseNodeRef.current = null;
-      }
-
-      const buffer = createNoiseBuffer(settings.noise.type);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer!;
-      source.loop = true;
-      source.connect(noiseCompRef.current!);
-      source.start();
-      noiseNodeRef.current = source;
-
-      const fadeTime = settings.fadeInOut ? 3 : 0.1;
-      const gainValue = settings.noise.volume * Math.pow(10, settings.noise.gainDb / 20);
-      const threshold = settings.noise.normalize ? -24 : 0;
-      
-      if (noiseCompRef.current) noiseCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
-      noiseGainRef.current!.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-    } else {
-      if (noiseGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        noiseGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-        
-        const timer = setTimeout(() => {
-           if ((!settings.noise.isEnabled || isBg) && noiseNodeRef.current) {
-             noiseNodeRef.current.stop();
-             noiseNodeRef.current = null;
-           }
-        }, fadeTime * 1000);
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('noise', isLayerPlaying, isBg, 'noise', { noiseType: settings.noise.type }, settings.noise.volume, settings.noise.gainDb);
+    const sync = async () => {
+      syncBgLayer('noise', isLayerPlaying, 'noise', { noiseType: settings.noise.type }, settings.noise.volume, settings.noise.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.noise.isEnabled, settings.noise.playInBackground, settings.noise.type, settings.noise.volume, settings.noise.gainDb, settings.noise.normalize, settings.audioTools.gainDb]);
+    sync();
+  }, [isPlaying, settings.noise.isEnabled, settings.noise.playInBackground, settings.noise.type, settings.noise.volume, settings.noise.gainDb, settings.fadeInOut]);
 
   // Handle Didgeridoo Layer
   useEffect(() => {
     const isBg = settings.didgeridoo.playInBackground;
     const isLayerPlaying = settings.didgeridoo.isEnabled && settings.didgeridoo.isLooping && (isPlaying || isBg);
-
-    if (isLayerPlaying && !isBg) {
-      setupDidgeridoo();
-      if (didgGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        // Apply both volume and gainDb for precision control
-        const gainValue = settings.didgeridoo.volume * Math.pow(10, settings.didgeridoo.gainDb / 20);
-        const threshold = settings.didgeridoo.normalize ? -24 : 0;
-        
-        if (didgCompRef.current) didgCompRef.current.threshold.setTargetAtTime(threshold, ctx.currentTime, 0.1);
-        didgGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (didgGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        didgGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('didgeridoo', isLayerPlaying, isBg, 'didgeridoo', { 
-        frequency: settings.didgeridoo.frequency, 
+    const sync = async () => {
+      await syncBgLayer('didgeridoo', isLayerPlaying, 'didgeridoo', { 
+        frequency: settings.didgeridoo.frequency,
         depth: settings.didgeridoo.depth,
         pitchSafeMode: settings.didgeridoo.pitchSafeMode
       }, settings.didgeridoo.volume, settings.didgeridoo.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.isLooping, settings.didgeridoo.playInBackground, settings.fadeInOut, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.didgeridoo.normalize, settings.didgeridoo.frequency, settings.didgeridoo.depth, settings.audioTools.gainDb, settings.didgeridoo.pitchSafeMode]);
+    sync();
+  }, [isPlaying, settings.didgeridoo.isEnabled, settings.didgeridoo.playInBackground, settings.didgeridoo.frequency, settings.didgeridoo.depth, settings.didgeridoo.volume, settings.didgeridoo.gainDb, settings.fadeInOut, settings.didgeridoo.pitchSafeMode]);
 
   // Handle Shamanic Layer
   useEffect(() => {
     const isBg = settings.shamanic.playInBackground;
     const isLayerPlaying = settings.shamanic.isEnabled && settings.shamanic.isLooping && (isPlaying || isBg);
-
-    if (isLayerPlaying && !isBg) {
-      setupShamanic();
-      if (shamanicGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        const gainValue = settings.shamanic.volume * Math.pow(10, settings.shamanic.gainDb / 20);
-        shamanicGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (shamanicGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        shamanicGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-        
-        // Stop scheduler if strictly not playing at all (neither foreground nor background)
-        if (!isLayerPlaying && shamanicIntervalRef.current) {
-          window.clearInterval(shamanicIntervalRef.current);
-          shamanicIntervalRef.current = null;
-          shamanicGainRef.current = null;
-        }
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('shamanic', isLayerPlaying, isBg, 'shamanic', { 
+    const sync = async () => {
+      await syncBgLayer('shamanic', isLayerPlaying, 'shamanic', { 
         frequency: settings.shamanic.frequency, 
         depth: settings.shamanic.depth,
         playbackRate: settings.shamanic.playbackRate,
         pitchSafeMode: settings.shamanic.pitchSafeMode
       }, settings.shamanic.volume, settings.shamanic.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.shamanic.isEnabled, settings.shamanic.isLooping, settings.shamanic.playInBackground, settings.fadeInOut, settings.shamanic.volume, settings.shamanic.gainDb, settings.shamanic.normalize, settings.shamanic.frequency, settings.shamanic.depth, settings.shamanic.playbackRate, settings.audioTools.gainDb, settings.shamanic.pitchSafeMode]);
+    sync();
+  }, [isPlaying, settings.shamanic.isEnabled, settings.shamanic.playInBackground, settings.shamanic.frequency, settings.shamanic.depth, settings.shamanic.playbackRate, settings.shamanic.volume, settings.shamanic.gainDb, settings.fadeInOut, settings.shamanic.pitchSafeMode]);
 
   // Handle Pure Hz Layer
   useEffect(() => {
     const isBg = settings.pureHz.playInBackground;
     const isLayerPlaying = settings.pureHz.isEnabled && settings.pureHz.isLooping && (isPlaying || isBg);
-
-    if (isLayerPlaying && !isBg) {
-      setupPureHz();
-      if (pureHzGainRef.current && pureHzOscRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        const gainValue = settings.pureHz.volume * Math.pow(10, settings.pureHz.gainDb / 20);
-        pureHzOscRef.current.frequency.setTargetAtTime(settings.pureHz.frequency, ctx.currentTime, 0.1);
-        pureHzGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (pureHzGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        pureHzGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('pureHz', isLayerPlaying, isBg, 'pureHz', { frequency: settings.pureHz.frequency, pitchSafeMode: settings.pureHz.pitchSafeMode }, settings.pureHz.volume, settings.pureHz.gainDb);
+    const sync = async () => {
+      await syncBgLayer('pureHz', isLayerPlaying, 'pureHz', { frequency: settings.pureHz.frequency, pitchSafeMode: settings.pureHz.pitchSafeMode }, settings.pureHz.volume, settings.pureHz.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.isLooping, settings.pureHz.playInBackground, settings.fadeInOut, settings.pureHz.volume, settings.pureHz.frequency, settings.pureHz.gainDb, settings.audioTools.gainDb, settings.pureHz.pitchSafeMode]);
+    sync();
+  }, [isPlaying, settings.pureHz.isEnabled, settings.pureHz.playInBackground, settings.pureHz.frequency, settings.pureHz.volume, settings.pureHz.gainDb, settings.fadeInOut, settings.pureHz.pitchSafeMode]);
 
   // Handle Isochronic Layer
   useEffect(() => {
     const isBg = settings.isochronic.playInBackground;
     const isLayerPlaying = settings.isochronic.isEnabled && (isPlaying || isBg);
-
-    if (isLayerPlaying && !isBg) {
-      setupIsochronic();
-      if (isoGainRef.current && isoOscRef.current && isoLfoRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        const gainValue = settings.isochronic.volume * Math.pow(10, settings.isochronic.gainDb / 20);
-        isoOscRef.current.frequency.setTargetAtTime(settings.isochronic.frequency, ctx.currentTime, 0.1);
-        isoLfoRef.current.frequency.setTargetAtTime(settings.isochronic.pulseRate, ctx.currentTime, 0.1);
-        isoGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (isoGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        isoGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('isochronic', isLayerPlaying, isBg, 'isochronic', { 
+    const sync = async () => {
+      await syncBgLayer('isochronic', isLayerPlaying, 'isochronic', { 
         frequency: settings.isochronic.frequency, 
         pulseRate: settings.isochronic.pulseRate,
         pitchSafeMode: settings.isochronic.pitchSafeMode
       }, settings.isochronic.volume, settings.isochronic.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.isochronic.isEnabled, settings.isochronic.playInBackground, settings.fadeInOut, settings.isochronic.volume, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.gainDb, settings.audioTools.gainDb, settings.isochronic.pitchSafeMode]);
+    sync();
+  }, [isPlaying, settings.isochronic.isEnabled, settings.isochronic.playInBackground, settings.isochronic.frequency, settings.isochronic.pulseRate, settings.isochronic.volume, settings.isochronic.gainDb, settings.fadeInOut, settings.isochronic.pitchSafeMode]);
 
   // Handle Solfeggio Layer
   useEffect(() => {
     const isBg = settings.solfeggio.playInBackground;
     const isLayerPlaying = settings.solfeggio.isEnabled && (isPlaying || isBg);
-
-    if (isLayerPlaying && !isBg) {
-      setupSolfeggio();
-      if (solGainRef.current && solOscRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        const gainValue = settings.solfeggio.volume * Math.pow(10, settings.solfeggio.gainDb / 20);
-        solOscRef.current.frequency.setTargetAtTime(settings.solfeggio.frequency, ctx.currentTime, 0.1);
-        solGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (solGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        solGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('solfeggio', isLayerPlaying, isBg, 'solfeggio', { frequency: settings.solfeggio.frequency, pitchSafeMode: settings.solfeggio.pitchSafeMode }, settings.solfeggio.volume, settings.solfeggio.gainDb);
+    const sync = async () => {
+      await syncBgLayer('solfeggio', isLayerPlaying, 'solfeggio', { frequency: settings.solfeggio.frequency, pitchSafeMode: settings.solfeggio.pitchSafeMode }, settings.solfeggio.volume, settings.solfeggio.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.fadeInOut, settings.solfeggio.volume, settings.solfeggio.frequency, settings.solfeggio.gainDb, settings.audioTools.gainDb, settings.solfeggio.pitchSafeMode]);
+    sync();
+  }, [isPlaying, settings.solfeggio.isEnabled, settings.solfeggio.playInBackground, settings.solfeggio.frequency, settings.solfeggio.volume, settings.solfeggio.gainDb, settings.fadeInOut, settings.solfeggio.pitchSafeMode]);
 
   // Handle Schumann Layer
   useEffect(() => {
     const isBg = settings.schumann.playInBackground;
     const isLayerPlaying = settings.schumann.isEnabled && (isPlaying || isBg);
-
-    if (isLayerPlaying && !isBg) {
-      setupSchumann();
-      if (schumannGainRef.current && schumannOscRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        const gainValue = settings.schumann.volume * Math.pow(10, settings.schumann.gainDb / 20);
-        schumannOscRef.current.frequency.setTargetAtTime(settings.schumann.frequency, ctx.currentTime, 0.1);
-        schumannGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (schumannGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.4;
-        schumannGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('schumann', isLayerPlaying, isBg, 'pureHz', { frequency: settings.schumann.frequency, pitchSafeMode: settings.schumann.pitchSafeMode }, settings.schumann.volume, settings.schumann.gainDb);
+    const sync = async () => {
+      await syncBgLayer('schumann', isLayerPlaying, 'pureHz', { frequency: settings.schumann.frequency, pitchSafeMode: settings.schumann.pitchSafeMode }, settings.schumann.volume, settings.schumann.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.schumann.isEnabled, settings.schumann.playInBackground, settings.fadeInOut, settings.schumann.volume, settings.schumann.frequency, settings.schumann.gainDb, settings.audioTools.gainDb, settings.schumann.pitchSafeMode]);
+    sync();
+  }, [isPlaying, settings.schumann.isEnabled, settings.schumann.playInBackground, settings.schumann.frequency, settings.schumann.volume, settings.schumann.gainDb, settings.fadeInOut, settings.schumann.pitchSafeMode]);
 
   // Handle Mental Toughness Layer
   useEffect(() => {
     const isBg = settings.mentalToughness.playInBackground;
     const isLayerPlaying = settings.mentalToughness.isEnabled && settings.mentalToughness.isLooping && (isPlaying || isBg);
-
-    if (isLayerPlaying && !isBg) {
-      setupMentalToughness();
-      if (mentalToughnessGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        const gainValue = settings.mentalToughness.volume * Math.pow(10, settings.mentalToughness.gainDb / 20);
-        mentalToughnessGainRef.current.gain.setTargetAtTime(gainValue, ctx.currentTime, fadeTime / 2);
-      }
-    } else {
-      if (mentalToughnessGainRef.current && audioCtxRef.current) {
-        const ctx = audioCtxRef.current;
-        const fadeTime = settings.fadeInOut ? 3 : 0.1;
-        mentalToughnessGainRef.current.gain.setTargetAtTime(0, ctx.currentTime, fadeTime / 2);
-        
-        if (!isLayerPlaying && mentalToughnessIntervalRef.current) {
-          window.clearInterval(mentalToughnessIntervalRef.current);
-          mentalToughnessIntervalRef.current = null;
-          mentalToughnessGainRef.current = null;
-        }
-      }
-    }
-
-    const syncBg = async () => {
-      syncBgLayer('mentalToughness', isLayerPlaying, isBg, 'mentalToughness', { 
+    const sync = async () => {
+      await syncBgLayer('mentalToughness', isLayerPlaying, 'mentalToughness', { 
         frequency: settings.mentalToughness.frequency, 
         pitch: settings.mentalToughness.pitch,
         texture: settings.mentalToughness.texture,
@@ -3134,8 +2935,8 @@ export default function AudioEngine() {
         pitchSafeMode: settings.mentalToughness.pitchSafeMode
       }, settings.mentalToughness.volume, settings.mentalToughness.gainDb);
     };
-    syncBg();
-  }, [isPlaying, settings.mentalToughness.isEnabled, settings.mentalToughness.isLooping, settings.mentalToughness.playInBackground, settings.fadeInOut, settings.mentalToughness.volume, settings.mentalToughness.gainDb, settings.mentalToughness.frequency, settings.mentalToughness.pitch, settings.mentalToughness.texture, settings.mentalToughness.intensity, settings.audioTools.gainDb, settings.mentalToughness.pitchSafeMode]);
+    sync();
+  }, [isPlaying, settings.mentalToughness.isEnabled, settings.mentalToughness.playInBackground, settings.mentalToughness.frequency, settings.mentalToughness.pitch, settings.mentalToughness.texture, settings.mentalToughness.intensity, settings.mentalToughness.volume, settings.mentalToughness.gainDb, settings.fadeInOut, settings.mentalToughness.pitchSafeMode]);
 
   // Handle Display Always On (WakeLock)
   const wakeLockRef = useRef<any>(null);
