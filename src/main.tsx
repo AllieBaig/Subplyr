@@ -38,8 +38,9 @@ setTimeout(() => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Aggressive SW registration with immediate claim
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    // Aggressive SW registration with relative paths for GitHub Pages compatibility
+    const swPath = './sw.js';
+    navigator.serviceWorker.register(swPath)
       .then(registration => {
         console.log('[SW] PWA System Active:', registration.scope);
         

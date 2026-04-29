@@ -50,6 +50,8 @@ export default function AudioEngine() {
   const lastKnownTime = useRef<number>(0);
   const stallCount = useRef<Record<string, number>>({});
   
+  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
+
   // Soft Heal for specific elements without resetting everything
   const softHealElement = async (audio: HTMLAudioElement | null, type: 'main' | 'hz' | 'heartbeat', layerId?: string) => {
     if (!audio) return;
@@ -87,7 +89,7 @@ export default function AudioEngine() {
   useEffect(() => {
     const healthInterval = setInterval(() => {
       const now = Date.now();
-      const visibility = document.visibilityState;
+      const visibility = typeof document !== 'undefined' ? document.visibilityState : 'visible';
       
       if (isPlaying && !isRenderingChunk) {
         const mainAudio = mainAudioRef.current;
@@ -131,7 +133,7 @@ export default function AudioEngine() {
       }
       
       lastHealthCheck.current = now;
-    }, visibility === 'visible' ? 5000 : 15000); // More frequent when visible, but monitor background too
+    }, 10000); // Check every 10s
     
     return () => clearInterval(healthInterval);
   }, [isPlaying, isForeground, currentTrack, getTrackUrl, isRenderingChunk]);
@@ -150,7 +152,7 @@ export default function AudioEngine() {
       }
     }
   };
-  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
+
   const chunkPlanRef = useRef<any>(null);
   const lastBgGenTime = useRef<Record<string, number>>({});
   const activeChunkIdRef = useRef<string | null>(null);
