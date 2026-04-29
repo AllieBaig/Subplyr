@@ -48,6 +48,7 @@ import { PlaybackControl } from '../components/PlaybackControl';
 import { AudioLayerLibrary } from '../components/AudioLayerLibrary';
 import { AppManagement, AppMaintenance } from './AppManagement';
 import { Group, Section } from '../components/SettingsUI';
+import { SystemIntegrityView } from '../components/SystemIntegrityView';
 
 export default function SettingsView({ onBack }: { onBack?: () => void }) {
   const { 
@@ -223,6 +224,7 @@ export default function SettingsView({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="flex flex-col pb-12 w-full max-w-7xl mx-auto">
+      <SystemIntegrityView />
       <VersionHistorySection />
 
       <PlaybackControl 

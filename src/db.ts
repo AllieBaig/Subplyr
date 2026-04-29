@@ -68,6 +68,16 @@ export async function initDB() {
   }
 }
 
+function handleDBError(err: any, context: string) {
+  if (err && (err.name === 'QuotaExceededError' || err.message?.includes('quota'))) {
+    console.error(`[Safety] Storage Quota Exceeded during ${context}. App may be unstable.`);
+    // We could trigger an auto-cleanup of chunks here if needed
+    clearAllChunks().catch(() => {});
+  } else {
+    console.error(`[Safety] Database error during ${context}:`, err);
+  }
+}
+
 export async function saveChunk(metadata: ChunkMetadata, blob: Blob) {
   try {
     const db = await initDB();
@@ -76,7 +86,7 @@ export async function saveChunk(metadata: ChunkMetadata, blob: Blob) {
     await tx.objectStore(BLOBS_STORE).put(blob, metadata.id);
     await tx.done;
   } catch (err) {
-    console.error("Failed to save chunk:", err);
+    handleDBError(err, 'saveChunk');
   }
 }
 
@@ -139,7 +149,7 @@ export async function saveTrack(track: DBTrack, isSubliminal: boolean = false) {
     }
     await tx.done;
   } catch (err) {
-    console.error("Failed to save track:", err);
+    handleDBError(err, 'saveTrack');
   }
 }
 
@@ -182,7 +192,7 @@ export async function saveSettings(settings: AppSettings) {
     const db = await initDB();
     await db.put(SETTINGS_STORE, settings, 'current');
   } catch (err) {
-    console.error("Failed to save settings:", err);
+    handleDBError(err, 'saveSettings');
   }
 }
 
@@ -212,7 +222,7 @@ export async function savePlaylist(playlist: any) {
     const db = await initDB();
     await db.put(PLAYLISTS_STORE, playlist);
   } catch (err) {
-    console.error("Failed to save playlist:", err);
+    handleDBError(err, 'savePlaylist');
   }
 }
 

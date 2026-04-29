@@ -2,10 +2,21 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import GlobalErrorBoundary from './components/GlobalErrorBoundary';
+import SafetyChecker from './utils/SafetyChecker';
+
+// Pre-boot diagnostics (Async, non-blocking)
+SafetyChecker.runFullDiagnostics().then(report => {
+  if (report.status === 'critical') {
+    console.error('[Safety] System is in critical state. Proceeding with caution.');
+  }
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <GlobalErrorBoundary>
+      <App />
+    </GlobalErrorBoundary>
   </StrictMode>,
 );
 

@@ -5,6 +5,7 @@ import { useSettings } from '../SettingsContext';
 import { useUIState } from '../UIStateContext';
 import { NATURE_SOUNDS } from '../constants';
 import { ChunkManager } from '../utils/ChunkManager';
+import SafetyChecker from '../utils/SafetyChecker';
 import * as db from '../db';
 
 export default function AudioEngine() {
@@ -33,7 +34,53 @@ export default function AudioEngine() {
 
   const { settings, updateSettings, updateAudioTools } = useSettings();
   const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
-  const [isRenderingChunk, setIsRenderingChunk] = useState(false);
+  // Safety: Runtime health monitor
+  const lastHealthCheck = useRef<number>(Date.now());
+  const playStateAnomalies = useRef<number>(0);
+  
+  useEffect(() => {
+    const healthInterval = setInterval(() => {
+      const now = Date.now();
+      if (isPlaying && isForeground) {
+        // Check if mainAudio is actually moving
+        const mainAudio = mainAudioRef.current;
+        if (mainAudio && !mainAudio.paused) {
+          const lastTime = mainAudio.currentTime;
+          setTimeout(() => {
+            if (isPlaying && mainAudio.currentTime === lastTime && !mainAudio.paused) {
+              console.warn('[Safety] Audio stall detected, triggering recovery...');
+              playStateAnomalies.current++;
+              if (playStateAnomalies.current > 3) {
+                healSystem(); // Nuclear option
+                playStateAnomalies.current = 0;
+              } else {
+                 mainAudio.play().catch(() => {}); // Soft nudge
+              }
+            } else {
+              playStateAnomalies.current = 0;
+            }
+          }, 1000);
+        }
+      }
+      lastHealthCheck.current = now;
+    }, 5000);
+    return () => clearInterval(healthInterval);
+  }, [isPlaying, isForeground, healSystem]);
+
+  // Unified Safe Play Wrapper
+  const safePlay = async (audio: HTMLAudioElement | null, context: string) => {
+    if (!SafetyChecker.validateAudioElement(audio, context)) return;
+    try {
+      await audio!.play();
+    } catch (e) {
+      if (e instanceof Error && e.name === 'NotAllowedError') {
+        // User interaction required - non-critical
+        console.warn(`[Safety] Play blocked by browser policy (${context})`);
+      } else {
+        console.error(`[Safety] Play failed (${context}):`, e);
+      }
+    }
+  };
   const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
   const chunkPlanRef = useRef<any>(null);
   const lastBgGenTime = useRef<Record<string, number>>({});
@@ -2813,17 +2860,6 @@ export default function AudioEngine() {
     };
   }, [isPlaying, settings.subliminal.isEnabled, settings.subliminal.playInBackground, settings.subliminal.isLooping, settings.subliminal.isPlaylistMode, subTrack, preparedSubUrl]);
 
-  // Handle Binaural Playback and Fading
-  useEffect(() => {
-    const isBg = settings.binaural.playInBackground;
-    const isLayerPlaying = settings.binaural.isEnabled && (isPlaying || isBg);
-
-    // 1. Manage Web Audio State (Foreground only if not in background mode)
-    if (isLayerPlaying && !isBg && !isForeground) { // Only stop if it's already playing via <audio> or we are purely foreground
-       // No-op, syncBgLayer handles it
-    }
-
-    // 2. Manage HTML Background Audio State (Binaural) - Unified stable parallel path
   // Handle Binaural Layer
   useEffect(() => {
     const isBg = settings.binaural.playInBackground;
