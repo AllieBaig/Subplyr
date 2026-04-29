@@ -1,4 +1,4 @@
-const VERSION = 'subliminal-v13'; // Increment for update
+const VERSION = 'subliminal-v14'; // Increment for update
 const CACHE_NAME = `subliminal-player-${VERSION}`;
 
 // Core assets that MUST be available for the app to start
@@ -62,7 +62,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Logic: Strictly Cache-First for assets, Network-First for navigation with fallback
+// Fetch Logic: Network-First for navigation, Cache-First for static assets
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -77,11 +77,13 @@ self.addEventListener('fetch', (event) => {
             const cache = await caches.open('shared-files');
             for (let i = 0; i < audioFiles.length; i++) {
               const file = audioFiles[i];
-              const response = new Response(file);
-              const headers = new Headers(response.headers);
-              headers.set('x-filename', encodeURIComponent(file.name));
-              const responseWithMeta = new Response(file, { headers });
-              await cache.put(`/shared-files/temp-${i}`, responseWithMeta);
+              if (file instanceof File || file instanceof Blob) {
+                const response = new Response(file);
+                const headers = new Headers(response.headers);
+                headers.set('x-filename', encodeURIComponent((file as any).name || `shared-${i}`));
+                const responseWithMeta = new Response(file, { headers });
+                await cache.put(`/shared-files/temp-${i}`, responseWithMeta);
+              }
             }
             return Response.redirect('/?shared-count=' + audioFiles.length, 303);
           }
@@ -101,37 +103,43 @@ self.addEventListener('fetch', (event) => {
   // Bypass for dev tools
   if (url.pathname.startsWith('/@vite') || url.pathname.includes('hot-update')) return;
 
+  // NAVIGATION Strategy: Network-First with Cache Fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match('/') || caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // ASSET Strategy: Cache-First with Network Fallback
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // CACHE-FIRST strategy for static assets
       if (cachedResponse) {
-         return cachedResponse;
+        return cachedResponse;
       }
 
-      // NETWORK FALLBACK
       return fetch(event.request).then((networkResponse) => {
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse;
         }
 
-        const responseToCache = networkResponse.clone();
         const isStaticAsset = url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff2|json)$/);
-        const isAppRoot = url.origin === self.location.origin && (url.pathname === '/' || url.pathname === '/index.html');
-        
-        if (isStaticAsset || isAppRoot) {
+        if (isStaticAsset) {
+          const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
         }
         
         return networkResponse;
-      }).catch((err) => {
-        // OFFLINE FALLBACK
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
-        
-        // Return blank/fake response for missing non-critical assets
+      }).catch(() => {
+        // Silent fail for missing assets offline
         return new Response('', { status: 404, statusText: 'Offline' });
       });
     })

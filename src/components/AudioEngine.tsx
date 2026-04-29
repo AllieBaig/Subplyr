@@ -51,17 +51,20 @@ export default function AudioEngine() {
   useEffect(() => {
     const healthInterval = setInterval(() => {
       const now = Date.now();
-      if (isPlaying && isForeground) {
+      if (isPlaying && isForeground && !isRenderingChunk) {
         // Check if mainAudio is actually moving
         const mainAudio = mainAudioRef.current;
-        if (mainAudio && !mainAudio.paused) {
+        if (mainAudio && !mainAudio.paused && mainAudio.src) {
           const lastTime = mainAudio.currentTime;
+          // Use a longer timeout for stall detection on slow devices
           setTimeout(() => {
-            if (isPlaying && mainAudio.currentTime === lastTime && !mainAudio.paused) {
-              console.warn('[Safety] Audio stall detected, triggering recovery...');
+            if (isPlaying && !isRenderingChunk && mainAudio.currentTime === lastTime && !mainAudio.paused && !mainAudio.ended) {
+              console.warn('[Safety] Audio stall detected, triggering soft recovery...');
               playStateAnomalies.current++;
-              if (playStateAnomalies.current > 3) {
-                healSystem(); // Nuclear option
+              // Only heal after multiple consistent failures
+              if (playStateAnomalies.current > 6) { 
+                console.error('[Safety] Multiple stalls detected - initiating system heal');
+                healSystem(); 
                 playStateAnomalies.current = 0;
               } else {
                  mainAudio.play().catch(() => {}); // Soft nudge
@@ -69,13 +72,13 @@ export default function AudioEngine() {
             } else {
               playStateAnomalies.current = 0;
             }
-          }, 1000);
+          }, 2000); // 2s detection window
         }
       }
       lastHealthCheck.current = now;
-    }, 5000);
+    }, 10000); // Check every 10s
     return () => clearInterval(healthInterval);
-  }, [isPlaying, isForeground, healSystem]);
+  }, [isPlaying, isForeground, healSystem, isRenderingChunk]);
 
   // Unified Safe Play Wrapper
   const safePlay = async (audio: HTMLAudioElement | null, context: string) => {

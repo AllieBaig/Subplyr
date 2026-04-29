@@ -72,16 +72,28 @@ class SafetyChecker {
       try {
         const registration = await navigator.serviceWorker.getRegistration();
         this.report.checks.pwa = !!registration;
+        if (!registration) {
+          console.log('[Safety] Service worker not registered yet - normal for first load or cleared cache');
+        }
       } catch (e) {
-        this.addError('Service worker check failed');
+        // Non-critical
+        console.warn('[Safety] Service worker check failed');
       }
     }
 
     // Determine final status
-    if (this.report.errors.length > 5) this.report.status = 'critical';
-    else if (this.report.errors.length > 0) this.report.status = 'degraded';
+    // Critical only if storage, database, OR audio is broken
+    const criticalFailure = !this.report.checks.storage || !this.report.checks.database || !this.report.checks.audio;
+    
+    if (criticalFailure) {
+      this.report.status = 'critical';
+    } else if (this.report.errors.length > 0) {
+      this.report.status = 'degraded';
+    } else {
+      this.report.status = 'healthy';
+    }
 
-    console.log('[Safety] Diagnostics complete:', this.report.status);
+    console.log('[Safety] Diagnostics complete:', this.report.status, this.report.checks);
     return this.report;
   }
 

@@ -1,7 +1,7 @@
 import * as db from '../db';
 import { Track } from '../types';
 
-const MAX_CHUNK_DURATION = 5 * 60; // 5 minutes - Safe for iPhone 8 RAM
+const MAX_CHUNK_DURATION = 3 * 60; // 3 minutes - Safe for iPhone 8 RAM
 const SAMPLE_RATE = 44100;
 
 export interface ChunkPlan {
