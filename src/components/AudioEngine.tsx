@@ -32,6 +32,16 @@ export default function AudioEngine() {
 
   const { currentTime, setCurrentTime, setDuration, updateLayerProgress, layerProgress } = usePlayback();
 
+  const [isRenderingChunk, setIsRenderingChunk] = useState(false);
+  // Detect Foreground/Background
+  const [isForeground, setIsForeground] = useState(typeof document !== 'undefined' ? document.visibilityState === 'visible' : true);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleVisibility = () => setIsForeground(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
   const { settings, updateSettings, updateAudioTools } = useSettings();
   const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
   // Safety: Runtime health monitor
@@ -89,14 +99,6 @@ export default function AudioEngine() {
   const chunkUrlsRef = useRef<Record<string, string>>({});
   const chunkCleanupRef = useRef<Set<string>>(new Set());
   const trackOffsetsRef = useRef<{start: number, duration: number}[]>([]);
-
-  // Detect Foreground/Background
-  const [isForeground, setIsForeground] = useState(document.visibilityState === 'visible');
-  useEffect(() => {
-    const handleVisibility = () => setIsForeground(document.visibilityState === 'visible');
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
 
   // Heartbeat Mechanism for iOS 16 Background Persistence
   const heartbeatAudioRef = useRef<HTMLAudioElement | null>(null);

@@ -1,4 +1,4 @@
-const VERSION = 'subliminal-v12'; // Increment for update
+const VERSION = 'subliminal-v13'; // Increment for update
 const CACHE_NAME = `subliminal-player-${VERSION}`;
 
 // Core assets that MUST be available for the app to start

@@ -17,6 +17,7 @@ import { GlobalSafetyManager, LoadingPlaceholder } from './components/Safety';
 import { AnimationStyle } from './types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { ModalProvider } from './components/SafeModal';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -207,8 +208,6 @@ function AppContent() {
     </div>
   );
 }
-
-import { ModalProvider } from './components/SafeModal';
 
 export default function App() {
   return (

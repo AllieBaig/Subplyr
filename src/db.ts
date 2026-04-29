@@ -58,7 +58,7 @@ export async function initDB() {
       },
       terminated() {
         console.error("IndexedDB: Connection terminated unexpectedly.");
-        window.location.reload(); 
+        if (typeof window !== 'undefined') window.location.reload(); 
       }
     });
   } catch (err) {

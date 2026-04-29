@@ -84,7 +84,8 @@ export class ChunkManager {
       const buffers: AudioBuffer[] = [];
       let totalDuration = 0;
 
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+      if (!AudioCtx) throw new Error("AudioContext not supported in this environment");
       const ctx = new AudioCtx();
 
       for (const tid of trackIds) {
@@ -96,7 +97,8 @@ export class ChunkManager {
         totalDuration += audioBuffer.duration;
       }
 
-      const OfflineCtx = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext;
+      const OfflineCtx = typeof window !== 'undefined' ? (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext) : null;
+      if (!OfflineCtx) throw new Error("OfflineAudioContext not supported in this environment");
       const offlineCtx = new OfflineCtx(2, Math.ceil(totalDuration * SAMPLE_RATE), SAMPLE_RATE);
 
       const mainGain = offlineCtx.createGain();
