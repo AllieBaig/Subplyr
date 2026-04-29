@@ -47,38 +47,94 @@ export default function AudioEngine() {
   // Safety: Runtime health monitor
   const lastHealthCheck = useRef<number>(Date.now());
   const playStateAnomalies = useRef<number>(0);
+  const lastKnownTime = useRef<number>(0);
+  const stallCount = useRef<Record<string, number>>({});
   
+  // Soft Heal for specific elements without resetting everything
+  const softHealElement = async (audio: HTMLAudioElement | null, type: 'main' | 'hz' | 'heartbeat', layerId?: string) => {
+    if (!audio) return;
+    console.warn(`[Safety] Attempting soft heal for ${type} ${layerId || ''}`);
+    
+    try {
+      const currentPos = audio.currentTime;
+      const wasPlaying = !audio.paused;
+      
+      if (type === 'main' && currentTrack) {
+        const freshUrl = await getTrackUrl(currentTrack.id, true);
+        if (freshUrl) {
+          audio.src = freshUrl;
+          audio.load();
+          audio.currentTime = currentPos;
+          if (wasPlaying || isPlaying) audio.play().catch(() => {});
+        }
+      } else if (type === 'heartbeat') {
+        audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/wD/";
+        audio.load();
+        audio.play().catch(() => {});
+      } else if (type === 'hz' && layerId) {
+        // For Hz layers, we just nudge play or trigger a swap if stuck
+        if (audio.paused && isPlaying) audio.play().catch(() => {});
+        else {
+          audio.currentTime = 0; // Reset stuck buffer
+          audio.play().catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.error(`[Safety] Soft heal failed for ${type}:`, e);
+    }
+  };
+
   useEffect(() => {
     const healthInterval = setInterval(() => {
       const now = Date.now();
-      if (isPlaying && isForeground && !isRenderingChunk) {
-        // Check if mainAudio is actually moving
+      const visibility = document.visibilityState;
+      
+      if (isPlaying && !isRenderingChunk) {
         const mainAudio = mainAudioRef.current;
-        if (mainAudio && !mainAudio.paused && mainAudio.src) {
-          const lastTime = mainAudio.currentTime;
-          // Use a longer timeout for stall detection on slow devices
-          setTimeout(() => {
-            if (isPlaying && !isRenderingChunk && mainAudio.currentTime === lastTime && !mainAudio.paused && !mainAudio.ended) {
-              console.warn('[Safety] Audio stall detected, triggering soft recovery...');
+        
+        // 1. MAIN AUDIO CHECK
+        if (mainAudio && mainAudio.src && !mainAudio.ended) {
+          if (mainAudio.paused) {
+             // If we should be playing but are paused (common iOS background stall)
+             stallCount.current['main'] = (stallCount.current['main'] || 0) + 1;
+             if (stallCount.current['main'] > 2) {
+               console.warn('[Safety] Detected unexplained pause in playback, nudging...');
+               mainAudio.play().catch(() => {});
+             }
+          } else {
+            const currentTime = mainAudio.currentTime;
+            if (currentTime === lastKnownTime.current && currentTime !== 0) {
+              // Stall detected (position not advancing)
               playStateAnomalies.current++;
-              // Only heal after multiple consistent failures
-              if (playStateAnomalies.current > 6) { 
-                console.error('[Safety] Multiple stalls detected - initiating system heal');
-                healSystem(); 
+              console.warn(`[Safety] Audio stall detected (${playStateAnomalies.current}/5)`);
+              
+              if (playStateAnomalies.current >= 5) {
+                console.error('[Safety] Critical stall - performing soft heal');
+                softHealElement(mainAudio, 'main');
                 playStateAnomalies.current = 0;
-              } else {
-                 mainAudio.play().catch(() => {}); // Soft nudge
+              } else if (playStateAnomalies.current >= 2) {
+                mainAudio.play().catch(() => {}); // Nudge
               }
             } else {
               playStateAnomalies.current = 0;
             }
-          }, 2000); // 2s detection window
+            lastKnownTime.current = currentTime;
+          }
+        }
+
+        // 2. HEARTBEAT CHECK
+        if (heartbeatAudioRef.current && heartbeatAudioRef.current.paused) {
+          heartbeatAudioRef.current.play().catch(() => {
+            softHealElement(heartbeatAudioRef.current, 'heartbeat');
+          });
         }
       }
+      
       lastHealthCheck.current = now;
-    }, 10000); // Check every 10s
+    }, visibility === 'visible' ? 5000 : 15000); // More frequent when visible, but monitor background too
+    
     return () => clearInterval(healthInterval);
-  }, [isPlaying, isForeground, healSystem, isRenderingChunk]);
+  }, [isPlaying, isForeground, currentTrack, getTrackUrl, isRenderingChunk]);
 
   // Unified Safe Play Wrapper
   const safePlay = async (audio: HTMLAudioElement | null, context: string) => {
@@ -103,31 +159,8 @@ export default function AudioEngine() {
   const chunkCleanupRef = useRef<Set<string>>(new Set());
   const trackOffsetsRef = useRef<{start: number, duration: number}[]>([]);
 
-  // Heartbeat Mechanism for iOS 16 Background Persistence
+  // Internal Audio Element Refs (Managed by lifecycle)
   const heartbeatAudioRef = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => {
-    const audio = new Audio();
-    // 10 seconds of silence (WAV) for better stability and lower CPU
-    audio.src = "data:audio/wav;base64,UklGRqAIAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YfAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; 
-    audio.loop = true;
-    audio.volume = 0.0001; // Silent but keeps session active
-    (audio as any).playsInline = true;
-    (audio as any).webkitPlaysInline = true;
-    heartbeatAudioRef.current = audio;
-    return () => {
-      audio.pause();
-      audio.src = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isPlaying && (settings.chunking.mode === 'heartbeat' || settings.chunking.mode === 'merge')) {
-      // HEARTBEAT should run in BOTH modes to ensure background gapless on iOS 16
-      heartbeatAudioRef.current?.play().catch(() => {});
-    } else {
-      heartbeatAudioRef.current?.pause();
-    }
-  }, [isPlaying, settings.chunking.mode]);
 
   // Update Chunk Plan when Playlist changes
   useEffect(() => {
@@ -885,16 +918,20 @@ export default function AudioEngine() {
       Object.entries(bgAudioRefs.current).forEach(([id, el]) => {
         const s = (settings as any)[id];
         if (s?.isEnabled && (isPlaying || s?.playInBackground)) {
-           if (el.paused) {
-             const otherEl = bgAudioRefs2.current[id];
-             if (!otherEl || otherEl.paused) {
-                console.log(`[AudioEngine] Auto-recovering parallel layer: ${id}`);
-                el.play().catch(() => {});
-             }
+           const otherEl = bgAudioRefs2.current[id];
+           const isStalled = el.paused && (!otherEl || otherEl.paused);
+           
+           if (isStalled) {
+              console.log(`[AudioEngine] Auto-recovering parallel layer: ${id}`);
+              el.play().catch(() => {
+                // If play fails, the element might be in an invalid state, but for Hz layers 
+                // they usually recover on next loop swap. We'll just nudge.
+              });
            }
         }
       });
       
+      // Nature & Subliminal specific recovery
       if (natureAudioRef.current && settings.nature.isEnabled && (isPlaying || settings.nature.playInBackground)) {
         if (natureAudioRef.current.paused) natureAudioRef.current.play().catch(() => {});
       }
@@ -902,7 +939,15 @@ export default function AudioEngine() {
       if (subAudioRef.current && settings.subliminal.isEnabled && (isPlaying || settings.subliminal.playInBackground)) {
         if (subAudioRef.current.paused) subAudioRef.current.play().catch(() => {});
       }
-    }, 5000);
+
+      // Sync MediaSession PlaybackState (iOS Lock Screen stability)
+      if ('mediaSession' in navigator) {
+        const expectedState = isPlaying ? 'playing' : 'paused';
+        if (navigator.mediaSession.playbackState !== expectedState) {
+          navigator.mediaSession.playbackState = expectedState;
+        }
+      }
+    }, 8000);
     return () => clearInterval(interval);
   }, [isPlaying, settings]);
 
