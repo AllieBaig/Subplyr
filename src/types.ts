@@ -21,6 +21,7 @@ export type SortOption = 'date' | 'alphabetical' | 'recent';
 export type GroupOption = 'none' | 'day' | 'week' | 'month' | 'alphabetical' | 'minutes' | 'numbers';
 export type AnimationStyle = 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'random' | 'off';
 export type HzInputMode = 'slider' | 'picker' | 'manual';
+export type BufferMode = 'single' | 'double';
 
 export interface SubliminalSettings {
   isEnabled: boolean;
@@ -44,6 +45,7 @@ export interface BinauralSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
 }
 
 export interface NatureSettings {
@@ -53,6 +55,7 @@ export interface NatureSettings {
   gainDb: number;
   normalize: boolean;
   playInBackground: boolean;
+  bufferMode: BufferMode;
 }
 
 export interface NoiseSettings {
@@ -62,6 +65,7 @@ export interface NoiseSettings {
   gainDb: number;
   normalize: boolean;
   playInBackground: boolean;
+  bufferMode: BufferMode;
 }
 
 export interface PhysicalSoundSettings {
@@ -84,6 +88,7 @@ export interface DidgeridooSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
   physical?: PhysicalSoundSettings;
 }
 
@@ -96,6 +101,7 @@ export interface PureHzSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
 }
 
 export interface IsochronicSettings {
@@ -107,6 +113,7 @@ export interface IsochronicSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
 }
 
 export interface SolfeggioSettings {
@@ -117,6 +124,7 @@ export interface SolfeggioSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
 }
 
 export interface SchumannSettings {
@@ -127,6 +135,7 @@ export interface SchumannSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
 }
 
 export interface AudioTools {
@@ -165,6 +174,7 @@ export interface ShamanicSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
   physical?: PhysicalSoundSettings;
 }
 
@@ -181,6 +191,7 @@ export interface MentalToughnessSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  bufferMode: BufferMode;
   physical?: PhysicalSoundSettings;
 }
 

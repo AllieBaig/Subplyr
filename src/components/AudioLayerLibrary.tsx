@@ -159,6 +159,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updateBinauralSettings({ playInBackground: v })}
               pitchSafeMode={settings.binaural.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updateBinauralSettings({ pitchSafeMode: v })}
+              bufferMode={settings.binaural.bufferMode}
+              setBufferMode={(v: any) => updateBinauralSettings({ bufferMode: v })}
               color="text-purple-500"
               subtitle={`${settings.binaural.leftFreq}Hz / ${settings.binaural.rightFreq}Hz`}
               onApplyPreset={(p: any) => applyLayerPreset('binaural', p)}
@@ -206,6 +208,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updatePureHzSettings({ playInBackground: v })}
               pitchSafeMode={settings.pureHz.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updatePureHzSettings({ pitchSafeMode: v })}
+              bufferMode={settings.pureHz.bufferMode}
+              setBufferMode={(v: any) => updatePureHzSettings({ bufferMode: v })}
               color="text-rose-600"
               subtitle={`${settings.pureHz.frequency}Hz`}
               onApplyPreset={(p: any) => applyLayerPreset('pureHz', p)}
@@ -234,6 +238,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updateIsochronicSettings({ playInBackground: v })}
               pitchSafeMode={settings.isochronic.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updateIsochronicSettings({ pitchSafeMode: v })}
+              bufferMode={settings.isochronic.bufferMode}
+              setBufferMode={(v: any) => updateIsochronicSettings({ bufferMode: v })}
               color="text-blue-600"
               subtitle={`${settings.isochronic.frequency}Hz pulse`}
               onApplyPreset={(p: any) => applyLayerPreset('isochronic', p)}
@@ -273,6 +279,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updateSolfeggioSettings({ playInBackground: v })}
               pitchSafeMode={settings.solfeggio.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updateSolfeggioSettings({ pitchSafeMode: v })}
+              bufferMode={settings.solfeggio.bufferMode}
+              setBufferMode={(v: any) => updateSolfeggioSettings({ bufferMode: v })}
               color="text-emerald-600"
               subtitle={`${settings.solfeggio.frequency}Hz Healing`}
               onApplyPreset={(p: any) => applyLayerPreset('solfeggio', p)}
@@ -301,6 +309,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updateSchumannSettings({ playInBackground: v })}
               pitchSafeMode={settings.schumann.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updateSchumannSettings({ pitchSafeMode: v })}
+              bufferMode={settings.schumann.bufferMode}
+              setBufferMode={(v: any) => updateSchumannSettings({ bufferMode: v })}
               color="text-blue-500"
               subtitle={`${settings.schumann.frequency}Hz Resonance`}
               onApplyPreset={(p: any) => applyLayerPreset('schumann', p)}
@@ -422,6 +432,8 @@ export const AudioLayerLibrary = () => {
               setNormalize={(v: boolean) => updateNatureSettings({ normalize: v })}
               playInBackground={settings.nature.playInBackground}
               setPlayInBackground={(v: boolean) => updateNatureSettings({ playInBackground: v })}
+              bufferMode={settings.nature.bufferMode}
+              setBufferMode={(v: any) => updateNatureSettings({ bufferMode: v })}
               color="text-green-500"
               subtitle={settings.nature.type}
               onApplyPreset={(p: any) => applyLayerPreset('nature', p)}
@@ -454,6 +466,8 @@ export const AudioLayerLibrary = () => {
               setNormalize={(v: boolean) => updateNoiseSettings({ normalize: v })}
               playInBackground={settings.noise.playInBackground}
               setPlayInBackground={(v: boolean) => updateNoiseSettings({ playInBackground: v })}
+              bufferMode={settings.noise.bufferMode}
+              setBufferMode={(v: any) => updateNoiseSettings({ bufferMode: v })}
               color="text-orange-500"
               subtitle={`${settings.noise.type} noise`}
               onApplyPreset={(p: any) => applyLayerPreset('noise', p)}
@@ -488,6 +502,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updateDidgeridooSettings({ playInBackground: v })}
               pitchSafeMode={settings.didgeridoo.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updateDidgeridooSettings({ pitchSafeMode: v })}
+              bufferMode={settings.didgeridoo.bufferMode}
+              setBufferMode={(v: any) => updateDidgeridooSettings({ bufferMode: v })}
               color="text-amber-800"
               subtitle={`${Math.round(settings.didgeridoo.frequency)}Hz Drone`}
               onApplyPreset={(p: any) => applyLayerPreset('didgeridoo', p)}
@@ -546,6 +562,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updateShamanicSettings({ playInBackground: v })}
               pitchSafeMode={settings.shamanic.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updateShamanicSettings({ pitchSafeMode: v })}
+              bufferMode={settings.shamanic.bufferMode}
+              setBufferMode={(v: any) => updateShamanicSettings({ bufferMode: v })}
               color="text-red-900"
               subtitle={`${Math.round(settings.shamanic.frequency)}Hz Tribal`}
               onApplyPreset={(p: any) => applyLayerPreset('shamanic', p)}
@@ -603,6 +621,8 @@ export const AudioLayerLibrary = () => {
               setPlayInBackground={(v: boolean) => updateMentalToughnessSettings({ playInBackground: v })}
               pitchSafeMode={settings.mentalToughness.pitchSafeMode}
               setPitchSafeMode={(v: boolean) => updateMentalToughnessSettings({ pitchSafeMode: v })}
+              bufferMode={settings.mentalToughness.bufferMode}
+              setBufferMode={(v: any) => updateMentalToughnessSettings({ bufferMode: v })}
               color="text-indigo-600"
               subtitle={`${settings.mentalToughness.pitch} ${settings.mentalToughness.texture}`}
               onApplyPreset={(p: any) => applyLayerPreset('mentalToughness', p)}

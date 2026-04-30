@@ -321,6 +321,7 @@ export const LayerAccordion = ({
   gainDb, setGainDb, normalize, setNormalize, 
   playInBackground, setPlayInBackground,
   pitchSafeMode, setPitchSafeMode,
+  bufferMode, setBufferMode,
   isExpanded, onAccordionToggle,
   color, subtitle, children, onApplyPreset,
   hideToggle = false
@@ -421,11 +422,31 @@ export const LayerAccordion = ({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Pitch Safe</span>
-                    <span className="text-[7px] font-bold text-system-tertiary-label uppercase">Meditation Filter</span>
+                    <span className="text-[7px] font-bold text-system-tertiary-label uppercase">Meditation</span>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Buffer Mode Control */}
+            {setBufferMode !== undefined && (
+              <div className="space-y-4">
+                <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest pl-1 leading-relaxed">
+                  Loop Buffer Strategy
+                </p>
+                <div className="flex bg-secondary-system-background p-1.5 rounded-full h-11 border border-apple-border paper-emboss">
+                  {(['single', 'double'] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setBufferMode(m)}
+                      className={`flex-1 h-full rounded-full text-[9px] font-black uppercase tracking-widest transition-all duration-200 paper-button ${bufferMode === m ? 'bg-white dark:bg-[#1c1c1b] text-apple-blue shadow-md' : 'text-system-secondary-label hover:text-system-label'}`}
+                    >
+                      {m === 'single' ? 'Single (Eco)' : 'Double (Gapless)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Volume Section */}
             <div className="space-y-4">

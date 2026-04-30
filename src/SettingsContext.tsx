@@ -47,6 +47,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
   },
   nature: {
     isEnabled: false,
@@ -55,6 +56,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     gainDb: 0,
     normalize: false,
     playInBackground: false,
+    bufferMode: 'double',
   },
   noise: {
     isEnabled: false,
@@ -63,6 +65,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     gainDb: 0,
     normalize: false,
     playInBackground: false,
+    bufferMode: 'double',
   },
   didgeridoo: {
     isEnabled: false,
@@ -75,6 +78,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
     physical: {
       roomSize: 'medium',
       wallResonance: 'medium',
@@ -94,6 +98,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
     physical: {
       roomSize: 'medium',
       wallResonance: 'low',
@@ -116,6 +121,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
     physical: {
       roomSize: 'large',
       wallResonance: 'medium',
@@ -134,6 +140,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
   },
   isochronic: {
     isEnabled: false,
@@ -144,6 +151,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
   },
   solfeggio: {
     isEnabled: false,
@@ -153,6 +161,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
   },
   schumann: {
     isEnabled: false,
@@ -162,6 +171,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    bufferMode: 'double',
   },
   audioTools: {
     gainDb: 0,
