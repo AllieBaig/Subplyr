@@ -320,14 +320,14 @@ export default function LibraryView() {
           <button 
             onClick={() => setShowSortMenu(!showSortMenu)}
             className={cn(
-              "p-2 rounded-full transition-all",
+              "p-2 rounded-full transition-all paper-button",
               showSortMenu ? 'bg-apple-blue/10 text-apple-blue' : 'text-system-tertiary-label',
-              settings.libraryControlsPosition === 'bottom' && "flex-1 flex justify-center bg-secondary-system-background h-11 items-center rounded-2xl"
+              settings.libraryControlsPosition === 'bottom' && "flex-1 flex justify-center bg-secondary-system-background/50 h-11 items-center rounded-2xl paper-emboss"
             )}
           >
             <div className="flex items-center gap-2">
               <SortAsc size={20} />
-              {settings.libraryControlsPosition === 'bottom' && <span className="text-[10px] font-black uppercase tracking-widest">Sort</span>}
+              {settings.libraryControlsPosition === 'bottom' && <span className="text-[10px] font-black uppercase tracking-widest italic font-serif">Sort</span>}
             </div>
           </button>
           <button 
@@ -337,9 +337,9 @@ export default function LibraryView() {
               if (isSelectMode) setSelectedTrackIds(new Set());
             }}
             className={cn(
-              "text-[13px] font-bold px-4 py-1.5 rounded-full transition-all",
+              "text-[13px] font-bold px-4 py-1.5 rounded-full transition-all paper-button",
               isSelectMode ? 'bg-apple-blue text-white' : 'text-apple-blue',
-              settings.libraryControlsPosition === 'bottom' && "flex-1 flex justify-center bg-secondary-system-background h-11 items-center rounded-2xl"
+              settings.libraryControlsPosition === 'bottom' && "flex-1 flex justify-center bg-secondary-system-background/50 h-11 items-center rounded-2xl paper-emboss"
             )}
           >
             {isSelectMode ? 'Cancel' : 'Select'}
@@ -348,12 +348,12 @@ export default function LibraryView() {
       )}
       {!isSelectMode && (
         <label className={cn(
-          "flex items-center justify-center cursor-pointer active:scale-95 transition-transform",
-          settings.libraryControlsPosition === 'bottom' ? "w-auto flex-1 bg-apple-blue text-white h-11 rounded-2xl shadow-sm" : "w-10 h-10 rounded-full"
+          "flex items-center justify-center cursor-pointer active:scale-95 transition-all paper-button",
+          settings.libraryControlsPosition === 'bottom' ? "w-auto flex-1 bg-apple-blue text-white h-11 rounded-2xl shadow-sm paper-emboss" : "w-10 h-10 rounded-full"
         )}>
           <div className="flex items-center gap-2">
             <Plus size={settings.libraryControlsPosition === 'bottom' ? 20 : 24} className={settings.libraryControlsPosition === 'bottom' ? "text-white" : "text-apple-blue"} />
-            {settings.libraryControlsPosition === 'bottom' && <span className="text-[10px] font-black uppercase tracking-widest">Import</span>}
+            {settings.libraryControlsPosition === 'bottom' && <span className="text-[10px] font-black uppercase tracking-widest italic font-serif">Import</span>}
           </div>
           <input type="file" multiple accept={AUDIO_ACCEPT_STRING} className="hidden" onChange={handleFileUpload} />
         </label>
@@ -368,10 +368,10 @@ export default function LibraryView() {
     )}>
       <header className="flex flex-col bg-system-background pb-6 gap-8">
         <div className="flex justify-between items-center px-1">
-          <h1 className="text-3xl font-[900] tracking-tight text-system-label flex items-center gap-3">
+          <h1 className="serif-title text-4xl text-system-label flex items-center gap-3 italic">
             Library
             {isSelectMode && selectedTrackIds.size > 0 && (
-              <span className="text-sm font-bold text-apple-blue bg-apple-blue/5 px-3 py-1 rounded-full animate-in fade-in zoom-in duration-300">
+              <span className="text-sm font-bold text-apple-blue bg-apple-blue/5 px-3 py-1 rounded-full animate-in fade-in zoom-in duration-300 paper-emboss">
                 {selectedTrackIds.size} Selected
               </span>
             )}
@@ -382,13 +382,13 @@ export default function LibraryView() {
         <div className="flex gap-6 px-1">
           <button 
             onClick={() => { setView('tracks'); setIsSelectMode(false); setSelectedTrackIds(new Set()); setEditingPlaylistId(null); setActivePlaylistId(null); }}
-            className={`text-[15px] font-[800] transition-opacity ${view === 'tracks' ? 'text-apple-blue opacity-100' : 'text-system-tertiary-label opacity-60 hover:opacity-100'}`}
+            className={`serif-title text-xl transition-all paper-button ${view === 'tracks' ? 'text-apple-blue opacity-100 scale-105' : 'text-system-tertiary-label opacity-60 hover:opacity-100 italic'}`}
           >
             Tracks
           </button>
           <button 
             onClick={() => { setView('playlists'); setIsSelectMode(false); setSelectedTrackIds(new Set()); setEditingPlaylistId(null); setActivePlaylistId(null); }}
-            className={`text-[15px] font-[800] transition-opacity ${view === 'playlists' || view === 'playlist_detail' ? 'text-apple-blue opacity-100' : 'text-system-tertiary-label opacity-60 hover:opacity-100'}`}
+            className={`serif-title text-xl transition-all paper-button ${view === 'playlists' || view === 'playlist_detail' ? 'text-apple-blue opacity-100 scale-105' : 'text-system-tertiary-label opacity-60 hover:opacity-100 italic'}`}
           >
             Playlists
           </button>
@@ -402,15 +402,15 @@ export default function LibraryView() {
       )}
 
       {showSortMenu && (view === 'tracks' || view === 'playlists') && !isSelectMode && (
-        <div className={`bg-apple-card border border-apple-border flex flex-col shadow-sm animate-in fade-in slide-in-from-top-2 mx-2 mb-6 ${settings.miniMode ? 'rounded-2xl p-3 gap-3' : 'rounded-3xl p-4 gap-4'}`}>
+        <div className={`paper-card flex flex-col animate-in fade-in slide-in-from-top-2 mx-2 mb-6 ${settings.miniMode ? 'p-3 gap-3' : 'p-4 gap-4'}`}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label">Sort {view === 'tracks' ? 'Tracks' : 'Playlists'}</span>
-            <div className="flex bg-secondary-system-background rounded-xl p-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label italic serif-title">Sort {view === 'tracks' ? 'Tracks' : 'Playlists'}</span>
+            <div className="flex bg-secondary-system-background/50 rounded-xl p-1 paper-emboss">
               {(['recent', 'alphabetical', 'date'] as SortOption[]).map(s => (
                 <button
                   key={s}
                   onClick={() => view === 'tracks' ? updateLibrarySettings({ sort: s }) : setPlaylistSort(s)}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${(view === 'tracks' ? settings.library.sort : playlistSort) === s ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all paper-button ${(view === 'tracks' ? settings.library.sort : playlistSort) === s ? 'bg-white shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                 >
                   {s === 'recent' ? 'Recent' : s === 'alphabetical' ? 'A-Z' : 'Date'}
                 </button>
@@ -420,13 +420,13 @@ export default function LibraryView() {
           {view === 'tracks' && (
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label">Group Tracks</span>
-                <div className="flex bg-secondary-system-background rounded-xl p-1 overflow-x-auto no-scrollbar max-w-[70%]">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label italic serif-title">Grouping</span>
+                <div className="flex bg-secondary-system-background/50 rounded-xl p-1 overflow-x-auto no-scrollbar max-w-[70%] paper-emboss">
                   {(['none', 'alphabetical', 'numbers', 'minutes', 'day', 'week', 'month'] as GroupOption[]).map(g => (
                     <button
                       key={g}
                       onClick={() => updateLibrarySettings({ group: g })}
-                      className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap ${settings.library.group === g ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                      className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap paper-button ${settings.library.group === g ? 'bg-white shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                     >
                       {g === 'minutes' ? 'Minutes' : g === 'numbers' ? '0-9' : g.charAt(0).toUpperCase() + g.slice(1)}
                     </button>
@@ -436,9 +436,9 @@ export default function LibraryView() {
               
               <button 
                 onClick={() => updateLibrarySettings({ groupByMinutes: !settings.library.groupByMinutes })}
-                className="flex items-center justify-between px-2"
+                className="flex items-center justify-between px-2 paper-button"
               >
-                <span className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label">Auto Group Recent Imports</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-system-secondary-label italic">Auto Group Recent Imports</span>
                 <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.library.groupByMinutes ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}>
                   <motion.div className="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full" animate={{ x: settings.library.groupByMinutes ? 16 : 0 }} />
                 </div>
@@ -517,7 +517,7 @@ export default function LibraryView() {
                     onClick={() => toggleSelectAll(group.items.map(t => t.id))}
                     className="flex items-center justify-between py-2 -mx-2 px-2 hover:bg-gray-50 transition-colors rounded-xl group/header"
                   >
-                    <h3 className="text-[11px] font-bold uppercase tracking-[.25em] text-apple-text-secondary group-hover/header:text-apple-blue transition-colors">
+                    <h3 className="serif-title text-[14px] text-apple-text-secondary group-hover/header:text-apple-blue transition-colors px-2 italic">
                       {group.label}
                     </h3>
                     <div className="flex items-center gap-3">
@@ -632,17 +632,17 @@ export default function LibraryView() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-full max-w-xl bg-white rounded-t-[2.5rem] p-8 pb-12 shadow-2xl flex flex-col gap-6"
+              className="w-full max-w-xl paper-card p-8 pb-12 shadow-2xl flex flex-col gap-6 overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                   <h2 className="text-xl font-black tracking-tight">Import {pendingFiles.length} Tracks</h2>
-                   <p className="text-[12px] text-gray-400 font-bold uppercase tracking-widest mt-1">Select Destination</p>
+                   <h2 className="serif-title text-2xl italic tracking-tight">Import {pendingFiles.length} Tracks</h2>
+                   <p className="text-[10px] text-system-tertiary-label font-bold uppercase tracking-widest mt-1 italic">Select Destination</p>
                 </div>
                 <button 
                   onClick={() => setShowImportTargetMenu(false)}
-                  className="p-2 bg-gray-50 rounded-full text-gray-400"
+                  className="p-2 bg-secondary-system-background/50 rounded-full text-system-tertiary-label paper-button"
                 >
                   <X size={20} />
                 </button>
@@ -651,28 +651,28 @@ export default function LibraryView() {
               <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto no-scrollbar py-2">
                 <button
                   onClick={() => processImport()}
-                  className="w-full flex items-center justify-between p-5 bg-gray-50 hover:bg-black hover:text-white rounded-2xl transition-all group"
+                  className="w-full flex items-center justify-between p-5 bg-secondary-system-background/50 hover:bg-secondary-system-background rounded-2xl transition-all group paper-button paper-emboss"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-apple-blue/10 flex items-center justify-center text-apple-blue group-hover:bg-white/20 group-hover:text-white transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-apple-blue/10 flex items-center justify-center text-apple-blue transition-colors">
                       <Music size={20} />
                     </div>
-                    <span className="font-bold text-[15px]">Library Only</span>
+                    <span className="serif-title text-[15px] italic">Library Only</span>
                   </div>
                   <ChevronRight size={18} className="opacity-30" />
                 </button>
 
-                <div className="h-[0.5px] bg-black/[0.03] my-2" />
+                <div className="h-[0.5px] bg-apple-border/30 my-2" />
 
                 <button
                   onClick={() => processImport('new')}
-                  className="w-full flex items-center justify-between p-5 bg-apple-blue/5 hover:bg-apple-blue transition-all group text-apple-blue hover:text-white rounded-2xl"
+                  className="w-full flex items-center justify-between p-5 bg-apple-blue/5 hover:bg-apple-blue/10 rounded-2xl transition-all group text-apple-blue paper-button paper-emboss"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-apple-blue/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-apple-blue/10 flex items-center justify-center transition-colors">
                       <Plus size={20} />
                     </div>
-                    <span className="font-bold text-[15px]">Import into New Playlist</span>
+                    <span className="serif-title text-[15px] italic">Import into New Playlist</span>
                   </div>
                   <ChevronRight size={18} className="opacity-30" />
                 </button>
@@ -681,15 +681,15 @@ export default function LibraryView() {
                   <button
                     key={p.id}
                     onClick={() => processImport(p.id)}
-                    className="w-full flex items-center justify-between p-5 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all"
+                    className="w-full flex items-center justify-between p-5 bg-secondary-system-background/50 hover:bg-secondary-system-background rounded-2xl transition-all paper-button paper-emboss"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400">
+                      <div className="w-10 h-10 rounded-xl bg-gray-100/50 flex items-center justify-center text-system-tertiary-label">
                         <ListPlus size={20} />
                       </div>
                       <div className="flex flex-col items-start">
-                        <span className="font-bold text-[15px]">{p.name}</span>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{p.trackIds.length} tracks</span>
+                        <span className="serif-title text-[15px] italic">{p.name}</span>
+                        <span className="text-[10px] text-system-tertiary-label font-bold uppercase tracking-tight italic opacity-70">{p.trackIds.length} tracks</span>
                       </div>
                     </div>
                     <ChevronRight size={18} className="opacity-30" />
@@ -708,10 +708,10 @@ export default function LibraryView() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 20, opacity: 0 }}
-            className="fixed bottom-28 left-4 right-4 z-[100] flex flex-col gap-4 px-6 py-6 bg-black/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white"
+            className="fixed bottom-28 left-4 right-4 z-[100] flex flex-col gap-4 px-6 py-6 paper-card text-system-label"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">{selectedTrackIds.size} Selected</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-system-tertiary-label italic serif-title">{selectedTrackIds.size} Selected</span>
               <div className="flex gap-5">
                 <button 
                   onClick={() => {
@@ -726,13 +726,13 @@ export default function LibraryView() {
                       setSelectedTrackIds(new Set([...Array.from(selectedTrackIds), ...list]));
                     }
                   }}
-                  className="text-[10px] font-bold text-apple-blue uppercase tracking-[0.1em]"
+                  className="text-[10px] font-bold text-apple-blue uppercase tracking-[0.1em] paper-button italic serif-title"
                 >
                   {((editingPlaylistId ? (playlists.find(p => p.id === editingPlaylistId)?.trackIds) : (activePlaylistId ? (playlists.find(p => p.id === activePlaylistId)?.trackIds) : tracks.map(t => t.id)))?.every(id => selectedTrackIds.has(id))) ? 'Deselect All' : 'Select All'}
                 </button>
                 <button 
                   onClick={() => { setIsSelectMode(false); setSelectedTrackIds(new Set()); }}
-                  className="text-[10px] font-bold text-white/60 uppercase tracking-[0.1em]"
+                  className="text-[10px] font-bold text-system-tertiary-label uppercase tracking-[0.1em] paper-button italic serif-title"
                 >
                   Cancel
                 </button>
@@ -743,20 +743,20 @@ export default function LibraryView() {
               <button 
                 onClick={() => { if (selectedTrackIds.size > 0) { setBulkActionType('add'); setShowBulkAddMenu(!showBulkAddMenu); } }}
                 disabled={selectedTrackIds.size === 0}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-20"
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-20 paper-button paper-emboss"
               >
                 <ListPlus size={20} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">{(editingPlaylistId || activePlaylistId) ? 'Copy' : 'Add'}</span>
+                <span className="text-[9px] font-bold uppercase tracking-tight italic font-serif">{(editingPlaylistId || activePlaylistId) ? 'Copy' : 'Add'}</span>
               </button>
               
               {(editingPlaylistId || activePlaylistId) && (
                 <button 
                   onClick={() => { if (selectedTrackIds.size > 0) { setBulkActionType('move'); setShowBulkAddMenu(!showBulkAddMenu); } }}
                   disabled={selectedTrackIds.size === 0}
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors"
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors paper-button paper-emboss"
                 >
                   <Share size={20} />
-                  <span className="text-[9px] font-bold uppercase tracking-tight">Move</span>
+                  <span className="text-[9px] font-bold uppercase tracking-tight italic font-serif">Move</span>
                 </button>
               )}
 
@@ -764,19 +764,19 @@ export default function LibraryView() {
                 <button 
                   onClick={handleBulkRemoveFromPlaylist}
                   disabled={selectedTrackIds.size === 0}
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-colors"
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-colors paper-button paper-emboss"
                 >
                   <Trash2 size={20} />
-                  <span className="text-[9px] font-bold uppercase tracking-tight">Remove</span>
+                  <span className="text-[9px] font-bold uppercase tracking-tight italic font-serif">Remove</span>
                 </button>
               ) : (
                 <button 
                   onClick={handleBulkCreatePlaylist}
                   disabled={selectedTrackIds.size === 0}
-                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-20"
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-20 paper-button paper-emboss"
                 >
                   <FolderPlus size={20} />
-                  <span className="text-[9px] font-bold uppercase tracking-tight">New List</span>
+                  <span className="text-[9px] font-bold uppercase tracking-tight italic font-serif">New List</span>
                 </button>
               )}
 
@@ -794,10 +794,10 @@ export default function LibraryView() {
                    }
                 }}
                 disabled={selectedTrackIds.size === 0}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors text-red-400 disabled:opacity-20"
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors text-red-400 disabled:opacity-20 paper-button paper-emboss"
               >
                 <Trash2 size={20} />
-                <span className="text-[9px] font-bold uppercase tracking-tight">Delete</span>
+                <span className="text-[9px] font-bold uppercase tracking-tight italic font-serif">Delete</span>
               </button>
             </div>
 
@@ -807,21 +807,21 @@ export default function LibraryView() {
                   initial={{ scale: 0.95, opacity: 0, y: 10 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                  className="absolute bottom-full mb-6 left-0 right-0 bg-white rounded-[2.5rem] p-6 text-black z-50 border border-black/5 shadow-2xl"
+                  className="absolute bottom-full mb-6 left-0 right-0 paper-card p-6 text-system-label z-50 overflow-hidden"
                 >
                   <div className="flex items-center justify-between mb-6 px-1">
-                    <h3 className="font-bold text-lg tracking-tight">Select Playlist</h3>
-                    <button onClick={() => setShowBulkAddMenu(false)} className="text-gray-400 p-2"><X size={20} /></button>
+                    <h3 className="serif-title text-xl italic tracking-tight">Select Playlist</h3>
+                    <button onClick={() => setShowBulkAddMenu(false)} className="text-system-tertiary-label p-2 paper-button"><X size={20} /></button>
                   </div>
                   <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto no-scrollbar">
                     {playlists.map((p: any) => (
                       <button
                         key={p.id}
                         onClick={() => handleBulkAddToPlaylist(p.id)}
-                        className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl flex items-center justify-between font-bold text-sm transition-all active:scale-[0.98]"
+                        className="w-full text-left px-5 py-4 bg-secondary-system-background/50 hover:bg-secondary-system-background rounded-2xl flex items-center justify-between transition-all active:scale-[0.98] paper-button paper-emboss"
                       >
-                        <span>{p.name}</span>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase">{p.trackIds.length} tracks</span>
+                        <span className="serif-title text-base italic">{p.name}</span>
+                        <span className="text-[10px] text-system-tertiary-label font-bold uppercase tracking-widest">{p.trackIds.length} tracks</span>
                       </button>
                     ))}
                   </div>
@@ -898,17 +898,17 @@ const TrackItem = React.memo(({ track, isActive, onPlay, onRemove, playlists, on
         
         <button 
           onClick={() => !track.isMissing && onPlay()} 
-          className="flex-1 flex items-center gap-4 text-left min-w-0 h-full py-3"
+          className="flex-1 flex items-center gap-4 text-left min-w-0 h-full py-3 paper-button"
         >
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-secondary-system-background flex items-center justify-center overflow-hidden relative shadow-sm border border-apple-border/50">
-             <ArtworkImage src={track.artwork} className="w-full h-full" iconSize={16} />
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-secondary-system-background/50 flex items-center justify-center overflow-hidden relative paper-emboss border border-apple-border/50">
+             <ArtworkImage src={track.artwork} className="w-full h-full opacity-90" iconSize={16} />
              {isActive && <div className="absolute inset-0 bg-apple-blue/10 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-apple-blue shadow-[0_0_8px_rgba(0,122,255,0.6)]" /></div>}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className={`font-bold truncate text-[14px] ${isActive ? 'text-apple-blue' : 'text-system-label'}`}>
+            <h4 className={`serif-title truncate text-[16px] ${isActive ? 'text-apple-blue' : 'text-system-label'}`}>
               <HighlightText text={track.name} highlight={searchQuery} />
             </h4>
-            <p className="text-[12px] text-system-secondary-label font-bold uppercase tracking-widest truncate mt-0.5">
+            <p className="text-[11px] text-system-secondary-label font-bold uppercase tracking-widest truncate mt-0.5 italic opacity-80">
               <HighlightText text={track.artist || 'Unknown Artist'} highlight={searchQuery} />
             </p>
           </div>
@@ -984,12 +984,12 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
     <div className={`flex flex-col gap-4 w-full max-w-7xl mx-auto pb-12`}>
       <button 
         onClick={onCreate}
-        className={`w-full bg-gray-50 border-none rounded-2xl flex items-center gap-4 transition-all active:scale-[0.98] ${isSelectMode ? 'hidden' : 'p-4'}`}
+        className={`w-full bg-secondary-system-background/50 border border-apple-border rounded-2xl flex items-center gap-4 transition-all active:scale-[0.98] paper-button paper-emboss ${isSelectMode ? 'hidden' : 'p-4'}`}
       >
         <div className="w-10 h-10 rounded-lg bg-apple-blue/10 flex items-center justify-center text-apple-blue">
           <Plus size={20} />
         </div>
-        <span className="font-bold text-[14px]">Create New Playlist</span>
+        <span className="serif-title text-base italic">Create New Playlist</span>
       </button>
 
       <div className="flex flex-col">
@@ -1002,10 +1002,10 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
               <div className={`flex items-center gap-4 py-4 px-1 transition-opacity h-[87.5px] ${isSelectMode && !isEditingThis ? 'opacity-40' : 'opacity-100'}`}>
                   <button 
                     onClick={() => !isSelectMode && onOpen(playlist.id)}
-                    className="flex-shrink-0 w-12 h-12 rounded-xl bg-secondary-system-background flex items-center justify-center overflow-hidden border border-apple-border active:scale-95 transition-transform"
+                    className="flex-shrink-0 w-12 h-12 rounded-xl bg-secondary-system-background/50 flex items-center justify-center overflow-hidden border border-apple-border active:scale-95 transition-all paper-button paper-emboss"
                   >
                      {playlist.trackIds.length > 0 ? (
-                       <ArtworkImage src={tracks.find((t: any) => t.id === playlist.trackIds[0])?.artwork} className="w-full h-full" iconSize={20} />
+                       <ArtworkImage src={tracks.find((t: any) => t.id === playlist.trackIds[0])?.artwork} className="w-full h-full opacity-90" iconSize={20} />
                      ) : (
                        <div className="grid grid-cols-2 grid-rows-2 w-full h-full p-1 gap-[2px]">
                           {[0,1,2,3].map(i => <div key={i} className="bg-secondary-system-background rounded-[2px]" />)}
@@ -1015,15 +1015,15 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
 
                 <button 
                   onClick={() => !isSelectMode && onOpen(playlist.id)}
-                  className="flex-1 min-w-0 text-left cursor-default"
+                  className="flex-1 min-w-0 text-left cursor-default paper-button px-2"
                 >
-                  <h3 className="font-bold text-[15px] truncate text-system-label">
+                  <h3 className="serif-title text-[18px] text-system-label italic">
                     <HighlightText text={playlist.name} highlight={searchQuery} />
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-[12px] text-system-secondary-label font-medium tracking-tight">{playlist.trackIds.length} tracks</p>
-                    <span className="text-gray-300">•</span>
-                    <p className="text-[12px] text-system-secondary-label font-medium tracking-tight">{formatTotalDuration(playlist.trackIds, tracks)}</p>
+                    <p className="text-[11px] text-system-secondary-label font-bold uppercase tracking-widest italic opacity-70">{playlist.trackIds.length} tracks</p>
+                    <span className="text-gray-300 opacity-40">•</span>
+                    <p className="text-[11px] text-system-secondary-label font-bold uppercase tracking-widest italic opacity-70">{formatTotalDuration(playlist.trackIds, tracks)}</p>
                   </div>
                 </button>
 
@@ -1031,7 +1031,7 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
                   {playlist.trackIds.length > 0 && (
                     <button 
                       onClick={() => onEnterSelect(playlist.id)}
-                      className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full transition-all ${isEditingThis ? 'bg-apple-blue text-white' : 'text-apple-blue bg-apple-blue/5 hover:bg-apple-blue/10'}`}
+                      className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full transition-all paper-button ${isEditingThis ? 'bg-apple-blue text-white' : 'text-apple-blue bg-apple-blue/5 hover:bg-apple-blue/10 paper-emboss'}`}
                     >
                       {isEditingThis ? 'Editing' : 'Select'}
                     </button>
@@ -1054,14 +1054,14 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
                               initial={{ opacity: 0, scale: 0.95, y: -10 }}
                               animate={{ opacity: 1, scale: 1, y: 0 }}
                               exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                              className="absolute right-0 top-full mt-2 w-48 bg-apple-card rounded-2xl shadow-2xl border border-apple-border z-50 py-2 overflow-hidden"
+                              className="absolute right-0 top-full mt-2 w-48 paper-card z-50 py-2 overflow-hidden"
                             >
                               <button 
                                 onClick={() => { 
                                   onRename(playlist.id, playlist.name);
                                   setActiveMenuId(null);
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary-system-background text-[13px] font-bold text-left text-system-label"
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary-system-background/50 text-[13px] font-bold text-left text-system-label paper-button"
                               >
                                 <Edit2 size={16} className="text-system-secondary-label" />
                                 Rename
@@ -1079,7 +1079,7 @@ const PlaylistView = ({ playlists, onCreate, onDelete, onRename, tracks, onTrack
                                   }
                                   setActiveMenuId(null);
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary-system-background text-[13px] font-bold text-red-500 text-left"
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary-system-background/50 text-[13px] font-bold text-red-500 text-left paper-button"
                               >
                                 <Trash2 size={16} className="text-red-400" />
                                 Delete

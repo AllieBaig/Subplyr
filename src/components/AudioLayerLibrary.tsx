@@ -85,20 +85,20 @@ export const AudioLayerLibrary = () => {
       <div className="space-y-3">
         <button 
           onClick={() => toggleGroup('main')}
-          className="flex items-center gap-3 w-full px-1 py-1 group active:opacity-70 transition-opacity"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-secondary-system-background/50 border border-apple-border paper-button paper-emboss"
         >
           <div className="w-8 h-8 rounded-lg bg-apple-blue/10 flex items-center justify-center text-apple-blue group-hover:scale-105 transition-transform">
             <MusicIcon size={16} />
           </div>
           <div className="flex-1 text-left">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-system-label">Main Audio</h3>
-            <p className="text-[9px] font-bold text-system-tertiary-label uppercase">Primary Playlist Channel</p>
+            <h3 className="serif-title text-xs text-system-label italic">Main Audio</h3>
+            <p className="text-[9px] font-bold text-system-tertiary-label uppercase tracking-widest">Primary Channel</p>
           </div>
           {expandedGroups.main ? <ChevronDown size={14} className="text-system-tertiary-label" /> : <ChevronRight size={14} className="text-system-tertiary-label" />}
         </button>
 
         {expandedGroups.main && (
-          <div className="flex flex-col gap-3 pl-1 animate-in slide-in-from-top-2 duration-300">
+          <div className="flex flex-col gap-3 animate-in slide-in-from-top-2 duration-300">
             <LayerAccordion 
               id="main_channel" icon={Sliders} label="Output Master" 
               isEnabled={true} 
@@ -128,20 +128,20 @@ export const AudioLayerLibrary = () => {
       <div className="space-y-3">
         <button 
           onClick={() => toggleGroup('frequency')}
-          className="flex items-center gap-3 w-full px-1 py-1 group active:opacity-70 transition-opacity"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-secondary-system-background/50 border border-apple-border paper-button paper-emboss"
         >
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 group-hover:scale-105 transition-transform">
+          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
             <Radio size={16} />
           </div>
           <div className="flex-1 text-left">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-system-label">Frequency</h3>
-            <p className="text-[9px] font-bold text-system-tertiary-label uppercase">Hz-based layers</p>
+            <h3 className="serif-title text-xs text-system-label italic">Frequency</h3>
+            <p className="text-[9px] font-bold text-system-tertiary-label uppercase tracking-widest">Hz-based layers</p>
           </div>
           {expandedGroups.frequency ? <ChevronDown size={14} className="text-system-tertiary-label" /> : <ChevronRight size={14} className="text-system-tertiary-label" />}
         </button>
 
         {expandedGroups.frequency && (
-          <div className="flex flex-col gap-3 pl-1 animate-in slide-in-from-top-2 duration-300">
+          <div className="flex flex-col gap-3 animate-in slide-in-from-top-2 duration-300">
             {/* Binaural */}
             <LayerAccordion 
               id="binaural" icon={Activity} label="Binaural Beats" 
@@ -332,20 +332,20 @@ export const AudioLayerLibrary = () => {
       <div className="space-y-3">
         <button 
           onClick={() => toggleGroup('soundscape')}
-          className="flex items-center gap-3 w-full px-1 py-1 group active:opacity-70 transition-opacity"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-secondary-system-background/50 border border-apple-border paper-button paper-emboss"
         >
-          <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:scale-105 transition-transform">
+          <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
             <Waves size={16} />
           </div>
           <div className="flex-1 text-left">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-system-label">Soundscape</h3>
-            <p className="text-[9px] font-bold text-system-tertiary-label uppercase">Ambient + Human layers</p>
+            <h3 className="serif-title text-xs text-system-label italic">Soundscape</h3>
+            <p className="text-[9px] font-bold text-system-tertiary-label uppercase tracking-widest">Ambient + Human</p>
           </div>
           {expandedGroups.soundscape ? <ChevronDown size={14} className="text-system-tertiary-label" /> : <ChevronRight size={14} className="text-system-tertiary-label" />}
         </button>
 
         {expandedGroups.soundscape && (
-          <div className="flex flex-col gap-3 pl-1 animate-in slide-in-from-top-2 duration-300">
+          <div className="flex flex-col gap-3 animate-in slide-in-from-top-2 duration-300">
             {/* Subliminal */}
             <LayerAccordion 
               id="subliminal" icon={Volume2} label="Subliminal Audio" 
@@ -366,16 +366,16 @@ export const AudioLayerLibrary = () => {
               onApplyPreset={(p: any) => applyLayerPreset('subliminal', p)}
             >
               <div className="flex flex-col gap-6">
-                <div className="bg-secondary-system-background p-1 rounded-xl flex items-center h-8">
+                <div className="bg-secondary-system-background/50 p-1 rounded-xl flex items-center h-8 paper-emboss">
                   <button 
                     onClick={() => updateSubliminalSettings({ isPlaylistMode: false })}
-                    className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${!settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                    className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all paper-button ${!settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                   >
                     Track
                   </button>
                   <button 
                     onClick={() => updateSubliminalSettings({ isPlaylistMode: true })}
-                    className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all ${settings.subliminal.isPlaylistMode ? 'bg-system-background shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
+                    className={`flex-1 h-full text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all paper-button ${settings.subliminal.isPlaylistMode ? 'bg-white shadow-sm text-apple-blue' : 'text-system-secondary-label'}`}
                   >
                     Playlist
                   </button>
@@ -431,7 +431,7 @@ export const AudioLayerLibrary = () => {
                   <button 
                     key={sound.id}
                     onClick={() => updateNatureSettings({ type: sound.id as any })}
-                    className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                    className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border paper-button ${settings.nature.type === sound.id ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-secondary-system-background/50 border-apple-border text-system-secondary-label'}`}
                   >
                     {sound.name}
                   </button>
@@ -463,7 +463,7 @@ export const AudioLayerLibrary = () => {
                     <button 
                       key={type}
                       onClick={() => updateNoiseSettings({ type: type as any })}
-                      className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                      className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border paper-button ${settings.noise.type === type ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-secondary-system-background/50 border-apple-border text-system-secondary-label'}`}
                     >
                       {type}
                     </button>
@@ -624,7 +624,7 @@ export const AudioLayerLibrary = () => {
                       <button 
                         key={p}
                         onClick={() => updateMentalToughnessSettings({ pitch: p as any })}
-                        className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.mentalToughness.pitch === p ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                        className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border paper-button ${settings.mentalToughness.pitch === p ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-secondary-system-background/50 border-apple-border text-system-secondary-label'}`}
                       >
                         {p}
                       </button>
@@ -645,7 +645,7 @@ export const AudioLayerLibrary = () => {
                       <button 
                         key={t.id}
                         onClick={() => updateMentalToughnessSettings({ texture: t.id as any })}
-                        className={`py-2 px-1 rounded-xl text-[8px] font-bold uppercase transition-all border ${settings.mentalToughness.texture === t.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                        className={`py-2 px-1 rounded-xl text-[8px] font-bold uppercase transition-all border paper-button ${settings.mentalToughness.texture === t.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-secondary-system-background/50 border-apple-border text-system-secondary-label'}`}
                       >
                         {t.label}
                       </button>
@@ -677,7 +677,7 @@ export const AudioLayerLibrary = () => {
                       <button 
                         key={i}
                         onClick={() => updateMentalToughnessSettings({ intensity: i as any })}
-                        className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${settings.mentalToughness.intensity === i ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-system-background border-apple-border text-system-secondary-label'}`}
+                        className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border paper-button ${settings.mentalToughness.intensity === i ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-secondary-system-background/50 border-apple-border text-system-secondary-label'}`}
                       >
                         {i}
                       </button>

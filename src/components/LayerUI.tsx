@@ -48,21 +48,21 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
 
   const renderManual = () => (
     <div className="flex flex-col items-center py-6">
-      <div className="bg-system-background border border-apple-border shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-[2.5rem] px-10 py-8 flex flex-col items-center gap-2 min-w-[220px] relative animate-in zoom-in-95 duration-300">
+      <div className="paper-card px-10 py-8 flex flex-col items-center gap-2 min-w-[220px] relative animate-in zoom-in-95 duration-300 paper-emboss">
         <div className="flex items-baseline gap-2">
           <input 
             type="number"
             value={value}
             onChange={(e) => onChange(Math.max(0.1, Math.min(1900, parseFloat(e.target.value) || 0.1)))}
-            className="bg-transparent border-none p-0 text-5xl font-[900] text-center tabular-nums focus:ring-0 outline-none w-32 tracking-tighter"
-            style={{ color: value > 0 ? (color === 'purple' ? '#9333ea' : color === 'blue' ? '#007aff' : color === 'green' ? '#16a34a' : color === 'amber' ? '#92400e' : color === 'rose' ? '#e11d48' : '#ea580c') : 'currentColor' }}
+            className="bg-transparent border-none p-0 text-5xl font-[900] text-center tabular-nums focus:ring-0 outline-none w-32 tracking-tighter serif-title"
+            style={{ color: value > 0 ? (color === 'purple' ? '#9333ea' : color === 'blue' ? '#4a5d7e' : color === 'green' ? '#16a34a' : color === 'amber' ? '#92400e' : color === 'rose' ? '#e11d48' : '#ea580c') : 'currentColor' }}
           />
-          <span className="text-xl font-bold opacity-30 text-system-label">Hz</span>
+          <span className="text-xl serif-title opacity-30 text-system-label italic">Hz</span>
         </div>
         <span className="text-[10px] font-black text-system-tertiary-label uppercase tracking-[0.3em] mt-1 opacity-50">Frequency</span>
         
         {/* Decorative Pill Header */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-4 py-1.5 rounded-full border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-tertiary-label shadow-sm">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-apple-secondary-bg px-4 py-1.5 rounded-full border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-tertiary-label shadow-sm">
           Manual Tuning
         </div>
       </div>
@@ -73,20 +73,20 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
     <div className="space-y-6 pt-2">
       <div className="flex justify-between items-center px-2">
          <div className="flex flex-col">
-            <span className={`text-2xl font-black tabular-nums tracking-tight ${colorClass}`}>{value}</span>
+            <span className={`text-3xl serif-title tabular-nums tracking-tight ${colorClass}`}>{value}</span>
             <span className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Selected Frequency</span>
          </div>
-         <div className="flex bg-system-background rounded-full p-1 border border-apple-border shadow-sm">
+         <div className="flex bg-secondary-system-background rounded-full p-1 border border-apple-border paper-emboss">
             <button 
               onClick={() => onChange(Math.max(0.1, value - 1))} 
-              className="w-10 h-8 flex items-center justify-center text-system-label hover:bg-secondary-system-background active:scale-90 rounded-full transition-all font-black text-lg"
+              className="w-10 h-8 flex items-center justify-center text-system-label hover:bg-white active:scale-90 rounded-full transition-all font-black text-lg paper-button"
             >
               -
             </button>
             <div className="w-px h-4 bg-apple-border my-auto opacity-50" />
             <button 
               onClick={() => onChange(Math.min(1900, value + 1))} 
-              className="w-10 h-8 flex items-center justify-center text-system-label hover:bg-secondary-system-background active:scale-90 rounded-full transition-all font-black text-lg"
+              className="w-10 h-8 flex items-center justify-center text-system-label hover:bg-white active:scale-90 rounded-full transition-all font-black text-lg paper-button"
             >
               +
             </button>
@@ -122,7 +122,7 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
             <span className="text-sm font-black text-amber-600 tabular-nums bg-amber-500/10 px-3 py-1 rounded-full">{currentVal}Hz</span>
           </div>
         )}
-        <div className="bg-system-background border border-apple-border rounded-[2rem] overflow-hidden shadow-sm">
+        <div className="bg-system-background border border-apple-border rounded-[2rem] overflow-hidden shadow-sm paper-emboss">
           <PickerWheel 
             items={pickerItems}
             selectedValue={isPreset ? currentVal : -1}
@@ -134,7 +134,7 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
         <div className="flex justify-center">
            <button 
             onClick={() => updateSettings({ hzInputMode: 'manual' })}
-            className="px-6 py-2 bg-apple-blue/5 border border-apple-blue/10 rounded-full text-[9px] font-black text-apple-blue uppercase tracking-widest hover:bg-apple-blue/10 active:scale-95 transition-all"
+            className="px-6 py-2 bg-apple-blue/5 border border-apple-blue/10 rounded-full text-[9px] font-black text-apple-blue uppercase tracking-widest hover:bg-apple-blue/10 active:scale-95 transition-all paper-button"
            >
              Set Manual Frequency
            </button>
@@ -145,12 +145,12 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
 
   return (
     <div className="space-y-4">
-      <div className="flex bg-secondary-system-background p-1.5 rounded-[1.25rem] h-11 border border-apple-border shadow-inner">
+      <div className="flex bg-secondary-system-background p-1.5 rounded-[1.25rem] h-11 border border-apple-border paper-emboss">
         {(['picker', 'slider', 'manual'] as const).map(mode => (
           <button
             key={mode}
             onClick={() => updateSettings({ hzInputMode: mode })}
-            className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-200 ${inputMode === mode ? 'bg-system-background text-apple-blue shadow-md scale-[1.02]' : 'text-system-secondary-label hover:text-system-label'}`}
+            className={`flex-1 h-full rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-200 paper-button ${inputMode === mode ? 'bg-white dark:bg-[#1c1c1b] text-apple-blue shadow-md' : 'text-system-secondary-label hover:text-system-label'}`}
           >
             {mode}
           </button>
@@ -211,7 +211,7 @@ export const PhysicalSoundEngineUI = ({ phys, onChange, color }: { phys: any, on
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className={`overflow-hidden space-y-6 pt-2 pb-6 px-4 bg-system-background rounded-3xl border ${borderClass} shadow-inner`}
+            className={`overflow-hidden space-y-6 pt-2 pb-6 px-4 bg-secondary-system-background rounded-3xl border ${borderClass} paper-emboss`}
           >
             {/* Room Size */}
             <div className="space-y-3 pt-2">
@@ -221,7 +221,7 @@ export const PhysicalSoundEngineUI = ({ phys, onChange, color }: { phys: any, on
                   <button 
                     key={size}
                     onClick={() => onChange({ ...phys, roomSize: size })}
-                    className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${phys.roomSize === size ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                    className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border paper-button ${phys.roomSize === size ? activeBtnClass : 'bg-white dark:bg-[#1c1c1b] border-apple-border text-system-secondary-label'}`}
                   >
                     {size}
                   </button>
@@ -237,7 +237,7 @@ export const PhysicalSoundEngineUI = ({ phys, onChange, color }: { phys: any, on
                   <button 
                     key={res}
                     onClick={() => onChange({ ...phys, wallResonance: res })}
-                    className={`py-2 px-1 rounded-xl text-[8px] font-black uppercase transition-all border ${phys.wallResonance === res ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                    className={`py-2 px-1 rounded-xl text-[8px] font-black uppercase transition-all border paper-button ${phys.wallResonance === res ? activeBtnClass : 'bg-white dark:bg-[#1c1c1b] border-apple-border text-system-secondary-label'}`}
                   >
                     {res}
                   </button>
@@ -258,7 +258,7 @@ export const PhysicalSoundEngineUI = ({ phys, onChange, color }: { phys: any, on
                   <button 
                     key={tex.id}
                     onClick={() => onChange({ ...phys, materialTexture: tex.id })}
-                    className={`py-2 px-1 rounded-xl text-[8px] font-bold uppercase transition-all border ${phys.materialTexture === tex.id ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                    className={`py-2 px-1 rounded-xl text-[8px] font-bold uppercase transition-all border paper-button ${phys.materialTexture === tex.id ? activeBtnClass : 'bg-white dark:bg-[#1c1c1b] border-apple-border text-system-secondary-label'}`}
                   >
                     {tex.label}
                   </button>
@@ -275,7 +275,7 @@ export const PhysicalSoundEngineUI = ({ phys, onChange, color }: { phys: any, on
                     <button 
                       key={i}
                       onClick={() => onChange({ ...phys, bangingIntensity: i })}
-                      className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${phys.bangingIntensity === i ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                      className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border paper-button ${phys.bangingIntensity === i ? activeBtnClass : 'bg-white dark:bg-[#1c1c1b] border-apple-border text-system-secondary-label'}`}
                     >
                       {i}
                     </button>
@@ -345,7 +345,7 @@ export const LayerAccordion = ({
                    '#f97316';
 
   return (
-    <div className="bg-secondary-system-background border border-apple-border rounded-[2.5rem] overflow-hidden transition-all shadow-sm">
+    <div className="paper-card overflow-hidden">
       <div 
         className="p-5 flex items-center justify-between cursor-pointer"
         onClick={toggleAccordion}
@@ -386,14 +386,14 @@ export const LayerAccordion = ({
             <div className="grid grid-cols-2 gap-3">
               {/* Background Play Support */}
               {setPlayInBackground !== undefined && (
-                <div className="flex flex-col gap-3 p-4 bg-system-background rounded-[2rem] border border-apple-border shadow-sm">
+                <div className="flex flex-col gap-3 p-4 bg-secondary-system-background rounded-[2rem] border border-apple-border paper-emboss">
                   <div className="flex items-center justify-between">
                     <div className="w-8 h-8 bg-apple-blue/5 text-apple-blue rounded-xl flex items-center justify-center">
                       <Activity size={14} />
                     </div>
                     <button 
                       onClick={() => setPlayInBackground(!playInBackground)}
-                      className={`w-9 h-5 rounded-full relative transition-colors ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                      className={`w-9 h-5 rounded-full relative transition-colors paper-button ${playInBackground ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
                     >
                       <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: playInBackground ? 16 : 0 }} />
                     </button>
@@ -407,14 +407,14 @@ export const LayerAccordion = ({
 
               {/* Pitch Safe Mode Toggle */}
               {setPitchSafeMode !== undefined && (
-                <div className="flex flex-col gap-3 p-4 bg-system-background rounded-[2rem] border border-apple-border shadow-sm">
+                <div className="flex flex-col gap-3 p-4 bg-secondary-system-background rounded-[2rem] border border-apple-border paper-emboss">
                   <div className="flex items-center justify-between">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center`} style={{ backgroundColor: `${colorHex}10`, color: colorHex }}>
                       <Ear size={14} />
                     </div>
                     <button 
                       onClick={() => setPitchSafeMode(!pitchSafeMode)}
-                      className={`w-9 h-5 rounded-full relative transition-colors ${pitchSafeMode ? (color.includes('emerald') ? 'bg-emerald-600' : color.includes('red') ? 'bg-red-900' : color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
+                      className={`w-9 h-5 rounded-full relative transition-colors paper-button ${pitchSafeMode ? (color.includes('emerald') ? 'bg-emerald-600' : color.includes('red') ? 'bg-red-900' : color.includes('blue') ? 'bg-apple-blue' : color.includes('purple') ? 'bg-purple-500' : color.includes('green') ? 'bg-green-500' : color.includes('amber') ? 'bg-amber-800' : color.includes('rose') ? 'bg-rose-600' : 'bg-orange-500') : 'bg-system-tertiary-label'}`}
                     >
                       <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: pitchSafeMode ? 16 : 0 }} />
                     </button>
@@ -504,14 +504,14 @@ export const LayerAccordion = ({
                       className="overflow-hidden space-y-5 pt-5"
                     >
                       {setNormalize && (
-                        <div className="flex items-center justify-between p-4 bg-system-background rounded-2xl border border-apple-border shadow-sm">
+                        <div className="flex items-center justify-between p-4 bg-secondary-system-background rounded-2xl border border-apple-border paper-emboss">
                             <div className="flex flex-col">
                               <span className="text-[9px] font-black text-system-label uppercase tracking-widest">Normalization</span>
                               <span className="text-[8px] font-bold text-system-secondary-label uppercase">{normalize ? 'Perfect Balance' : 'Raw Output'}</span>
                             </div>
                             <button 
                               onClick={() => setNormalize(!normalize)}
-                              className={`w-8 h-5 rounded-full relative transition-colors ${normalize ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
+                              className={`w-8 h-5 rounded-full relative transition-colors paper-button ${normalize ? 'bg-apple-blue' : 'bg-system-tertiary-label'}`}
                             >
                               <motion.div className="absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full" animate={{ x: normalize ? 12 : 0 }} />
                             </button>
@@ -521,13 +521,13 @@ export const LayerAccordion = ({
                         <div className="grid grid-cols-2 gap-3">
                           <button 
                             onClick={() => onApplyPreset('soft')}
-                            className="py-3 rounded-2xl bg-system-background border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label hover:bg-secondary-system-background transition-all"
+                            className="py-3 rounded-2xl bg-white dark:bg-[#1c1c1b] border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label paper-button shadow-sm"
                           >
                             Soft Mix
                           </button>
                           <button 
                             onClick={() => onApplyPreset('night')}
-                            className="py-3 rounded-2xl bg-system-background border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label hover:bg-secondary-system-background transition-all"
+                            className="py-3 rounded-2xl bg-white dark:bg-[#1c1c1b] border border-apple-border text-[9px] font-black uppercase tracking-widest text-system-label paper-button shadow-sm"
                           >
                             Binaural Night
                           </button>

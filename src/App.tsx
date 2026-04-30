@@ -96,11 +96,11 @@ function AppContent() {
                 <div className="w-16 h-16 bg-amber-100/10 text-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
                   <AlertCircle size={32} />
                 </div>
-                <h2 className="text-xl font-black mb-2 text-system-label">Startup Error</h2>
+                <h2 className="text-2xl serif-title mb-2 text-system-label">Startup Error</h2>
                 <p className="text-system-secondary-label text-sm mb-8 font-bold leading-relaxed">{initError}</p>
                 <button 
                   onClick={() => window.location.reload()}
-                  className="w-full bg-system-label text-system-background h-14 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className="w-full paper-button bg-system-label text-system-background h-14 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2"
                 >
                   <RefreshCcw size={18} />
                   <span>Retry System</span>
@@ -115,7 +115,7 @@ function AppContent() {
                 settings.menuPosition === 'top' ? 'pt-28 pb-40' : 'pt-10 pb-64'
               )}>
                 {/* Main Tab Views Stacked */}
-                <div className="flex-1 relative w-full h-full">
+                <div className="flex-1 relative w-full h-full px-4">
                   {/* Library View */}
                   <div className={cn(
                     "w-full h-full transition-opacity duration-300",
@@ -168,7 +168,7 @@ function AppContent() {
                         ) : (
                           <div className="w-12 h-12" />
                         )}
-                        <h2 className="text-xl font-black tracking-tight text-system-label">Settings</h2>
+                        <h2 className="text-2xl serif-title tracking-tight text-system-label">Settings</h2>
                         <div className="w-12 h-12" />
                       </div>
                       <SettingsView onBack={() => setActiveTab('library')} />

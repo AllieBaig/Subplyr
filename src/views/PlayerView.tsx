@@ -251,7 +251,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         {settings.backButtonPosition === 'top' ? (
           <button 
             onClick={onBack}
-            className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -ml-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}
+            className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -ml-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background/50 rounded-full transition-colors paper-button`}
           >
             <ChevronDown size={settings.bigTouchMode ? 32 : 28} />
           </button>
@@ -259,14 +259,14 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
           <div className="w-10" />
         )}
         <div className="flex flex-col items-center">
-          <h1 className={`font-bold uppercase tracking-[0.25em] text-system-secondary-label ${settings.bigTouchMode ? 'text-[10px]' : 'text-[9px]'}`}>
+          <h1 className={`serif-title uppercase tracking-[0.2em] text-system-secondary-label italic ${settings.bigTouchMode ? 'text-[11px]' : 'text-[10px]'}`}>
             {currentPlaylist ? currentPlaylist.name : 'Now Playing'}
           </h1>
           {currentPlaylist && (
             <span className="text-[8px] font-bold text-apple-blue mt-0.5 uppercase tracking-widest">{currentPosition}</span>
           )}
         </div>
-        <button className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background rounded-full transition-colors`}>
+        <button className={`${settings.bigTouchMode ? 'w-14 h-14' : 'w-10 h-10'} -mr-2 flex items-center justify-center text-system-label hover:bg-secondary-system-background/50 rounded-full transition-colors paper-button`}>
           <MoreHorizontal size={settings.bigTouchMode ? 28 : 24} />
         </button>
       </header>
@@ -281,17 +281,17 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
               <motion.div 
                 key="artwork"
                 initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: isPlaying ? 1 : 0.92 }}
+                animate={{ opacity: 1, scale: isPlaying ? 1 : 0.96 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
                 className={cn(
-                  "aspect-square bg-apple-card rounded-[2.5rem] shadow-[0_24px_48px_rgba(0,0,0,0.12)] border border-apple-border overflow-hidden relative shadow-2xl transition-all duration-500",
+                  "aspect-square paper-card overflow-hidden relative transition-all duration-500",
                   settings.bigTouchMode ? 'w-full max-w-[320px]' : 'w-full max-w-[260px]'
                 )}
               >
                 <ArtworkImage 
                   src={artworkSrc} 
-                  className="w-full h-full" 
+                  className="w-full h-full opacity-90" 
                   iconSize={settings.bigTouchMode ? 120 : 100} 
                 />
               </motion.div>
@@ -310,15 +310,15 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
         )}>
           <div className="w-full overflow-hidden mb-1">
             <h2 className={cn(
-              "font-[900] tracking-tight text-system-label truncate px-2 transition-all duration-300",
-              settings.bigTouchMode ? "text-3xl" : "text-2xl"
+              "serif-title text-system-label truncate px-2 transition-all duration-300",
+              settings.bigTouchMode ? "text-4xl" : "text-3xl"
             )}>
               {trackName}
             </h2>
           </div>
           <div className="w-full overflow-hidden mb-4">
             <p className={cn(
-              "text-system-secondary-label font-bold truncate px-2 transition-all duration-300",
+              "text-system-secondary-label font-bold truncate px-2 transition-all duration-300 italic opacity-80",
               settings.bigTouchMode ? "text-lg" : "text-base"
             )}>
               {artistName}
@@ -328,7 +328,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
           <button 
             onClick={() => setIsPanelOpen(true)}
             className={cn(
-              "inline-flex items-center gap-2.5 bg-secondary-system-background hover:bg-secondary-system-background/80 rounded-full transition-all active:scale-95 border border-apple-border max-w-[90%] flex-shrink-0",
+              "inline-flex items-center gap-2.5 bg-secondary-system-background border border-apple-border rounded-full hover:bg-white active:scale-95 transition-all max-w-[90%] flex-shrink-0 paper-emboss paper-button",
               settings.bigTouchMode ? 'px-6 py-3' : 'px-5 py-2'
             )}
           >
@@ -376,7 +376,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
           <div className="flex items-center gap-8">
             <button 
               onClick={() => userPlayPrevious()} 
-              className="p-2 text-system-label active:scale-90 transition-all"
+              className="p-2 text-system-label active:scale-95 transition-all paper-button"
             >
               <SkipBack size={settings.bigTouchMode ? 40 : 32} fill="currentColor" stroke="none" />
             </button>
@@ -384,7 +384,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
             <button 
               onClick={() => userTogglePlayback()}
               className={cn(
-                "bg-system-label text-system-background rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all outline-none border-none",
+                "bg-system-label text-system-background rounded-full flex items-center justify-center shadow-xl transition-all paper-button",
                 settings.bigTouchMode ? 'w-20 h-20' : 'w-16 h-16'
               )}
             >
@@ -397,7 +397,7 @@ export default function PlayerView({ onBack }: PlayerViewProps) {
             
             <button 
               onClick={() => userPlayNext()} 
-              className="p-2 text-system-label active:scale-90 transition-all"
+              className="p-2 text-system-label active:scale-95 transition-all paper-button"
             >
               <SkipForward size={settings.bigTouchMode ? 40 : 32} fill="currentColor" stroke="none" />
             </button>
