@@ -55,6 +55,15 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol === 'blob:') return;
   if (url.pathname.startsWith('/@vite') || url.pathname.includes('hot-update')) return;
 
+  // CRITICAL: NEVER intercept audio fetch requests for iOS 16 stability
+  // This allows Safari to handle Range requests and native buffering correctly.
+  const isAudio = 
+    event.request.destination === 'audio' || 
+    url.pathname.match(/\.(mp3|m4a|wav|ogg|flac|aac)$/i) ||
+    event.request.headers.get('Accept')?.includes('audio/');
+  
+  if (isAudio) return;
+
   // NAVIGATION: Optimized for iOS 16
   if (event.request.mode === 'navigate') {
     event.respondWith(

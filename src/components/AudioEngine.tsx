@@ -44,14 +44,28 @@ export default function AudioEngine() {
 
   const { settings, updateSettings, updateAudioTools } = useSettings();
   const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
+
+  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
+
+  // Callback Refs for stable listeners
+  const playNextRef = useRef(playNext);
+  const playPreviousRef = useRef(playPrevious);
+  const isPlayingRef = useRef(isPlaying);
+  const currentTrackRef = useRef(currentTrack);
+  const settingsRef = useRef(settings);
+
+  useEffect(() => { playNextRef.current = playNext; }, [playNext]);
+  useEffect(() => { playPreviousRef.current = playPrevious; }, [playPrevious]);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+  
   // Safety: Runtime health monitor
   const lastHealthCheck = useRef<number>(Date.now());
   const playStateAnomalies = useRef<number>(0);
   const lastKnownTime = useRef<number>(0);
   const stallCount = useRef<Record<string, number>>({});
   
-  const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
-
   // Soft Heal for specific elements without resetting everything
   const softHealElement = async (audio: HTMLAudioElement | null, type: 'main' | 'hz' | 'heartbeat', layerId?: string) => {
     if (!audio) return;
@@ -412,10 +426,8 @@ export default function AudioEngine() {
   const natureGainRef = useRef<GainNode | null>(null);
   const natureCompRef = useRef<DynamicsCompressorNode | null>(null);
 
-  // Background HTML Audio Refs for iOS 16 Persistence - Double Buffered for Gapless
+  // Background HTML Audio Refs for iOS 16 Persistence - Stable One-Player-Per-Layer
   const bgAudioRefs = useRef<Record<string, HTMLAudioElement>>({});
-  const bgAudioRefs2 = useRef<Record<string, HTMLAudioElement>>({});
-  const activeBgRef = useRef<Record<string, 1 | 2>>({});
   const bgAudioUrls = useRef<Record<string, string>>({});
   const bgAudioParams = useRef<Record<string, string>>({});
 
@@ -480,12 +492,12 @@ export default function AudioEngine() {
     masterGainNode.gain.setValueAtTime(finalGainValue, 0);
     masterGainNode.connect(ctx.destination);
 
-    // Fade In/Out for seamless looping if Pitch Safe Mode is on or active generally
+    // Fade In/Out for seamless looping
     const applyFades = (node: GainNode) => {
       node.gain.setValueAtTime(0, 0);
-      node.gain.linearRampToValueAtTime(1, 1.5); // 1.5s fade in
-      node.gain.setValueAtTime(1, duration - 1.5);
-      node.gain.linearRampToValueAtTime(0, duration); // 1.5s fade out
+      node.gain.linearRampToValueAtTime(1, 0.01); // 10ms fade in
+      node.gain.setValueAtTime(1, duration - 0.01);
+      node.gain.linearRampToValueAtTime(0, duration); // 10ms fade out
     };
 
     // Reverb Helper
@@ -1032,15 +1044,9 @@ export default function AudioEngine() {
       Object.entries(bgAudioRefs.current).forEach(([id, el]) => {
         const s = (settings as any)[id];
         if (s?.isEnabled && (isPlaying || s?.playInBackground)) {
-           const otherEl = bgAudioRefs2.current[id];
-           const isStalled = el.paused && (!otherEl || otherEl.paused);
-           
-           if (isStalled) {
+           if (el.paused) {
               console.log(`[AudioEngine] Auto-recovering parallel layer: ${id}`);
-              el.play().catch(() => {
-                // If play fails, the element might be in an invalid state, but for Hz layers 
-                // they usually recover on next loop swap. We'll just nudge.
-              });
+              el.play().catch(() => {});
            }
         }
       });
@@ -1270,14 +1276,11 @@ export default function AudioEngine() {
 
     const layers = ['pureHz', 'binaural', 'isochronic', 'solfeggio', 'schumann', 'didgeridoo', 'shamanic', 'noise', 'mentalToughness'];
     layers.forEach(id => {
-      const el1 = bgAudioRefs.current[id];
-      const el2 = bgAudioRefs2.current[id];
+      const el = bgAudioRefs.current[id];
       const s = (settings as any)[id];
-      if (s && el1 && el2) {
+      if (s && el) {
          // Background tones are BAKED with gain/volume, so we keep HTML volume at 1.0 for stability
-         // However, we ensure they are initialized
-         el1.volume = 1.0;
-         el2.volume = 1.0;
+         el.volume = 1.0;
       }
     });
 
@@ -1310,10 +1313,14 @@ export default function AudioEngine() {
     const natureAudio = new Audio();
     const heartbeatAudio = new Audio();
     
-    [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
+    // Core iOS 16 Stability: One stable player per layer, kept in DOM
+    [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach((a, i) => {
       (a as any).playsInline = true;
       (a as any).webkitPlaysInline = true;
       a.preload = 'auto';
+      a.style.display = 'none';
+      a.id = `layer-audio-${i}`;
+      document.body.appendChild(a);
     });
 
     natureAudio.loop = true;
@@ -1328,7 +1335,7 @@ export default function AudioEngine() {
     natureAudioRef.current = natureAudio;
     heartbeatAudioRef.current = heartbeatAudio;
 
-    // 2. Audio State & Metadata Listeners (Consolidated for stability)
+    // 2. Audio State & Metadata Listeners (Stable Context via Refs)
     let lastPositionUpdate = 0;
     const onTimeUpdate = () => {
       const now = Date.now();
@@ -1337,7 +1344,7 @@ export default function AudioEngine() {
       }
       
       // Throttle Media Session position updates for iPhone 8 / iOS 16 stability
-      if ('mediaSession' in navigator && (navigator.mediaSession as any).setPositionState && isPlaying && (now - lastPositionUpdate > 1000)) {
+      if ('mediaSession' in navigator && (navigator.mediaSession as any).setPositionState && isPlayingRef.current && (now - lastPositionUpdate > 1000)) {
         try {
           (navigator.mediaSession as any).setPositionState({
             duration: mainAudio.duration || 0,
@@ -1356,12 +1363,13 @@ export default function AudioEngine() {
     const onError = async () => {
       const error = mainAudio.error;
       console.warn("[AudioEngine] Main audio error:", error?.code, error?.message);
-      if (!isPlaying) return;
+      if (!isPlayingRef.current) return;
       
       // Recovery logic for revoked Blob URLs on iOS 16
       if (error?.code === 4 || error?.code === 3) {
-         if (currentTrack) {
-           const freshUrl = await getTrackUrl(currentTrack.id, true);
+         const track = currentTrackRef.current;
+         if (track) {
+           const freshUrl = await getTrackUrl(track.id, true);
            if (freshUrl && mainAudioRef.current) {
              mainAudioRef.current.src = freshUrl;
              mainAudioRef.current.load();
@@ -1372,12 +1380,12 @@ export default function AudioEngine() {
     };
 
     const onEnded = () => {
-      if (settings.chunking.mode === 'merge') return; // Handled by separate merge logic
-      if (settings.playbackMode === 'loop') {
+      if (settingsRef.current.chunking.mode === 'merge') return; 
+      if (settingsRef.current.playbackMode === 'loop') {
         mainAudio.currentTime = 0;
         mainAudio.play().catch(() => {});
       } else {
-        playNext(true);
+        playNextRef.current(true);
       }
     };
 
@@ -1398,23 +1406,25 @@ export default function AudioEngine() {
     };
 
     const unlockAudio = () => {
+      console.log("[AudioEngine] First tap unlock triggered");
       const ctx = initCtx();
       if (ctx && ctx.state === 'suspended') {
         ctx.resume();
       }
       
-      // Prioritize main audio for session focus
-      if (isPlaying) {
+      // Un-mute and start all elements instantly on first touch to bypass Safari restrictions
+      if (isPlayingRef.current) {
         mainAudio.play().catch(() => {});
         [subAudio, natureAudio, heartbeatAudio].forEach(a => {
            if (a.paused) a.play().catch(() => {});
         });
       } else {
-        // Pre-warm main audio first
+        // Pre-warm and leave heartbeat playing if possible
         mainAudio.play().then(() => { mainAudio.pause(); }).catch(() => {});
-        [subAudio, natureAudio, heartbeatAudio].forEach(a => {
-           a.play().then(() => { if (a !== heartbeatAudio) a.pause(); }).catch(() => {});
+        [subAudio, natureAudio].forEach(a => {
+           a.play().then(() => { a.pause(); }).catch(() => {});
         });
+        heartbeatAudio.play().catch(() => {}); // Keep heartbeat alive
       }
     };
 
@@ -1422,7 +1432,10 @@ export default function AudioEngine() {
       if (document.visibilityState === 'visible') {
         setIsForeground(true);
         if (audioCtxRef.current) audioCtxRef.current.resume().catch(() => {});
-        if (isPlaying && mainAudio.paused) mainAudio.play().catch(() => {});
+        if (isPlayingRef.current && mainAudio.paused) {
+           // iOS 16 background suspension recovery
+           mainAudio.play().catch(() => {});
+        }
       } else {
         setIsForeground(false);
       }
@@ -1447,16 +1460,20 @@ export default function AudioEngine() {
       [mainAudio, subAudio, natureAudio, heartbeatAudio].forEach(a => {
         a.pause();
         a.src = '';
+        if (a.parentNode) a.parentNode.removeChild(a);
       });
 
-      if (audioCtxRef.current) audioCtxRef.current.close().catch(() => {});
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
       
       mainAudioRef.current = null;
       subAudioRef.current = null;
       natureAudioRef.current = null;
       heartbeatAudioRef.current = null;
     };
-  }, [playNext, isPlaying, settings.chunking.mode, settings.playbackMode, currentTrack]); // Added dependencies for correct listener context
+  }, []); // Run ONCE and keep alive
 
   // Determine if we actually need Web Audio active
   const needsWebAudio = useMemo(() => {
@@ -1543,135 +1560,88 @@ export default function AudioEngine() {
     return buffer;
   };
 
-  // Helper: Sync Background Layer with Gapless Looping (Double Buffering)
+  // Helper: Sync Background Layer with One Stable Element per layer
   const syncBgLayer = async (layerId: string, isLayerPlaying: boolean, type: string, params: any, volume: number, gainDb: number) => {
     if (isLayerPlaying) {
       if (!bgAudioRefs.current[layerId]) {
-        const createEl = () => {
-          const el = new Audio();
-          (el as any).playsInline = true;
-          (el as any).webkitPlaysInline = true;
-          return el;
-        };
-        bgAudioRefs.current[layerId] = createEl();
-        bgAudioRefs2.current[layerId] = createEl();
-        activeBgRef.current[layerId] = 1;
-
-        // Progress tracking on both
-        [bgAudioRefs.current[layerId], bgAudioRefs2.current[layerId]].forEach(el => {
-          el.addEventListener('timeupdate', () => {
-            if (activeBgRef.current[layerId] === (el === bgAudioRefs.current[layerId] ? 1 : 2)) {
-              // THROTTLE: Only update UI progress if foreground or every ~2s if background to keep it alive
-              const now = Date.now();
-              const lastUpdate = (el as any).lastProgressTime || 0;
-              const throttleMs = document.visibilityState === 'visible' ? 250 : 2000;
-              
-              if (now - lastUpdate > throttleMs) {
-                updateLayerProgress(layerId, {
-                  currentTime: el.currentTime,
-                  duration: el.duration || 30
-                });
-                (el as any).lastProgressTime = now;
-              }
-              
-              // Gapless Logic: Trigger next buffer 0.5s before end (safer for iPhone 8)
-              if (el.duration > 0 && el.currentTime > el.duration - 0.5) {
-                 const otherIdx = activeBgRef.current[layerId] === 1 ? 2 : 1;
-                 const otherEl = otherIdx === 1 ? bgAudioRefs.current[layerId] : bgAudioRefs2.current[layerId];
-                 if (otherEl.paused) {
-                   console.log(`[AudioEngine] Gapless Swap for ${layerId} to buffer ${otherIdx}`);
-                   otherEl.currentTime = 0;
-                   otherEl.play().catch(() => {});
-                   activeBgRef.current[layerId] = otherIdx;
-                   
-                   // crossfade
-                   const fadeOutEl = el;
-                   const fadeInEl = otherEl;
-                   let fadeStep = 0;
-                   const steps = 10;
-                   const fadeInterval = setInterval(() => {
-                      fadeStep++;
-                      const vol = 1.0;
-                      fadeInEl.volume = (fadeStep / steps) * vol;
-                      fadeOutEl.volume = (1 - (fadeStep / steps)) * vol;
-                      if (fadeStep >= steps) {
-                        clearInterval(fadeInterval);
-                        fadeOutEl.pause();
-                        fadeOutEl.currentTime = 0;
-                      }
-                   }, 30);
-                 }
-              }
-            }
-          });
-          el.addEventListener('ended', () => {
-            // Backup for timeupdate miss
-            const otherIdx = el === bgAudioRefs.current[layerId] ? 2 : 1;
-            const otherEl = otherIdx === 1 ? bgAudioRefs.current[layerId] : bgAudioRefs2.current[layerId];
-            if (otherEl.paused) {
-              otherEl.currentTime = 0;
-              otherEl.play().catch(() => {});
-              activeBgRef.current[layerId] = otherIdx;
-            }
-          });
+        const el = new Audio();
+        el.id = `bg-audio-${layerId}`;
+        (el as any).playsInline = true;
+        (el as any).webkitPlaysInline = true;
+        el.style.display = 'none';
+        el.loop = true; // Use native looping for stability on ONE element
+        document.body.appendChild(el);
+        bgAudioRefs.current[layerId] = el;
+        
+        el.addEventListener('timeupdate', () => {
+          const now = Date.now();
+          const lastUpdate = (el as any).lastProgressTime || 0;
+          const throttleMs = document.visibilityState === 'visible' ? 500 : 5000;
+          if (now - lastUpdate > throttleMs) {
+            updateLayerProgress(layerId, {
+              currentTime: el.currentTime,
+              duration: el.duration || 30
+            });
+            (el as any).lastProgressTime = now;
+          }
         });
       }
 
-    const activeIdx = activeBgRef.current[layerId];
-    const el = activeIdx === 1 ? bgAudioRefs.current[layerId] : bgAudioRefs2.current[layerId];
-    const otherEl = activeIdx === 1 ? bgAudioRefs2.current[layerId] : bgAudioRefs.current[layerId];
+      const el = bgAudioRefs.current[layerId];
 
-    // Master Gain Multiplier for baking
-    const masterGainDb = settings.audioTools.gainDb;
-    const masterGainMultiplier = masterGainDb !== 0 ? Math.pow(10, masterGainDb / 20) : 1.0;
+      // Master Gain Multiplier for baking
+      const masterGainDb = settings.audioTools.gainDb;
+      const masterGainMultiplier = masterGainDb !== 0 ? Math.pow(10, masterGainDb / 20) : 1.0;
 
-    // Trigger regeneration if Hz, Volume, Gain, or Safety Multiplier changes
-    const extendedParams = { 
-      ...params, 
-      volume, 
-      gainDb, 
-      masterGainDb,
-      safetyMultiplier
-    };
-    const paramKey = JSON.stringify(extendedParams);
-    
-    if (bgAudioParams.current[layerId] !== paramKey) {
-      // Debounce generation for slider smoothness on iPhone 8
-      const now = Date.now();
-      const lastGen = lastBgGenTime.current[layerId] || 0;
-      if (now - lastGen < 350) return; // Wait for user to stop sliding
+      // Trigger regeneration if Hz, Volume, Gain, or Safety Multiplier changes
+      const extendedParams = { 
+        ...params, 
+        volume, 
+        gainDb, 
+        masterGainDb,
+        safetyMultiplier
+      };
+      const paramKey = JSON.stringify(extendedParams);
       
-      lastBgGenTime.current[layerId] = now;
-      
-      if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
-      
-      const blob = await generateToneBlob(type, extendedParams);
-      const url = URL.createObjectURL(blob);
-      registerUrl(url); // Track for cleanup
-      bgAudioUrls.current[layerId] = url;
-      bgAudioParams.current[layerId] = paramKey;
-      
-      [bgAudioRefs.current[layerId], bgAudioRefs2.current[layerId]].forEach(a => {
-        a.src = url;
-        a.load();
-      });
-    }
+      if (bgAudioParams.current[layerId] !== paramKey) {
+        // Debounce generation for slider smoothness on iPhone 8
+        const now = Date.now();
+        const lastGen = lastBgGenTime.current[layerId] || 0;
+        if (now - lastGen < 350) return; // Wait for user to stop sliding
+        
+        lastBgGenTime.current[layerId] = now;
+        
+        if (bgAudioUrls.current[layerId]) URL.revokeObjectURL(bgAudioUrls.current[layerId]);
+        
+        const blob = await generateToneBlob(type, extendedParams);
+        const url = URL.createObjectURL(blob);
+        registerUrl(url); // Track for cleanup
+        bgAudioUrls.current[layerId] = url;
+        bgAudioParams.current[layerId] = paramKey;
+        
+        el.src = url;
+        el.load();
+        if (isPlaying || (settings as any)[layerId]?.playInBackground) {
+          el.play().catch(() => {});
+        }
+      }
 
-    // Since gain is BAKED into the file, we keep the HTML element at 1.0 volume
-    // This bypasses the unreliable iOS 16 <audio> volume property in background
-    el.volume = 1.0;
-    if (el.paused && otherEl.paused) {
-      el.play().catch(() => {});
-    }
+      // Since gain is BAKED into the file, we keep the HTML element at 1.0 volume
+      // This bypasses the unreliable iOS 16 <audio> volume property in background
+      el.volume = 1.0;
+      if (el.paused && (isPlaying || (settings as any)[layerId]?.playInBackground)) {
+        el.play().catch(() => {});
+      }
     } else {
-      const el1 = bgAudioRefs.current[layerId];
-      const el2 = bgAudioRefs2.current[layerId];
-      if (el1) el1.pause();
-      if (el2) el2.pause();
+      const el = bgAudioRefs.current[layerId];
+      if (el) {
+        el.pause();
+        el.src = '';
+        el.load();
+        // Keep the element in DOM to avoid recreation, just silence it
+      }
       
       if (!isLayerPlaying) {
-        if (el1) { el1.src = ''; el1.load(); }
-        if (el2) { el2.src = ''; el2.load(); }
         if (bgAudioUrls.current[layerId]) {
           URL.revokeObjectURL(bgAudioUrls.current[layerId]);
           delete bgAudioUrls.current[layerId];
@@ -3191,7 +3161,6 @@ export default function AudioEngine() {
         }
         // Force resume all <audio> elements too
         Object.values(bgAudioRefs.current).forEach(a => a.play().catch(() => {}));
-        Object.values(bgAudioRefs2.current).forEach(a => a.play().catch(() => {}));
         if (natureAudioRef.current) natureAudioRef.current.play().catch(() => {});
         if (subAudioRef.current) subAudioRef.current.play().catch(() => {});
         if (mainAudioRef.current) mainAudioRef.current.play().catch(() => {});
