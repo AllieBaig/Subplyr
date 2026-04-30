@@ -45,6 +45,36 @@ export default function AudioEngine() {
   const { settings, updateSettings, updateAudioTools } = useSettings();
   const { isLoading, showToast, isOffline, navigateTo, activeTabRequest, clearTabRequest } = useUIState();
 
+  useEffect(() => {
+    let active = isPlaying;
+    const s = settings;
+    if (s.subliminal.isEnabled && (isPlaying || s.subliminal.playInBackground)) active = true;
+    if (s.binaural.isEnabled && (isPlaying || s.binaural.playInBackground)) active = true;
+    if (s.nature.isEnabled && (isPlaying || s.nature.playInBackground)) active = true;
+    if (s.noise.isEnabled && (isPlaying || s.noise.playInBackground)) active = true;
+    if (s.didgeridoo.isEnabled && (isPlaying || s.didgeridoo.playInBackground)) active = true;
+    if (s.pureHz.isEnabled && (isPlaying || s.pureHz.playInBackground)) active = true;
+    if (s.isochronic.isEnabled && (isPlaying || s.isochronic.playInBackground)) active = true;
+    if (s.solfeggio.isEnabled && (isPlaying || s.solfeggio.playInBackground)) active = true;
+    if (s.schumann.isEnabled && (isPlaying || s.schumann.playInBackground)) active = true;
+    if (s.shamanic.isEnabled && (isPlaying || s.shamanic.playInBackground)) active = true;
+    if (s.mentalToughness.isEnabled && (isPlaying || s.mentalToughness.playInBackground)) active = true;
+    (window as any).isZenAudioPlaying = active;
+  }, [
+    isPlaying, 
+    settings.subliminal.isEnabled, settings.subliminal.playInBackground,
+    settings.binaural.isEnabled, settings.binaural.playInBackground,
+    settings.nature.isEnabled, settings.nature.playInBackground,
+    settings.noise.isEnabled, settings.noise.playInBackground,
+    settings.didgeridoo.isEnabled, settings.didgeridoo.playInBackground,
+    settings.pureHz.isEnabled, settings.pureHz.playInBackground,
+    settings.isochronic.isEnabled, settings.isochronic.playInBackground,
+    settings.solfeggio.isEnabled, settings.solfeggio.playInBackground,
+    settings.schumann.isEnabled, settings.schumann.playInBackground,
+    settings.shamanic.isEnabled, settings.shamanic.playInBackground,
+    settings.mentalToughness.isEnabled, settings.mentalToughness.playInBackground
+  ]);
+
   const currentTrack = currentTrackIndex !== null ? currentPlaybackList[currentTrackIndex] : null;
 
   // Callback Refs for stable listeners

@@ -1,4 +1,4 @@
-const VERSION = 'subliminal-v16'; // Increment for update
+const VERSION = 'subliminal-v17'; // Increment for update
 const CACHE_NAME = `subliminal-player-${VERSION}`;
 
 // Core shell assets for instant startup
@@ -16,6 +16,35 @@ const EXTERNAL_ASSETS = [
 
 const PRECACHE_ASSETS = [...STATIC_ASSETS, ...EXTERNAL_ASSETS];
 
+// Self-Healing: Verify integrity of critical assets
+async function validateCacheIntegrity() {
+  const cache = await caches.open(CACHE_NAME);
+  const keys = await cache.keys();
+  
+  // Check if we have the index.html and manifest
+  const criticalFiles = ['./index.html', './manifest.json'];
+  const missingFiles = [];
+
+  for (const file of criticalFiles) {
+    const response = await cache.match(file);
+    if (!response || !response.ok || response.status === 206) {
+      missingFiles.push(file);
+    }
+  }
+
+  if (missingFiles.length > 0) {
+    console.warn(`[SW] Self-healing needed for: ${missingFiles.join(', ')}`);
+    for (const file of missingFiles) {
+      try {
+        const networkResponse = await fetch(file, { cache: 'reload' });
+        if (networkResponse.ok) await cache.put(file, networkResponse);
+      } catch (e) {
+        console.error(`[SW] Repair failed for ${file}:`, e);
+      }
+    }
+  }
+}
+
 // Install: Immediate activation and pre-caching
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -32,7 +61,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: Purge old versions
+// Activate: Purge old versions and run self-repair
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -40,7 +69,11 @@ self.addEventListener('activate', (event) => {
         keys.filter(key => key.startsWith('subliminal-player-') && key !== CACHE_NAME)
             .map(key => caches.delete(key))
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      self.clients.claim();
+      // Start background repair
+      validateCacheIntegrity();
+    })
   );
 });
 
@@ -50,13 +83,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET or cross-origin binary that Safari might choke on in SW
+  // Skip non-GET or internal vite/hot-update
   if (event.request.method !== 'GET') return;
   if (url.protocol === 'blob:') return;
   if (url.pathname.startsWith('/@vite') || url.pathname.includes('hot-update')) return;
 
   // CRITICAL: NEVER intercept audio fetch requests for iOS 16 stability
-  // This allows Safari to handle Range requests and native buffering correctly.
   const isAudio = 
     event.request.destination === 'audio' || 
     url.pathname.match(/\.(mp3|m4a|wav|ogg|flac|aac)$/i) ||
@@ -64,21 +96,45 @@ self.addEventListener('fetch', (event) => {
   
   if (isAudio) return;
 
-  // NAVIGATION: Optimized for iOS 16
+  // NAVIGATION: Optimized for iOS 16 and Subfolder SPA routing
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
           return response;
         })
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          return await cache.match('./index.html') || 
-                 await cache.match('./') || 
-                 await cache.match('index.html') ||
-                 new Response('Offline - Initializing app shell...', { status: 200, headers: { 'Content-Type': 'text/html' } });
+          // Try to match exact request, then fallback to index shell
+          const exactMatch = await cache.match(event.request);
+          if (exactMatch) return exactMatch;
+
+          const shell = await cache.match('./index.html') || 
+                        await cache.match('index.html') || 
+                        await cache.match('./');
+          
+          if (shell) return shell;
+
+          // Ultimate fallback for corrupted shells or missing files during network loss
+          return new Response(
+            `<html>
+              <head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"></head>
+              <body style="font-family:-apple-system,system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;background:#fff;text-align:center;padding:20px;">
+                <h2 style="font-weight:600;color:#1c1c1e;">Connection lost</h2>
+                <p style="color:#8e8e93;font-size:14px;">The app shell is being repaired. This may happen on old iOS versions during sync.</p>
+                <button onclick="location.reload()" style="background:#007aff;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:600;margin-top:20px;-webkit-appearance:none;">Continue to App</button>
+                <script>
+                   // Silent background repair attempt
+                   setTimeout(() => { if (!navigator.onLine) return; location.reload(); }, 3000);
+                </script>
+              </body>
+            </html>`, 
+            { status: 200, headers: { 'Content-Type': 'text/html' } }
+          );
         })
     );
     return;
@@ -86,7 +142,7 @@ self.addEventListener('fetch', (event) => {
 
   // ASSETS: Cache-First with Background Revalidation
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
         if (networkResponse.ok && networkResponse.status === 200) {
           const isAsset = url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff2|json)$/);

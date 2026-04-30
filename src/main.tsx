@@ -50,15 +50,33 @@ if ('serviceWorker' in navigator) {
           if (newWorker) {
             newWorker.onstatechange = () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[SW] New version available, ready for reload');
+                console.log('[SW] New version ready in background');
+                // We don't force reload here to avoid breaking active audio
+                // The new SW will claim on next start or via skipWaiting
               }
             };
           }
         });
       })
       .catch(err => {
-        console.error('[SW] System offline fallback failed:', err);
+        // Fallback: If SW registration fails, we still allow app to run
+        console.warn('[SW] Offline support degraded:', err);
       });
+
+    // Handle controller change (e.g. after skipWaiting)
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      // Only reload if we are NOT playing audio to avoid disruption
+      // We check a global window flag that we'll set in AudioEngine
+      if (!(window as any).isZenAudioPlaying) {
+        console.log('[SW] Controller changed, refreshing for new version');
+        window.location.reload();
+      } else {
+        console.log('[SW] Version updated, reload deferred (audio active)');
+      }
+    });
   });
 }
 
