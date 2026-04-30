@@ -166,6 +166,156 @@ export const HzSelector = ({ value, onChange, color }: { value: number, onChange
   );
 };
 
+export const PhysicalSoundEngineUI = ({ phys, onChange, color }: { phys: any, onChange: (v: any) => void, color: string }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (!phys) return null;
+
+  const colorClass = color === 'red' ? 'text-red-900 bg-red-900/10' : 
+                    color === 'amber' ? 'text-amber-800 bg-amber-800/10' : 
+                    'text-indigo-600 bg-indigo-600/10';
+
+  const accentClass = color === 'red' ? 'accent-red-900' : 
+                     color === 'amber' ? 'accent-amber-800' : 
+                     'accent-indigo-600';
+
+  const borderClass = color === 'red' ? 'border-red-900/20' : 
+                     color === 'amber' ? 'border-amber-800/20' : 
+                     'border-indigo-600/20';
+
+  const activeBtnClass = color === 'red' ? 'bg-red-900 text-white border-red-900' : 
+                        color === 'amber' ? 'bg-amber-800 text-white border-amber-800' : 
+                        'bg-indigo-600 text-white border-indigo-600';
+
+  return (
+    <div className="space-y-4">
+      <button 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between py-3 group"
+      >
+        <div className="flex items-center gap-4">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${colorClass}`}>
+              <Activity size={14} />
+          </div>
+          <div className="flex flex-col items-start">
+            <span className="text-[10px] font-black text-system-label uppercase tracking-widest">Physical Sound Engine</span>
+            <span className="text-[7px] font-bold text-system-tertiary-label uppercase">Simulated Physics & Resilience</span>
+          </div>
+        </div>
+        <ChevronRight size={16} className={`text-system-tertiary-label transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className={`overflow-hidden space-y-6 pt-2 pb-6 px-4 bg-system-background rounded-3xl border ${borderClass} shadow-inner`}
+          >
+            {/* Room Size */}
+            <div className="space-y-3 pt-2">
+              <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Room Size</p>
+              <div className="grid grid-cols-2 gap-2">
+                {['small', 'medium', 'large', 'cave'].map(size => (
+                  <button 
+                    key={size}
+                    onClick={() => onChange({ ...phys, roomSize: size })}
+                    className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${phys.roomSize === size ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Wall Resonance */}
+            <div className="space-y-3">
+              <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Wall Resonance</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {['off', 'low', 'medium', 'high'].map(res => (
+                  <button 
+                    key={res}
+                    onClick={() => onChange({ ...phys, wallResonance: res })}
+                    className={`py-2 px-1 rounded-xl text-[8px] font-black uppercase transition-all border ${phys.wallResonance === res ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                  >
+                    {res}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Material Texture */}
+            <div className="space-y-3">
+              <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Material Texture</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'thin_wood', label: 'Thin Wood' },
+                  { id: 'empty_wood', label: 'Empty Wood' },
+                  { id: 'solid_wall', label: 'Solid Wall' },
+                  { id: 'open_space', label: 'Open Space' }
+                ].map(tex => (
+                  <button 
+                    key={tex.id}
+                    onClick={() => onChange({ ...phys, materialTexture: tex.id })}
+                    className={`py-2 px-1 rounded-xl text-[8px] font-bold uppercase transition-all border ${phys.materialTexture === tex.id ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                  >
+                    {tex.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Banging Intensity */}
+            {phys.bangingIntensity && (
+               <div className="space-y-3">
+                <p className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Global Hit Impact</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {['soft', 'medium', 'hard'].map(i => (
+                    <button 
+                      key={i}
+                      onClick={() => onChange({ ...phys, bangingIntensity: i })}
+                      className={`py-2 px-1 rounded-xl text-[9px] font-bold uppercase transition-all border ${phys.bangingIntensity === i ? activeBtnClass : 'bg-secondary-system-background border-apple-border text-system-secondary-label'}`}
+                    >
+                      {i}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resonance Depth Slider */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Resonance Depth</span>
+                <span className={`text-[10px] font-black tabular-nums ${color.includes('red') ? 'text-red-900' : color.includes('amber') ? 'text-amber-800' : 'text-indigo-600'}`}>{(phys.resonanceDepth * 100).toFixed(0)}%</span>
+              </div>
+              <input 
+                type="range" min={0} max={1} step={0.01} value={phys.resonanceDepth}
+                onChange={(e) => onChange({ ...phys, resonanceDepth: parseFloat(e.target.value) })}
+                className={`w-full h-1 bg-apple-border rounded-full appearance-none ${accentClass}`}
+              />
+            </div>
+
+            {/* Echo Tail Slider */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-black text-system-tertiary-label uppercase tracking-widest">Tail Decay</span>
+                <span className={`text-[10px] font-black tabular-nums ${color.includes('red') ? 'text-red-900' : color.includes('amber') ? 'text-amber-800' : 'text-indigo-600'}`}>{(phys.echoTailLength * 100).toFixed(0)}%</span>
+              </div>
+              <input 
+                type="range" min={0} max={1} step={0.01} value={phys.echoTailLength}
+                onChange={(e) => onChange({ ...phys, echoTailLength: parseFloat(e.target.value) })}
+                className={`w-full h-1 bg-apple-border rounded-full appearance-none ${accentClass}`}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export const LayerAccordion = ({ 
   id, icon: Icon, label, isEnabled, onToggle, vol, setVol, 
   gainDb, setGainDb, normalize, setNormalize, 

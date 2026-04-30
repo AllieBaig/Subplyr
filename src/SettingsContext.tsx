@@ -75,6 +75,13 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    physical: {
+      roomSize: 'medium',
+      wallResonance: 'medium',
+      materialTexture: 'solid_wall',
+      resonanceDepth: 0.3,
+      echoTailLength: 0.2
+    },
   },
   shamanic: {
     isEnabled: false,
@@ -87,6 +94,14 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    physical: {
+      roomSize: 'medium',
+      wallResonance: 'low',
+      materialTexture: 'empty_wood',
+      resonanceDepth: 0.4,
+      echoTailLength: 0.3,
+      bangingIntensity: 'medium'
+    },
   },
   mentalToughness: {
     isEnabled: false,
@@ -101,6 +116,14 @@ const DEFAULT_SETTINGS: AppSettings = {
     normalize: false,
     playInBackground: false,
     pitchSafeMode: false,
+    physical: {
+      roomSize: 'large',
+      wallResonance: 'medium',
+      materialTexture: 'solid_wall',
+      resonanceDepth: 0.5,
+      echoTailLength: 0.4,
+      bangingIntensity: 'medium'
+    },
   },
   pureHz: {
     isEnabled: false,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../SettingsContext';
 import { useAudio } from '../AudioContext';
-import { LayerAccordion, HzSelector } from './LayerUI';
+import { LayerAccordion, HzSelector, PhysicalSoundEngineUI } from './LayerUI';
 import { NATURE_SOUNDS } from '../constants';
 import { 
   Volume2, Activity, CloudRain, Wind, 
@@ -518,6 +518,14 @@ export const AudioLayerLibrary = () => {
                       </div>
                     </div>
                  </div>
+
+                 <div className="pt-4 border-t border-apple-border/30">
+                   <PhysicalSoundEngineUI 
+                     phys={settings.didgeridoo.physical} 
+                     onChange={(v) => updateDidgeridooSettings({ physical: v })} 
+                     color="amber"
+                   />
+                 </div>
               </div>
             </LayerAccordion>
 
@@ -566,6 +574,14 @@ export const AudioLayerLibrary = () => {
                         <span className="text-[8px] font-bold text-system-tertiary-label uppercase">Fast</span>
                       </div>
                     </div>
+                 </div>
+
+                 <div className="pt-4 border-t border-apple-border/30">
+                   <PhysicalSoundEngineUI 
+                     phys={settings.shamanic.physical} 
+                     onChange={(v) => updateShamanicSettings({ physical: v })} 
+                     color="red"
+                   />
                  </div>
               </div>
             </LayerAccordion>
@@ -667,6 +683,14 @@ export const AudioLayerLibrary = () => {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="pt-4 border-t border-apple-border/30">
+                  <PhysicalSoundEngineUI 
+                    phys={settings.mentalToughness.physical} 
+                    onChange={(v) => updateMentalToughnessSettings({ physical: v })} 
+                    color="indigo"
+                  />
                 </div>
               </div>
             </LayerAccordion>

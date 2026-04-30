@@ -64,6 +64,15 @@ export interface NoiseSettings {
   playInBackground: boolean;
 }
 
+export interface PhysicalSoundSettings {
+  roomSize: 'small' | 'medium' | 'large' | 'cave';
+  wallResonance: 'off' | 'low' | 'medium' | 'high';
+  materialTexture: 'thin_wood' | 'empty_wood' | 'solid_wall' | 'open_space';
+  resonanceDepth: number; // 0 to 1
+  echoTailLength: number; // 0 to 1
+  bangingIntensity?: 'soft' | 'medium' | 'hard'; // For Mental Toughness + Drumming
+}
+
 export interface DidgeridooSettings {
   isEnabled: boolean;
   volume: number;
@@ -75,6 +84,7 @@ export interface DidgeridooSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  physical?: PhysicalSoundSettings;
 }
 
 export interface PureHzSettings {
@@ -155,6 +165,7 @@ export interface ShamanicSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  physical?: PhysicalSoundSettings;
 }
 
 export interface MentalToughnessSettings {
@@ -170,6 +181,7 @@ export interface MentalToughnessSettings {
   normalize: boolean;
   playInBackground: boolean;
   pitchSafeMode: boolean;
+  physical?: PhysicalSoundSettings;
 }
 
 export interface AppSettings {

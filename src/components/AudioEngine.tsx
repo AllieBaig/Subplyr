@@ -517,6 +517,80 @@ export default function AudioEngine() {
     const isPitchRange = (freq: number) => freq >= 200 && freq <= 1900;
     const useSoftPitch = options.pitchSafeMode && isPitchRange(options.frequency || (type === 'binaural' ? (options.leftFreq + options.rightFreq) / 2 : 0));
 
+    // Physical Sound Engine Helper
+    const applyPhysicalReverb = (source: AudioNode, dest: AudioNode, phys: any) => {
+      if (!phys) {
+        source.connect(dest);
+        return;
+      }
+
+      const { roomSize, wallResonance, materialTexture, resonanceDepth, echoTailLength } = phys;
+      
+      // 1. Create Impulse Response based on params
+      let reverbLength = 0.5;
+      switch(roomSize) {
+        case 'small': reverbLength = 0.3; break;
+        case 'medium': reverbLength = 1.0; break;
+        case 'large': reverbLength = 2.5; break;
+        case 'cave': reverbLength = 5.0; break;
+      }
+      reverbLength *= (0.5 + (echoTailLength || 0.5));
+
+      const length = Math.ceil(sampleRate * reverbLength);
+      const impulse = ctx.createBuffer(2, length, sampleRate);
+      const impulseL = impulse.getChannelData(0);
+      const impulseR = impulse.getChannelData(1);
+
+      // 2. Texture Pre-filtering logic
+      let filterFreq = 15000;
+      let filterQ = 0.7;
+      switch(materialTexture) {
+        case 'thin_wood': filterFreq = 1800; filterQ = 4; break;
+        case 'empty_wood': filterFreq = 900; filterQ = 7; break;
+        case 'solid_wall': filterFreq = 5000; filterQ = 1.5; break;
+        case 'open_space': filterFreq = 15000; filterQ = 0.6; break;
+      }
+
+      for (let i = 0; i < length; i++) {
+        const decay = Math.pow(1 - i / length, 4);
+        const noise = (Math.random() * 2 - 1);
+        impulseL[i] = noise * decay;
+        impulseR[i] = noise * decay;
+      }
+
+      const reverb = ctx.createConvolver();
+      reverb.buffer = impulse;
+
+      const dryGain = ctx.createGain();
+      const wetGain = ctx.createGain();
+      
+      // Resonance Depth + Wall Resonance impact
+      let resonanceMultiplier = 1.0;
+      switch(wallResonance) {
+        case 'off': resonanceMultiplier = 0.05; break;
+        case 'low': resonanceMultiplier = 0.3; break;
+        case 'medium': resonanceMultiplier = 0.7; break;
+        case 'high': resonanceMultiplier = 1.1; break;
+      }
+
+      const wetAmount = 0.1 + (resonanceDepth * (options.pitchSafeMode ? 0.3 : 0.5)) * resonanceMultiplier;
+      dryGain.gain.setValueAtTime(Math.max(0.1, 1.0 - wetAmount * 0.7), 0);
+      wetGain.gain.setValueAtTime(wetAmount, 0);
+
+      const textureFilter = ctx.createBiquadFilter();
+      textureFilter.type = 'lowpass';
+      textureFilter.frequency.setValueAtTime(filterFreq, 0);
+      textureFilter.Q.setValueAtTime(filterQ, 0);
+
+      source.connect(dryGain);
+      source.connect(textureFilter);
+      textureFilter.connect(reverb);
+      reverb.connect(wetGain);
+      
+      dryGain.connect(dest);
+      wetGain.connect(dest);
+    };
+
     // Setup layer specific offline graph
     if (type === 'pureHz' || type === 'solfeggio' || type === 'schumann') {
       const osc = ctx.createOscillator();
@@ -689,7 +763,12 @@ export default function AudioEngine() {
         applyFades(outGain);
       } else {
         outGain.gain.setValueAtTime(0.06, 0);
-        filter.connect(outGain);
+        
+        if (options.physical) {
+          applyPhysicalReverb(filter, outGain, options.physical);
+        } else {
+          filter.connect(outGain);
+        }
       }
 
       outGain.connect(masterGainNode);
@@ -717,7 +796,11 @@ export default function AudioEngine() {
         osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.05);
         
         g.gain.setValueAtTime(0, time);
-        g.gain.linearRampToValueAtTime(0.35 * (1 + options.depth), time + 0.01);
+        let peak = 0.35 * (1 + options.depth);
+        const bIntensity = options.physical?.bangingIntensity;
+        if (bIntensity === 'soft') peak *= 0.7;
+        if (bIntensity === 'hard') peak *= 1.3;
+        g.gain.linearRampToValueAtTime(peak, time + 0.01);
         g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
         
         filter.type = 'lowpass';
@@ -740,7 +823,11 @@ export default function AudioEngine() {
         applySoftReverb(preReverbGain, outGain);
         applyFades(outGain);
       } else {
-        drumGain.connect(outGain);
+        if (options.physical) {
+          applyPhysicalReverb(drumGain, outGain, options.physical);
+        } else {
+          drumGain.connect(outGain);
+        }
       }
 
       outGain.connect(masterGainNode);
@@ -815,8 +902,10 @@ export default function AudioEngine() {
 
         // 3. Envelope
         let peak = 0.4;
-        if (options.intensity === 'light') peak *= 0.6;
-        if (options.intensity === 'strong') peak *= 1.4;
+        const bIntensity = options.physical?.bangingIntensity || options.intensity;
+        if (bIntensity === 'soft' || options.intensity === 'light') peak *= 0.6;
+        if (bIntensity === 'medium') peak *= 1.0;
+        if (bIntensity === 'hard' || options.intensity === 'strong') peak *= 1.4;
         if (options.intensity === 'deep') peak *= 1.9;
 
         g.gain.setValueAtTime(0, time);
@@ -835,7 +924,14 @@ export default function AudioEngine() {
       }
 
       applyFades(mainGain);
-      mainGain.connect(masterGainNode);
+      
+      const outGain = ctx.createGain();
+      if (options.physical) {
+        applyPhysicalReverb(mainGain, outGain, options.physical);
+      } else {
+        mainGain.connect(outGain);
+      }
+      outGain.connect(masterGainNode);
     }
     else if (type === 'noise') {
       const bufferSize = sampleRate * duration;
