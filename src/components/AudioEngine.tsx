@@ -160,6 +160,22 @@ export default function AudioEngine() {
   const chunkUrlsRef = useRef<Record<string, string>>({});
   const chunkCleanupRef = useRef<Set<string>>(new Set());
   const trackOffsetsRef = useRef<{start: number, duration: number}[]>([]);
+  const objectUrlRef = useRef<Set<string>>(new Set());
+
+  const registerUrl = (url: string) => {
+    if (url.startsWith('blob:')) {
+      objectUrlRef.current.add(url);
+    }
+  };
+
+  const cleanupUrls = () => {
+    objectUrlRef.current.forEach(url => URL.revokeObjectURL(url));
+    objectUrlRef.current.clear();
+  };
+
+  useEffect(() => {
+    return () => cleanupUrls();
+  }, []);
 
   // Internal Audio Element Refs (Managed by lifecycle)
   const heartbeatAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -1535,6 +1551,7 @@ export default function AudioEngine() {
       
       const blob = await generateToneBlob(type, extendedParams);
       const url = URL.createObjectURL(blob);
+      registerUrl(url); // Track for cleanup
       bgAudioUrls.current[layerId] = url;
       bgAudioParams.current[layerId] = paramKey;
       

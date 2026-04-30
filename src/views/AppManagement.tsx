@@ -3,6 +3,7 @@ import { useAudio } from '../AudioContext';
 import { useSettings } from '../SettingsContext';
 import { useUIState } from '../UIStateContext';
 import { Section } from '../components/SettingsUI';
+import StorageInfo from '../components/StorageInfo';
 import { 
   Download, Upload, Wrench, ChevronRight, History, Settings as SettingsIcon
 } from 'lucide-react';
@@ -56,6 +57,8 @@ export const AppMaintenance = () => {
       color="bg-amber-100 text-amber-600"
     >
       <div className="flex flex-col gap-4">
+        <StorageInfo />
+        
         <button 
           onClick={() => clearAppCache()}
           className="w-full p-4 flex items-center justify-between hover:bg-secondary-system-background transition-colors bg-system-background rounded-2xl border border-apple-border"

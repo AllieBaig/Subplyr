@@ -79,44 +79,52 @@ export class ChunkManager {
   static async renderChunk(playlistId: string, chunkIndex: number, trackIds: string[], volume: number = 1.0, gainDb: number = 0): Promise<{ blob: Blob; duration: number } | null> {
     try {
       const chunkId = `chunk_${playlistId}_${chunkIndex}`;
-      console.log(`[ChunkManager] Rendering ${chunkId} with vol:${volume}, gain:${gainDb}dB...`);
+      console.log(`[ChunkManager] Rendering ${chunkId} (Memory-Optimized)...`);
 
-      const buffers: AudioBuffer[] = [];
       let totalDuration = 0;
+      const trackDurations: number[] = [];
 
-      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
-      if (!AudioCtx) throw new Error("AudioContext not supported in this environment");
-      const ctx = new AudioCtx();
-
+      // Pass 1: Get total duration without keeping full buffers
       for (const tid of trackIds) {
-        const blob = await db.getTrackBlob(tid);
-        if (!blob) continue;
-        const arrayBuffer = await blob.arrayBuffer();
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        buffers.push(audioBuffer);
-        totalDuration += audioBuffer.duration;
+        const d = await this.getAudioDuration(tid);
+        trackDurations.push(d);
+        totalDuration += d;
       }
 
-      const OfflineCtx = typeof window !== 'undefined' ? (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext) : null;
-      if (!OfflineCtx) throw new Error("OfflineAudioContext not supported in this environment");
-      const offlineCtx = new OfflineCtx(2, Math.ceil(totalDuration * SAMPLE_RATE), SAMPLE_RATE);
+      if (totalDuration === 0) return null;
 
+      const OfflineCtx = typeof window !== 'undefined' ? (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext) : null;
+      if (!OfflineCtx) throw new Error("OfflineAudioContext not supported");
+      
+      const offlineCtx = new OfflineCtx(2, Math.ceil(totalDuration * SAMPLE_RATE), SAMPLE_RATE);
       const mainGain = offlineCtx.createGain();
       const dbMultiplier = Math.pow(10, gainDb / 20);
       mainGain.gain.setValueAtTime(volume * dbMultiplier, 0);
       mainGain.connect(offlineCtx.destination);
 
+      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+      const tempCtx = AudioCtx ? new AudioCtx() : null;
+
+      // Pass 2: Decode and schedule one by one
       let offset = 0;
-      for (const buffer of buffers) {
-        const source = offlineCtx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(mainGain);
-        source.start(offset);
-        offset += buffer.duration;
+      for (let i = 0; i < trackIds.length; i++) {
+        const tid = trackIds[i];
+        const blob = await db.getTrackBlob(tid);
+        if (!blob) continue;
+        
+        const arrayBuffer = await blob.arrayBuffer();
+        if (tempCtx) {
+          const buffer = await tempCtx.decodeAudioData(arrayBuffer);
+          const source = offlineCtx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(mainGain);
+          source.start(offset);
+          offset += buffer.duration;
+        }
       }
 
       const renderedBuffer = await offlineCtx.startRendering();
-      await ctx.close();
+      if (tempCtx) await tempCtx.close();
 
       const blob = this.audioBufferToWav(renderedBuffer);
       return { blob, duration: totalDuration };

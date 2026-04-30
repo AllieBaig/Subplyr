@@ -182,7 +182,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     lastChunkPosition: 0,
     currentTrackIndex: null,
     mode: 'heartbeat',
-    sizeMinutes: 10
+    sizeMinutes: 3
   },
   visibility: {
     audioLayers: true,
